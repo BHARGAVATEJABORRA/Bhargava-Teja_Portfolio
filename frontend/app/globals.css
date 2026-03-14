@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #f4f6f8;
+  --color-surface: #e8edf2;
+  --color-card: #ffffff;
+  --color-ink: #0e1b2b;
+  --color-muted-ink: #47566c;
+  --color-border: #c8d2dd;
+  --color-accent: #0f766e;
+  --color-glow: rgba(15, 118, 110, 0.28);
+  --bg-radial-a: rgba(15, 118, 110, 0.16);
+  --bg-radial-b: rgba(14, 27, 43, 0.08);
+}
+
+.dark {
+  --color-bg: #0b1118;
+  --color-surface: #111a23;
+  --color-card: #15202c;
+  --color-ink: #e5edf7;
+  --color-muted-ink: #a8b8cd;
+  --color-border: #2f4156;
+  --color-accent: #2dd4bf;
+  --color-glow: rgba(45, 212, 191, 0.24);
+  --bg-radial-a: rgba(45, 212, 191, 0.12);
+  --bg-radial-b: rgba(80, 116, 255, 0.08);
+}
+
+@theme inline {
+  --font-sans: var(--font-space-grotesk);
+  --font-mono: var(--font-ibm-plex-mono);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  color: var(--color-ink);
+  font-family: var(--font-space-grotesk), "Avenir Next", "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at 12% 20%, var(--bg-radial-a), transparent 30%),
+    radial-gradient(circle at 88% 10%, var(--bg-radial-b), transparent 32%),
+    var(--color-bg);
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
