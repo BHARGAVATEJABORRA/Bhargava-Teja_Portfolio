@@ -1,36 +1,52 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Portfolio Frontend
 
-## Getting Started
+Recruiter-first Next.js App Router portfolio implementation.
 
-First, run the development server:
+## Scripts
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run build
+npm run start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Environment Setup
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+This Next.js app lives in `frontend/`, so local development variables belong in `frontend/.env.local`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Use this local template:
 
-## Learn More
+```bash
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_GA_ID=
+SPOTIFY_CLIENT_ID=68491febe3f743e89dc6db78ee213b7f
+SPOTIFY_CLIENT_SECRET=6f56fc2d4ef14a3b9254efc275c8f24f
+SPOTIFY_REFRESH_TOKEN=
+```
 
-To learn more about Next.js, take a look at the following resources:
+Notes:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `NEXT_PUBLIC_SITE_URL` falls back to `http://localhost:3000` if it is missing.
+- `NEXT_PUBLIC_GA_ID` is optional. Leave it blank to skip loading Google Analytics.
+- The Spotify widget stays in a safe placeholder state until all three Spotify env vars are set.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+To obtain `SPOTIFY_REFRESH_TOKEN`, use Spotify's authorization-code flow:
 
-## Deploy on Vercel
+1. Send the user through Spotify authorization for your app.
+2. Exchange the returned authorization code for an access token and refresh token.
+3. Paste the refresh token into `SPOTIFY_REFRESH_TOKEN` in `frontend/.env.local`.
+4. Set the same variables in your production deployment environment before release.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Launch Content Checklist
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Real personal inputs are required before public launch:
+
+- `frontend/content/portfolio-content.ts`
+  - GitHub and LinkedIn profile URLs
+  - Project links and case-study destinations
+  - Education/certification entries (if available)
+- `frontend/public/bhargava-teja-borra-resume.txt`
+  - Replace with final PDF resume and update `identity.resumeHref`
+
+The app intentionally routes unresolved profile/project links to contact-safe fallbacks to avoid sending visitors to generic placeholders.

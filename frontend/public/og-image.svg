@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-labelledby="title desc">
+  <title id="title">Bhargava Teja Borra Portfolio</title>
+  <desc id="desc">Product-minded full-stack engineer portfolio preview.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0b1118" />
+      <stop offset="55%" stop-color="#101d2a" />
+      <stop offset="100%" stop-color="#0f1724" />
+    </linearGradient>
+    <radialGradient id="glow" cx="24%" cy="22%" r="56%">
+      <stop offset="0%" stop-color="#2dd4bf" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#2dd4bf" stop-opacity="0" />
+    </radialGradient>
+    <radialGradient id="glowB" cx="82%" cy="15%" r="45%">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#60a5fa" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)" />
+  <rect width="1200" height="630" fill="url(#glow)" />
+  <rect width="1200" height="630" fill="url(#glowB)" />
+  <g fill="#e5edf7" font-family="Space Grotesk, Avenir Next, Segoe UI, sans-serif">
+    <text x="96" y="250" font-size="66" font-weight="600" letter-spacing="-1.2">Bhargava Teja Borra</text>
+    <text x="96" y="318" font-size="36" font-weight="500" fill="#a8b8cd">Product-minded Software Engineer</text>
+    <text x="96" y="386" font-size="28" fill="#99a8bd">
+      Recruiter-first systems and interface delivery
+    </text>
+  </g>
+  <rect x="92" y="454" width="400" height="56" rx="28" fill="none" stroke="#2dd4bf" stroke-opacity="0.58" />
+  <text x="122" y="490" fill="#dff9f3" font-family="IBM Plex Mono, Menlo, monospace" font-size="24">
+    recruiter-ready portfolio
+  </text>
+</svg>

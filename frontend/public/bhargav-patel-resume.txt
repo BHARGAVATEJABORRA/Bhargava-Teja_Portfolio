@@ -1,8 +1,0 @@
-Bhargav Patel - Resume Placeholder
-
-This placeholder resume is included for MVP command palette download wiring.
-Replace with the final PDF resume before production launch.
-
-Contact: hello@bhargavpatel.dev
-LinkedIn: https://www.linkedin.com
-GitHub: https://github.com

@@ -3,9 +3,11 @@ import { Chip } from "@/components/ui/chip";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SectionShell } from "@/components/ui/section-shell";
 import { portfolioContent } from "@/content/portfolio-content";
+import { resolveRecruiterSafeLink } from "@/lib/profile-links";
 
 export function FlagshipSection() {
   const project = portfolioContent.flagship;
+  const repositoryLink = resolveRecruiterSafeLink(project.links.repository);
 
   return (
     <SectionShell id="flagship" labelledBy="flagship-title">
@@ -58,12 +60,12 @@ export function FlagshipSection() {
                 Request case study
               </TrackedLink>
               <a
-                href={project.links.repository}
-                target="_blank"
-                rel="noreferrer"
+                href={repositoryLink.href}
+                target={repositoryLink.openInNewTab ? "_blank" : undefined}
+                rel={repositoryLink.openInNewTab ? "noopener noreferrer" : undefined}
                 className="rounded-full border border-[var(--color-border)] px-4 py-2 text-sm font-semibold text-[var(--color-ink)]"
               >
-                View repository
+                {repositoryLink.isConfigured ? "View repository" : "Repository available on request"}
               </a>
             </div>
           </div>

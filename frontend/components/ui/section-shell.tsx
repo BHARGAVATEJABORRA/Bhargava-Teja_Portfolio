@@ -13,8 +13,8 @@ interface SectionShellProps {
 
 export function SectionShell({ id, labelledBy, children, className = "", animateOnView = true }: SectionShellProps) {
   return (
-    <section id={id} aria-labelledby={labelledBy} className={`py-16 sm:py-20 ${className}`}>
-      <Container>{animateOnView ? <SectionReveal>{children}</SectionReveal> : children}</Container>
+    <section id={id} aria-labelledby={labelledBy} className={`scroll-mt-28 flex min-h-svh items-center py-20 sm:py-24 ${className}`}>
+      <Container className="w-full">{animateOnView ? <SectionReveal>{children}</SectionReveal> : children}</Container>
     </section>
   );
 }

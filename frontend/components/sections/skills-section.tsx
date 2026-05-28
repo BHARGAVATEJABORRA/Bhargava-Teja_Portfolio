@@ -1,131 +1,106 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import type { CSSProperties, ComponentType } from "react";
+import { FaAws, FaJava, FaMicrosoft } from "react-icons/fa6";
+import { LuBrainCircuit, LuCode, LuDatabase, LuGlobe, LuNetwork } from "react-icons/lu";
 import {
-  SiExpress,
-  SiFastify,
+  SiCircleci,
+  SiDocker,
+  SiGithubactions,
+  SiGnubash,
+  SiJavascript,
+  SiJenkins,
+  SiKubernetes,
+  SiMongodb,
   SiNextdotjs,
   SiNodedotjs,
-  SiPostgresql,
+  SiOpenai,
+  SiPython,
   SiReact,
-  SiRedis,
   SiTailwindcss,
+  SiTerraform,
   SiTypescript,
 } from "react-icons/si";
-import { LuFlag, LuGauge, LuRadar, LuShieldCheck, LuWorkflow } from "react-icons/lu";
 
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SectionShell } from "@/components/ui/section-shell";
 import { portfolioContent } from "@/content/portfolio-content";
 
-const skillIconMap = {
-  nextjs: SiNextdotjs,
-  react: SiReact,
-  typescript: SiTypescript,
-  tailwindcss: SiTailwindcss,
-  accessibility: LuShieldCheck,
-  performance: LuGauge,
-  nodejs: SiNodedotjs,
-  express: SiExpress,
-  fastify: SiFastify,
-  rest: LuWorkflow,
-  schema: LuShieldCheck,
-  shield: LuShieldCheck,
-  postgresql: SiPostgresql,
-  redis: SiRedis,
-  observability: LuRadar,
-  cicd: LuWorkflow,
-  flag: LuFlag,
+type SkillIconComponent = ComponentType<{ size?: number; className?: string; style?: CSSProperties; "aria-hidden"?: boolean }>;
+
+const skillIconMap: Record<string, SkillIconComponent> = {
+  SiAmazonaws: FaAws,
+  SiMicrosoftazure: FaMicrosoft,
+  SiDocker,
+  SiKubernetes,
+  SiTerraform,
+  SiGithubactions,
+  SiJenkins,
+  SiCircleci,
+  SiPython,
+  SiJava: FaJava,
+  SiJavascript,
+  SiTypescript,
+  LuDatabase,
+  SiGnubash,
+  SiNodedotjs,
+  SiMongodb,
+  LuGlobe,
+  LuNetwork,
+  SiReact,
+  SiNextdotjs,
+  SiTailwindcss,
+  SiOpenai,
+  LuBrainCircuit,
 };
 
 export function SkillsSection() {
-  const filters = useMemo(() => ["All", ...portfolioContent.skills.map((group) => group.category)], []);
-  const [activeFilter, setActiveFilter] = useState<string>("All");
-
-  const skills = useMemo(
-    () =>
-      portfolioContent.skills.flatMap((group) =>
-        group.skills.map((skill) => ({
-          ...skill,
-          category: group.category,
-        })),
-      ),
-    [],
-  );
-
-  const filteredSkills = useMemo(
-    () => (activeFilter === "All" ? skills : skills.filter((skill) => skill.category === activeFilter)),
-    [activeFilter, skills],
-  );
-
   return (
-    <SectionShell id="skills" labelledBy="skills-title" className="bg-[var(--color-surface)]">
+    <SectionShell id="skills" labelledBy="skills-title">
       <div className="space-y-8">
         <SectionHeading
           id="skills-title"
           eyebrow="Skills"
-          title="Modern stack, production habits"
-          description="Filter by category, then scan logo-forward strengths. Color is revealed on interaction to keep the default view calm and readable."
+          title="Logo-forward stack by domain"
+          description="Grouped by engineering domain. Icons stay restrained in grayscale and reveal brand color with a soft glow on interaction."
         />
 
-        <div className="flex flex-wrap gap-2" role="toolbar" aria-label="Skill category filters">
-          {filters.map((filter) => {
-            const isActive = activeFilter === filter;
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          {portfolioContent.skills.map((group) => (
+            <article key={group.category} className="surface-panel rounded-3xl p-5 sm:p-6">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">{group.category}</p>
+              <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
+                {group.skills.map((skill) => {
+                  const IconComponent = skillIconMap[skill.iconKey] ?? LuCode;
+                  return (
+                    <li key={`${group.category}-${skill.name}`}>
+                      <div
+                        className="skill-card glass-surface relative flex cursor-default flex-col items-center gap-1.5 overflow-hidden rounded-[1.6rem] p-2.5"
+                        style={{ "--skill-glow": skill.brandColor } as CSSProperties}
+                      >
+                        <div
+                          className="skill-bg-glow pointer-events-none absolute inset-0 rounded-[1.6rem]"
+                          aria-hidden
+                          style={{
+                            background: `radial-gradient(circle at 50% 0%, ${skill.brandColor}22 0%, transparent 65%)`,
+                          }}
+                        />
 
-            return (
-              <button
-                key={filter}
-                type="button"
-                aria-pressed={isActive}
-                onClick={() => {
-                  setActiveFilter(filter);
-                }}
-                className={`rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "border-[var(--color-accent)] bg-[var(--color-card)] text-[var(--color-ink)]"
-                    : "border-[var(--color-border)] text-[var(--color-muted-ink)] hover:bg-[var(--color-card)]"
-                }`}
-              >
-                {filter}
-              </button>
-            );
-          })}
+                        <div className="relative z-10 flex h-8 w-8 items-center justify-center">
+                          <IconComponent size={24} className="skill-icon" style={{ color: skill.brandColor }} aria-hidden />
+                        </div>
+
+                        <p className="skill-name relative z-10 text-center text-[10px] font-semibold leading-tight text-[var(--color-muted-ink)] transition-colors duration-300">
+                          {skill.name}
+                        </p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </article>
+          ))}
         </div>
-
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-live="polite">
-          {filteredSkills.map((skill) => {
-            const Icon = skillIconMap[skill.iconKey as keyof typeof skillIconMap] ?? LuShieldCheck;
-
-            return (
-              <li key={`${skill.category}-${skill.name}`}>
-                <article className="group relative overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-4">
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-200 group-hover:opacity-100"
-                    style={{
-                      background: `radial-gradient(circle at 50% 0%, ${skill.brandColor}22 0%, transparent 62%)`,
-                    }}
-                  />
-                  <div className="relative flex items-center gap-3">
-                    <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)]">
-                      <Icon
-                        aria-hidden
-                        className="h-6 w-6 grayscale opacity-80 transition duration-200 group-hover:grayscale-0 group-hover:opacity-100"
-                        style={{
-                          color: skill.brandColor,
-                        }}
-                      />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="truncate text-base font-semibold text-[var(--color-ink)]">{skill.name}</p>
-                      <p className="truncate text-xs uppercase tracking-[0.14em] text-[var(--color-muted-ink)]">{skill.category}</p>
-                    </div>
-                  </div>
-                </article>
-              </li>
-            );
-          })}
-        </ul>
       </div>
     </SectionShell>
   );

@@ -3,8 +3,9 @@
 import { Command } from "cmdk";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { portfolioContent } from "@/content/portfolio-content";
 import { trackEvent } from "@/lib/analytics";
+import { getResolvedSocialLink, getResumeHref } from "@/lib/profile-links";
+import { contentAvailability } from "@/lib/site";
 
 interface PaletteCommand {
   id: string;
@@ -14,12 +15,11 @@ interface PaletteCommand {
   run: () => void;
 }
 
-const resumeAsset = "/bhargav-patel-resume.txt";
-
 function scrollToSection(id: string) {
   const section = document.getElementById(id);
 
   if (!section) {
+    window.location.assign(`/#${id}`);
     return;
   }
 
@@ -36,12 +36,9 @@ function scrollToSection(id: string) {
 export function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
 
-  const githubUrl =
-    portfolioContent.identity.socialLinks.find((link) => link.label.toLowerCase() === "github")?.href ??
-    "https://github.com";
-  const linkedInUrl =
-    portfolioContent.identity.socialLinks.find((link) => link.label.toLowerCase() === "linkedin")?.href ??
-    "https://www.linkedin.com";
+  const githubLink = getResolvedSocialLink("github");
+  const linkedInLink = getResolvedSocialLink("linkedin");
+  const resumeAsset = getResumeHref();
 
   const commands = useMemo<PaletteCommand[]>(
     () => [
@@ -62,13 +59,17 @@ export function CommandPalette() {
         keywords: "projects work portfolio",
         run: () => scrollToSection("projects"),
       },
-      {
-        id: "jump-articles",
-        group: "Navigate",
-        label: "Go to Articles",
-        keywords: "articles blogs writing",
-        run: () => scrollToSection("articles"),
-      },
+      ...(contentAvailability.hasRealArticles
+        ? [
+            {
+              id: "jump-articles",
+              group: "Navigate" as const,
+              label: "Go to Articles",
+              keywords: "articles blogs writing",
+              run: () => scrollToSection("articles"),
+            },
+          ]
+        : []),
       {
         id: "jump-contact",
         group: "Navigate",
@@ -82,7 +83,12 @@ export function CommandPalette() {
         label: "Open GitHub",
         keywords: "github code repo",
         run: () => {
-          window.open(githubUrl, "_blank", "noopener,noreferrer");
+          if (!githubLink.isConfigured) {
+            scrollToSection("contact");
+            return;
+          }
+
+          window.open(githubLink.href, "_blank", "noopener,noreferrer");
         },
       },
       {
@@ -91,7 +97,12 @@ export function CommandPalette() {
         label: "Open LinkedIn",
         keywords: "linkedin profile",
         run: () => {
-          window.open(linkedInUrl, "_blank", "noopener,noreferrer");
+          if (!linkedInLink.isConfigured) {
+            scrollToSection("contact");
+            return;
+          }
+
+          window.open(linkedInLink.href, "_blank", "noopener,noreferrer");
         },
       },
       {
@@ -102,15 +113,16 @@ export function CommandPalette() {
         run: () => {
           const anchor = document.createElement("a");
           anchor.href = resumeAsset;
-          anchor.download = "bhargav-patel-resume.txt";
+          anchor.download = resumeAsset.split("/").pop() ?? "resume";
           anchor.rel = "noopener";
           document.body.appendChild(anchor);
           anchor.click();
           anchor.remove();
+          trackEvent("resume_download", { source: "command_palette" });
         },
       },
     ],
-    [githubUrl, linkedInUrl],
+    [githubLink.href, githubLink.isConfigured, linkedInLink.href, linkedInLink.isConfigured, resumeAsset],
   );
 
   const groupedCommands = useMemo(() => {
@@ -212,7 +224,7 @@ export function CommandPalette() {
                       key={command.id}
                       value={`${command.label} ${command.keywords}`}
                       onSelect={() => execute(command)}
-                      className="cursor-pointer rounded-lg px-3 py-2 text-sm text-[var(--color-ink)] data-[selected=true]:bg-[var(--color-surface)]"
+                      className="cursor-pointer rounded-full px-3 py-2 text-sm text-[var(--color-ink)] data-[selected=true]:bg-[var(--color-surface)]"
                     >
                       {command.label}
                     </Command.Item>

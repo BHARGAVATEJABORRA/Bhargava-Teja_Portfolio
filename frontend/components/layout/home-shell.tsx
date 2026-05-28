@@ -1,73 +1,47 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
+import { CommandPalette } from "@/components/layout/command-palette";
+import { SiteHeader } from "@/components/layout/site-header";
+import { EntranceCurtain } from "@/components/motion/entrance-curtain";
 import { AboutSection } from "@/components/sections/about-section";
-import { ArticlesSection } from "@/components/sections/articles-section";
-import { ContactSection } from "@/components/sections/contact-section";
-import { ControlCenterSection } from "@/components/sections/control-center-section";
+import { BlogsSection } from "@/components/sections/blogs-section";
+import { ContactFooterSection } from "@/components/sections/contact-footer-section";
 import { ExperienceSection } from "@/components/sections/experience-section";
-import { FlagshipSection } from "@/components/sections/flagship-section";
 import { HeroSection } from "@/components/sections/hero-section";
 import { ProjectsSection } from "@/components/sections/projects-section";
-import { ProofStripSection } from "@/components/sections/proof-strip-section";
 import { SkillsSection } from "@/components/sections/skills-section";
-import { EntranceCurtain } from "@/components/motion/entrance-curtain";
-
-const ENTRANCE_STORAGE_KEY = "portfolio:entrance_seen_v1";
 
 export function HomeShell() {
-  const [isCurtainOpen, setIsCurtainOpen] = useState(false);
-  const [heroRevealKey, setHeroRevealKey] = useState(0);
-
-  useEffect(() => {
-    const frame = window.requestAnimationFrame(() => {
-      try {
-        const hasSeenEntrance = window.localStorage.getItem(ENTRANCE_STORAGE_KEY) === "1";
-
-        if (hasSeenEntrance) {
-          setHeroRevealKey(1);
-          return;
-        }
-
-        setIsCurtainOpen(true);
-      } catch {
-        setHeroRevealKey(1);
-      }
-    });
-
-    return () => {
-      window.cancelAnimationFrame(frame);
-    };
-  }, []);
-
-  const handleCurtainComplete = useCallback(() => {
-    setIsCurtainOpen(false);
-
-    try {
-      window.localStorage.setItem(ENTRANCE_STORAGE_KEY, "1");
-    } catch {
-      // Non-blocking fallback when storage is unavailable.
-    }
-
-    setHeroRevealKey((current) => current + 1);
+  const [showContent, setShowContent] = useState(false);
+  const handleEntranceDone = useCallback(() => {
+    setShowContent(true);
   }, []);
 
   return (
     <>
-      <main id="main-content">
-        <HeroSection revealKey={heroRevealKey} />
-        <ProofStripSection />
-        <AboutSection />
-        <ControlCenterSection />
-        <FlagshipSection />
-        <ProjectsSection />
-        <ExperienceSection />
-        <SkillsSection />
-        <ArticlesSection />
-        <ContactSection />
-      </main>
-      <EntranceCurtain isOpen={isCurtainOpen} onComplete={handleCurtainComplete} />
+      <EntranceCurtain onDone={handleEntranceDone} />
+
+      {showContent ? (
+        <>
+          <SiteHeader />
+
+          <main id="main-content">
+            {/* Hero section owns the lower hero controls. */}
+            <HeroSection />
+            <AboutSection />
+            <SkillsSection />
+            <ExperienceSection />
+            <ProjectsSection />
+            <BlogsSection />
+            <ContactFooterSection />
+          </main>
+
+          {/* Command palette — keyboard only (Cmd/Ctrl+K) */}
+          <CommandPalette />
+        </>
+      ) : null}
     </>
   );
 }

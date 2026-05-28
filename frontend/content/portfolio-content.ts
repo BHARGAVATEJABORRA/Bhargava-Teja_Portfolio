@@ -21,20 +21,41 @@ export interface FlagshipProject {
   };
 }
 
+export interface ProjectMetric {
+  label: string;
+  value: string;
+}
+
 export interface ProjectSummary {
   title: string;
   timeframe: string;
   role: string;
+  category: string;
+  problem: string;
+  approach: string;
   stack: string[];
+  techStack: string[];
   outcome: string;
   href: string;
+  linkState: "configured" | "on-request";
+  liveUrl?: string;
+  repoUrl?: string;
+  metrics?: ProjectMetric[];
 }
 
 export interface ExperienceItem {
-  company: string;
+  organization: string;
   title: string;
   period: string;
   highlights: string[];
+  location?: string;
+  href?: string;
+}
+
+export interface ExperienceCollection {
+  work: ExperienceItem[];
+  education: ExperienceItem[];
+  certifications: ExperienceItem[];
 }
 
 export interface SkillCategory {
@@ -50,11 +71,17 @@ export interface SkillItem {
 }
 
 export interface ArticleSummary {
+  slug: string;
   title: string;
-  premise: string;
-  takeaway: string;
+  excerpt: string;
+  publishedAt: string;
   readTime: string;
   href: string;
+  isExternal?: boolean;
+  isReal?: boolean;
+  tags?: string[];
+  premise: string;
+  takeaway: string;
 }
 
 export interface ControlCenterModule {
@@ -65,253 +92,374 @@ export interface ControlCenterModule {
 
 export const portfolioContent = {
   identity: {
-    name: "Bhargav Patel",
-    role: "Product-minded Full-Stack Engineer",
-    location: "Austin, TX",
+    name: "Bhargava Teja Borra",
+    publicAlias: "Bhargava Teja Borra",
+    legalName: "Bhargava Teja Borra",
+    role: "Software Engineer",
+    location: "Addison (Dallas), TX, USA",
+    currentlyAt: "Capital One",
+    avatarUrl: "",
+    bio:
+      "Architect and engineer scalable AWS infrastructure and microservice platforms with 3+ years of production delivery across enterprise systems.\n\nI focus on reliability, automation, and measurable outcomes, including reducing compute costs by 35% and improving API and deployment performance by 40%.",
+    resumeHref: "/bhargava-teja-borra-resume.txt",
+    phone: "123-456-7890",
+    phoneVisibleOnPage: false,
     intro:
-      "I build recruiter-friendly products that balance shipping velocity, measurable impact, and maintainable architecture.",
-    contactEmail: "hello@bhargavpatel.dev",
+      "Architect and engineer scalable AWS infrastructure with measurable reliability, performance, and cost outcomes.",
+    contactEmail: "bhargavateja.borra@gmail.com",
     socialLinks: [
       {
         label: "GitHub",
-        href: "https://github.com",
+        href: "https://github.com/BHARGAVATEJABORRA",
       },
       {
         label: "LinkedIn",
-        href: "https://www.linkedin.com",
+        href: "https://www.linkedin.com/in/bhargavatejaborra/",
+      },
+      {
+        label: "Credly",
+        href: "https://www.credly.com/users/borra-bhargava-teja.00b61798/badges#credly",
+      },
+      {
+        label: "Instagram",
+        href: "https://www.instagram.com/bhargav_bh__?igsh=Y3NmZ2pwMDdwYXU%3D&utm_source=qr",
+      },
+      {
+        label: "Snapchat",
+        href: "https://snapchat.com/t/hv7Trqdu",
       },
     ],
+    controlCenter: {
+      availability: "open-to-opportunities" as const,
+      availabilityNote: "Open to senior IC and tech-lead opportunities in cloud, platform, and backend engineering",
+      location: "Dallas, TX",
+      timezone: "Central Time (CT)",
+      coffeeCount: 847,
+      githubUsername: "BHARGAVATEJABORRA",
+      weatherLocation: "Dallas",
+      weatherTimezone: "America/Chicago",
+    },
   },
   hero: {
-    headline: "I turn ambiguous product ideas into production-ready systems.",
-    supporting:
-      "From architecture decisions to UX polish, I focus on outcomes that recruiters and hiring managers can validate quickly.",
+    headline: "Architecting resilient cloud systems with measurable outcomes.",
     primaryCta: {
-      label: "View flagship project",
-      href: "#flagship",
+      label: "View My Work",
+      href: "#projects",
     },
     secondaryCta: {
-      label: "Contact me",
-      href: "#contact",
+      label: "Download Resume",
+      href: "/bhargava-teja-borra-resume.txt",
     },
-    wowCard: {
-      title: "System Health Radar",
-      subtitle: "One interaction. Three dimensions of impact.",
+    signalPanel: {
+      title: "Professional Summary",
+      subtitle: "Resume-backed outcomes from cloud and platform engineering delivery",
       bullets: [
-        "Performance budget held under 120 KB critical path",
-        "Accessibility passes for keyboard and reduced motion",
-        "Delivery speed improved with typed contracts",
+        "Reduced compute spend by 35% using rightsizing and AWS optimization",
+        "Improved API and deployment performance by 40% with automation",
+        "Delivered resilient AWS systems with reliability-first architecture",
       ],
     },
   },
   proofMetrics: [
     {
-      label: "Delivery Velocity",
-      value: "34% faster",
-      context: "Average feature cycle time reduction over two product releases",
+      label: "Cloud Experience",
+      value: "3+ Years",
+      context: "AWS infrastructure, microservices, CI/CD, and reliability engineering delivery",
     },
     {
-      label: "Core Web Vitals",
-      value: "95+",
-      context: "Measured on high-intent landing surfaces after optimization pass",
+      label: "Cost Optimization",
+      value: "35%",
+      context: "Compute cost reduction through optimization and automation",
     },
     {
-      label: "Conversion Lift",
-      value: "+18%",
-      context: "Recruiter CTA click-through improvement after IA redesign",
+      label: "API + Deploy Speed",
+      value: "40%",
+      context: "Performance gains from refactoring, automation, and better pipelines",
     },
     {
-      label: "Incident Reduction",
-      value: "-42%",
-      context: "Post-launch regressions lowered through explicit contracts and smoke tests",
+      label: "Reliability",
+      value: "99.9%",
+      context: "Uptime delivered on enterprise systems serving millions of users",
     },
   ] as ProofMetric[],
   about: {
     paragraphs: [
-      "I work best at the intersection of product strategy and engineering execution. I translate vague requirements into clear milestones and predictable delivery.",
-      "My focus is sustainable velocity: clean architecture, accessible interfaces, and metrics that make technical decisions legible to non-engineering stakeholders.",
+      "I build cloud-first systems that balance reliability, velocity, and operating cost. My work spans AWS platform engineering, infrastructure as code, and developer workflows that help teams ship with confidence.",
+      "I prefer practical engineering over abstraction-heavy complexity: clear ownership, measurable outcomes, and systems that are straightforward for the next engineer to operate and evolve.",
     ],
     principles: [
-      "Build for clarity first, scale second",
-      "Ship measurable improvements over flashy complexity",
-      "Treat accessibility and performance as core product quality",
+      "Automate repeatable operations to accelerate delivery and reduce risk",
+      "Design for resilience, observability, and recovery from day one",
+      "Use measurable outcomes to guide architecture and implementation choices",
     ],
   },
   controlCenter: {
     modules: [
       {
         title: "Availability",
-        detail: "Open to senior/full-stack roles",
-        value: "Interviewing for May 2026 starts",
+        detail: "Open to software engineering opportunities",
+        value: "Cloud, platform, backend, and full-stack delivery teams",
       },
       {
-        title: "Preferred Scope",
-        detail: "0→1 products, platform hardening, and growth surfaces",
-        value: "Hands-on IC with architecture ownership",
+        title: "Focus",
+        detail: "Cloud infrastructure, performance, and reliability",
+        value: "Hands-on IC work with strong ownership",
       },
       {
         title: "Response SLA",
-        detail: "Recruiter and hiring manager responses",
-        value: "Within 24 hours (weekdays)",
+        detail: "Recruiter and hiring manager outreach",
+        value: "Typically within one business day",
       },
     ] as ControlCenterModule[],
     aiCompanion: {
-      title: "AI Companion (Phase 2 candidate)",
-      description:
-        "The interactive assistant is intentionally limited in MVP. It is stubbed to avoid scope creep before recruiter path validation.",
+      title: "AI Companion",
+      description: "AI companion will be enabled in Phase 2.",
     },
   },
   flagship: {
-    name: "SignalOps Command Platform",
+    name: "Capital One Cloud Migration and Reliability Platform",
     summary:
-      "Unified an analytics dashboard, alerting orchestration, and release controls into one operations surface for customer success teams.",
-    stack: [
-      "Next.js",
-      "TypeScript",
-      "Node.js",
-      "PostgreSQL",
-      "Redis",
-      "OpenTelemetry",
-    ],
+      "Led migration and modernization of financial services workloads onto AWS serverless microservices with reliability, security, and delivery speed as first-class goals.",
+    stack: ["AWS", "Terraform", "Lambda", "API Gateway", "GitHub Actions", "IAM", "VPC"],
     impact: [
-      "Reduced alert triage time from 17 minutes to 6 minutes",
-      "Improved release confidence with staged guardrails and audit trails",
-      "Cut on-call escalations by centralizing runbook context",
+      "Reduced compute spend by 35% through rightsizing and platform automation",
+      "Improved API and deployment performance by 40% via CI/CD modernization",
+      "Strengthened resilience with multi-region design and disaster recovery planning",
     ],
     architecture: [
       {
-        title: "Typed service boundaries",
+        title: "Automation-first infrastructure",
         description:
-          "Established explicit contracts across API handlers, service modules, and UI adapters to prevent integration drift.",
+          "Implemented Terraform-driven infrastructure patterns to keep provisioning repeatable, auditable, and environment-consistent.",
       },
       {
-        title: "Event-first observability",
+        title: "Recovery and security posture",
         description:
-          "Shipped a lightweight event model that powered ops dashboards and retrospective analysis without heavy data duplication.",
+          "Applied VPC segmentation, IAM controls, and region-aware recovery patterns to reduce failure blast radius.",
       },
       {
-        title: "Progressive UX delivery",
+        title: "Delivery acceleration",
         description:
-          "Delivered high-value workflows first, then layered advanced controls behind validated usage signals.",
+          "Established GitHub Actions pipelines, quality gates, and deployment automation to reduce release cycle friction.",
       },
     ],
     links: {
       caseStudy: "#contact",
-      repository: "https://github.com",
+      repository: "#contact",
     },
   } as FlagshipProject,
   projects: [
     {
-      title: "Hiring Funnel Analytics",
-      timeframe: "2025",
-      role: "Lead Engineer",
-      stack: ["React", "TypeScript", "Supabase", "Tailwind"],
-      outcome:
-        "Improved recruiter visibility with stage drop-off diagnostics and automated weekly summaries.",
-      href: "https://github.com",
+      title: "Capital One Cloud Migration and Reliability Platform",
+      timeframe: "Jan 2023 - Present",
+      role: "Senior Software Engineer",
+      category: "Cloud Infrastructure",
+      problem: "Legacy services were expensive to operate and slow to deploy, with reliability risk under transaction-heavy load.",
+      approach: "Migrated services to AWS serverless microservices, codified infrastructure with Terraform, and standardized CI/CD with GitHub Actions.",
+      stack: ["AWS", "Lambda", "API Gateway", "Terraform", "GitHub Actions", "DynamoDB", "CloudWatch"],
+      techStack: ["AWS", "Lambda", "Terraform", "GitHub Actions", "CloudWatch"],
+      outcome: "Reduced compute costs and improved API and delivery throughput while increasing platform resilience.",
+      href: "#contact",
+      linkState: "on-request",
+      metrics: [
+        { value: "35%", label: "Cost Reduction" },
+        { value: "40%", label: "API/Deploy Gain" },
+      ],
     },
     {
-      title: "API Reliability Toolkit",
-      timeframe: "2024",
-      role: "Full-Stack Engineer",
-      stack: ["Node.js", "Fastify", "PostgreSQL", "Docker"],
-      outcome:
-        "Introduced predictable contracts and failure-mode testing across critical integration routes.",
-      href: "https://github.com",
+      title: "Accenture Data and Cloud Automation Platform",
+      timeframe: "Nov 2020 - Dec 2022",
+      role: "Software Engineer",
+      category: "Data Engineering",
+      problem: "Manual data-processing pipelines were slow, error-prone, and difficult to scale across enterprise environments.",
+      approach: "Built Python ETL workflows with AWS Step Functions, containerized services on Docker/Kubernetes, and standardized Terraform IaC.",
+      stack: ["Python", "AWS Step Functions", "Docker", "Kubernetes", "Terraform", "S3", "CloudWatch"],
+      techStack: ["Python", "AWS Step Functions", "Docker", "Kubernetes", "Terraform"],
+      outcome: "Improved data-processing throughput and reliability while reducing operational overhead through automation.",
+      href: "#contact",
+      linkState: "on-request",
+      metrics: [
+        { value: "40%", label: "Processing Gain" },
+        { value: "35%", label: "Cost Reduction" },
+      ],
     },
     {
-      title: "Portfolio CMS Prototype",
-      timeframe: "2024",
-      role: "Product Engineer",
-      stack: ["Next.js", "MDX", "Vercel"],
-      outcome:
-        "Built an authoring flow for case studies with zero-regression publish previews.",
-      href: "https://github.com",
+      title: "Transaction Intelligence and Fraud Signal Pipeline",
+      timeframe: "On request",
+      role: "Software Engineer",
+      category: "AI/ML",
+      problem: "Rule-based fraud and anomaly checks did not scale with transaction growth and evolving behavior patterns.",
+      approach: "Designed ML-assisted feature pipelines and event-driven scoring services to improve detection quality under high throughput.",
+      stack: ["Python", "AWS", "Machine Learning", "Microservices", "Event-Driven Architecture"],
+      techStack: ["Python", "AWS", "ML", "Microservices", "Event-Driven"],
+      outcome: "Delivered scalable transaction intelligence workflows used by product and risk teams.",
+      href: "#contact",
+      linkState: "on-request",
+      metrics: [
+        { value: "On request", label: "Case Study" },
+        { value: "On request", label: "Deployment Scope" },
+      ],
     },
   ] as ProjectSummary[],
-  experience: [
-    {
-      company: "Northstar Labs",
-      title: "Senior Full-Stack Engineer",
-      period: "2023 - Present",
-      highlights: [
-        "Owned recruiter-facing product surfaces and platform reliability improvements",
-        "Led architecture reviews and delivery sequencing for cross-functional launches",
-        "Mentored engineers on explicit contracts, error handling, and accessibility",
-      ],
-    },
-    {
-      company: "ProductFoundry",
-      title: "Software Engineer",
-      period: "2020 - 2023",
-      highlights: [
-        "Built growth and onboarding funnels with measurable conversion impact",
-        "Implemented observability-first API patterns for faster issue diagnosis",
-        "Collaborated with design on inclusive, responsive component systems",
-      ],
-    },
-  ] as ExperienceItem[],
+  experience: {
+    work: [
+      {
+        organization: "Capital One",
+        title: "Senior Software Engineer",
+        period: "Jan 2023 - Present",
+        location: "Addison, TX",
+        highlights: [
+          "Led migration of core services to AWS serverless microservices and API-driven architecture for better scale and reliability.",
+          "Engineered multi-region AWS deployment patterns with Terraform and standardized environment provisioning.",
+          "Implemented CI/CD with GitHub Actions, improving deployment speed and quality checks across release pipelines.",
+          "Reduced compute costs by 35% through rightsizing, workload optimization, and automation controls.",
+          "Improved API and delivery performance by 40% with observability-led refactors and pipeline improvements.",
+        ],
+      },
+      {
+        organization: "Accenture",
+        title: "Software Engineer",
+        period: "Nov 2020 - Dec 2022",
+        location: "Hyderabad, India",
+        highlights: [
+          "Built ETL pipelines using Python and AWS Step Functions to orchestrate reliable data-processing workflows.",
+          "Containerized backend services with Docker and Kubernetes to improve portability and runtime consistency.",
+          "Applied Terraform-based IaC to reduce environment drift and accelerate provisioning across teams.",
+          "Improved data-processing and platform efficiency by 40% through monitoring, tuning, and automation.",
+          "Delivered modernization initiatives that lowered operational costs by 35% and reduced manual intervention.",
+        ],
+      },
+    ],
+    education: [
+      {
+        organization: "University of Missouri - Kansas City",
+        title: "Master of Science in Computer Science",
+        period: "2019 - 2021",
+        location: "Kansas City, MO",
+        highlights: ["GPA: 3.83 · Graduate coursework in distributed systems, cloud computing, and software engineering."],
+      },
+    ],
+    certifications: [
+      {
+        organization: "Amazon Web Services",
+        title: "AWS Solutions Architect - Associate",
+        period: "Active",
+        highlights: ["Validated cloud architecture and AWS solution design competencies."],
+      },
+      {
+        organization: "Microsoft",
+        title: "Azure Developer Associate (AZ-204)",
+        period: "Active",
+        highlights: ["Certification focused on Azure application development and deployment."],
+      },
+      {
+        organization: "Microsoft",
+        title: "Azure Fundamentals (AZ-900)",
+        period: "Active",
+        highlights: ["Foundational cloud concepts and Azure service knowledge."],
+      },
+      {
+        organization: "Microsoft",
+        title: "Azure AI Fundamentals (AI-900)",
+        period: "Active",
+        highlights: ["Foundational AI and machine learning services on Azure."],
+      },
+      {
+        organization: "Oracle",
+        title: "Oracle Cloud Infrastructure Foundations",
+        period: "Active",
+        highlights: ["Foundational credential for OCI platform concepts and services."],
+      },
+      {
+        organization: "AWS + AICTE",
+        title: "AWS Cloud Virtual Internship",
+        period: "2020",
+        highlights: ["Applied AWS implementation learning in an internship track."],
+      },
+    ],
+  } as ExperienceCollection,
   skills: [
+    {
+      category: "Cloud/DevOps",
+      skills: [
+        { name: "AWS", iconKey: "SiAmazonaws", brandColor: "#FF9900" },
+        { name: "Azure", iconKey: "SiMicrosoftazure", brandColor: "#0078D4" },
+        { name: "Docker", iconKey: "SiDocker", brandColor: "#2496ED" },
+        { name: "Kubernetes", iconKey: "SiKubernetes", brandColor: "#326CE5" },
+        { name: "Terraform", iconKey: "SiTerraform", brandColor: "#7B42BC" },
+        { name: "GitHub Actions", iconKey: "SiGithubactions", brandColor: "#2088FF" },
+        { name: "Jenkins", iconKey: "SiJenkins", brandColor: "#D33833" },
+        { name: "CircleCI", iconKey: "SiCircleci", brandColor: "#343434" },
+      ],
+    },
+    {
+      category: "Programming Languages",
+      skills: [
+        { name: "Python", iconKey: "SiPython", brandColor: "#3776AB" },
+        { name: "Java", iconKey: "SiJava", brandColor: "#007396" },
+        { name: "JavaScript", iconKey: "SiJavascript", brandColor: "#F7DF1E" },
+        { name: "TypeScript", iconKey: "SiTypescript", brandColor: "#3178C6" },
+        { name: "SQL", iconKey: "LuDatabase", brandColor: "#4479A1" },
+        { name: "Bash", iconKey: "SiGnubash", brandColor: "#4EAA25" },
+      ],
+    },
+    {
+      category: "Backend/Infrastructure",
+      skills: [
+        { name: "Node.js", iconKey: "SiNodedotjs", brandColor: "#339933" },
+        { name: "MongoDB", iconKey: "SiMongodb", brandColor: "#47A248" },
+        { name: "CloudFormation", iconKey: "SiAmazonaws", brandColor: "#FF9900" },
+        { name: "API Gateway", iconKey: "LuGlobe", brandColor: "#FF4F00" },
+        { name: "Microservices", iconKey: "LuNetwork", brandColor: "#00B4D8" },
+      ],
+    },
     {
       category: "Frontend",
       skills: [
-        { name: "Next.js", iconKey: "nextjs", brandColor: "var(--color-ink)" },
-        { name: "React", iconKey: "react", brandColor: "#61dafb" },
-        { name: "TypeScript", iconKey: "typescript", brandColor: "#3178c6" },
-        { name: "Tailwind CSS", iconKey: "tailwindcss", brandColor: "#06b6d4" },
-        { name: "Accessibility", iconKey: "accessibility", brandColor: "#16a34a" },
-        { name: "Performance", iconKey: "performance", brandColor: "#f59e0b" },
+        { name: "React", iconKey: "SiReact", brandColor: "#61DAFB" },
+        { name: "Next.js", iconKey: "SiNextdotjs", brandColor: "#000000" },
+        { name: "Tailwind CSS", iconKey: "SiTailwindcss", brandColor: "#06B6D4" },
       ],
     },
     {
-      category: "Backend",
+      category: "AI/ML",
       skills: [
-        { name: "Node.js", iconKey: "nodejs", brandColor: "#83cd29" },
-        { name: "Express", iconKey: "express", brandColor: "#9ca3af" },
-        { name: "Fastify", iconKey: "fastify", brandColor: "#f97316" },
-        { name: "REST APIs", iconKey: "rest", brandColor: "#38bdf8" },
-        { name: "Schema Validation", iconKey: "schema", brandColor: "#a855f7" },
-        { name: "Error Contracts", iconKey: "shield", brandColor: "#f43f5e" },
-      ],
-    },
-    {
-      category: "Data & Platform",
-      skills: [
-        { name: "PostgreSQL", iconKey: "postgresql", brandColor: "#4169e1" },
-        { name: "Redis", iconKey: "redis", brandColor: "#dc382d" },
-        { name: "Observability", iconKey: "observability", brandColor: "#22d3ee" },
-        { name: "CI/CD", iconKey: "cicd", brandColor: "#0ea5e9" },
-        { name: "Feature Flags", iconKey: "flag", brandColor: "#f97316" },
+        { name: "SageMaker", iconKey: "SiAmazonaws", brandColor: "#FF9900" },
+        { name: "ChatGPT / LLM", iconKey: "SiOpenai", brandColor: "#412991" },
+        { name: "Machine Learning", iconKey: "LuBrainCircuit", brandColor: "#7C3AED" },
       ],
     },
   ] as SkillCategory[],
   articles: [
     {
-      title: "Designing API Contracts That Survive Product Change",
+      slug: "resilient-microservices-patterns",
+      title: "Building Resilient Cloud Microservices: Practical Patterns from Production",
+      excerpt:
+        "Lessons from migrating Capital One services to AWS serverless - deployment safety, observability checkpoints, and cost-aware scaling patterns.",
+      publishedAt: "2024-11",
+      readTime: "8 min read",
+      href: "#",
+      isReal: false,
+      tags: ["AWS", "Microservices", "Cloud"],
       premise:
-        "Why explicit response contracts reduce regressions during roadmap churn.",
+        "Lessons from migrating Capital One services to AWS serverless - deployment safety, observability checkpoints, and cost-aware scaling patterns.",
       takeaway:
-        "Treat contracts as product artifacts, not only engineering implementation details.",
+        "Use release gating, service-level telemetry, and cost-aware autoscaling policies together to keep cloud migration reliable and sustainable.",
+    },
+    {
+      slug: "terraform-multi-region",
+      title: "Terraform Multi-Region Deployments Without Drift",
+      excerpt:
+        "How we standardized environment parity across AWS and Azure using Terraform modules and GitHub Actions, reducing configuration drift to near zero.",
+      publishedAt: "2024-09",
       readTime: "7 min read",
-      href: "#contact",
-    },
-    {
-      title: "The 12-Second Recruiter Scan: IA for Technical Portfolios",
+      href: "#",
+      isReal: false,
+      tags: ["Terraform", "IaC", "CI/CD"],
       premise:
-        "How information hierarchy shapes first-impression outcomes for hiring teams.",
+        "How we standardized environment parity across AWS and Azure using Terraform modules and GitHub Actions, reducing configuration drift to near zero.",
       takeaway:
-        "Front-load proof and credibility while preserving depth for technical reviewers.",
-      readTime: "5 min read",
-      href: "#contact",
-    },
-    {
-      title: "Shipping Motion Responsibly in High-Intent Interfaces",
-      premise:
-        "A practical approach for delight without sacrificing clarity or performance.",
-      takeaway:
-        "Constrain animation budget to one intentional moment and honor reduced motion.",
-      readTime: "6 min read",
-      href: "#contact",
+        "Modular IaC with opinionated validation and CI pipelines prevents region drift before it reaches production environments.",
     },
   ] as ArticleSummary[],
 };

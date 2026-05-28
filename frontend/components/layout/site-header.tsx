@@ -1,44 +1,166 @@
 "use client";
 
-import { coreSectionLinks } from "@/lib/site";
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { LuLogIn } from "react-icons/lu";
+
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { portfolioContent } from "@/content/portfolio-content";
+import { trackEvent } from "@/lib/analytics";
+import { scrollToSection } from "@/lib/scroll-to-section";
+import { coreSectionLinks } from "@/lib/site";
+
+function SectionNavigation({
+  activeHref,
+  source,
+  compact = false,
+  liquidEnabled = false,
+}: {
+  activeHref: string | null;
+  source: "sticky_header" | "sticky_header_mobile";
+  compact?: boolean;
+  liquidEnabled?: boolean;
+}) {
+  return (
+    <nav
+      aria-label="Section navigation"
+      data-compact={compact ? "true" : "false"}
+      data-liquid-glass={liquidEnabled ? "on" : "off"}
+      className="index-bar-surface index-pill-nav rounded-full p-1.5"
+    >
+      <span aria-hidden className="index-bar-warp" />
+
+      <ul className="index-pill-list no-scrollbar relative z-[2] flex max-w-full items-center overflow-x-auto">
+        {coreSectionLinks.map((item) => {
+          const isActive = activeHref === item.href;
+
+          return (
+            <li key={`${source}-${item.href}`} className="index-pill-item shrink-0">
+              <Link
+                href={item.href}
+                aria-current={isActive ? "page" : undefined}
+                data-active={isActive ? "true" : "false"}
+                onClick={(event) => {
+                  if (item.href.startsWith("/#")) {
+                    event.preventDefault();
+                    scrollToSection(item.href.replace("/#", ""));
+                  }
+
+                  trackEvent("header_nav_click", { target: item.href, source });
+                }}
+                className="index-pill-link inline-flex items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+              >
+                <span aria-hidden className="index-pill-hover-circle" />
+                <span className="index-pill-label-stack">
+                  <span className="index-pill-label index-pill-label--base">{item.label}</span>
+                  <span aria-hidden className="index-pill-label index-pill-label--hover">
+                    {item.label}
+                  </span>
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
+  );
+}
 
 export function SiteHeader() {
+  const observedSectionIds = useMemo(
+    () => ["hero", ...coreSectionLinks.map((item) => item.href.replace("/#", "")).filter((id) => id.length > 0)],
+    [],
+  );
+  const [activeHref, setActiveHref] = useState<string | null>(null);
+  const [liquidEnabled] = useState(() => {
+    if (typeof window === "undefined") {
+      return false;
+    }
+
+    const ua = window.navigator.userAgent;
+    const isChromium = /(Chrome|Chromium|Edg)\//.test(ua) && !/Firefox\//.test(ua);
+    const hasBackdropFilter = typeof CSS !== "undefined" && CSS.supports("backdrop-filter: blur(1px)");
+
+    return isChromium && hasBackdropFilter;
+  });
+
+  useEffect(() => {
+    const sections = observedSectionIds
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => section !== null);
+
+    if (sections.length === 0) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+
+        if (visible.length > 0) {
+          const currentId = visible[0].target.id;
+          setActiveHref(currentId === "hero" ? null : `/#${currentId}`);
+        }
+      },
+      { rootMargin: "-35% 0px -50% 0px", threshold: [0.15, 0.35, 0.6] },
+    );
+
+    sections.forEach((section) => observer.observe(section));
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [observedSectionIds]);
+
   return (
-    <header className="sticky top-0 z-30 border-b border-[var(--color-border)] bg-[color:var(--color-bg)/0.92] backdrop-blur">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 py-4 sm:px-8">
-        <a href="#hero" className="text-sm font-semibold uppercase tracking-[0.18em] text-[var(--color-ink)]">
-          Bhargav Patel
-        </a>
-        <nav aria-label="Primary" className="hidden items-center gap-6 md:flex">
-          {coreSectionLinks.map((item) => (
-            <a
-              key={item.href}
-              href={item.href}
-              className="text-sm text-[var(--color-muted-ink)] transition-colors hover:text-[var(--color-ink)]"
-            >
-              {item.label}
-            </a>
-          ))}
-        </nav>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <button
-            type="button"
-            onClick={() => {
-              window.dispatchEvent(new Event("portfolio:open-command-palette"));
-            }}
-            className="hidden rounded-full border border-[var(--color-border)] px-3 py-2 text-xs font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface)] md:inline-flex"
+    <header data-site-header="true" className="pointer-events-none fixed inset-x-0 top-0 z-40 px-4 pt-4 sm:px-5">
+      <div className="pointer-events-auto relative z-10 flex items-center gap-3">
+        <Link
+          href="/#hero"
+          onClick={(event) => {
+            event.preventDefault();
+            scrollToSection("hero");
+            trackEvent("header_nav_click", { target: "/#hero", source: "brand_refresh" });
+          }}
+          className="inline-flex h-10 shrink-0 items-center px-1 text-sm font-semibold tracking-tight text-[var(--color-ink)]"
+        >
+          {portfolioContent.identity.name}
+        </Link>
+
+        <div className="ml-auto hidden min-w-0 items-center gap-2 md:flex">
+          <div className="min-w-0">
+            <SectionNavigation activeHref={activeHref} source="sticky_header" liquidEnabled={liquidEnabled} />
+          </div>
+          <Link
+            href="/login"
+            aria-label="Open login page"
+            onClick={() => trackEvent("login_icon_click", { source: "sticky_header", target: "/login" })}
+            data-liquid-glass="on"
+            className="liquid-control inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           >
-            Cmd/Ctrl + K
-          </button>
-          <a
-            href="#contact"
-            className="rounded-full border border-[var(--color-border)] px-4 py-2 text-xs font-semibold text-[var(--color-ink)] transition-colors hover:bg-[var(--color-surface)]"
-          >
-            Let&apos;s Talk
-          </a>
+            <LuLogIn size={17} aria-hidden />
+          </Link>
+          <ThemeToggle buttonClassName="h-10 w-10 min-h-0 min-w-0" />
         </div>
+
+        <div className="flex shrink-0 items-center gap-2 md:hidden">
+          <Link
+            href="/login"
+            aria-label="Open login page"
+            onClick={() => trackEvent("login_icon_click", { source: "sticky_header_mobile", target: "/login" })}
+            data-liquid-glass="on"
+            className="liquid-control inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          >
+            <LuLogIn size={17} aria-hidden />
+          </Link>
+          <ThemeToggle buttonClassName="h-10 w-10 min-h-0 min-w-0" />
+        </div>
+      </div>
+
+      <div className="pointer-events-auto relative z-10 mt-3 md:hidden">
+        <SectionNavigation activeHref={activeHref} source="sticky_header_mobile" compact liquidEnabled={liquidEnabled} />
       </div>
     </header>
   );

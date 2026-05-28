@@ -1,8 +1,13 @@
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SectionShell } from "@/components/ui/section-shell";
 import { portfolioContent } from "@/content/portfolio-content";
+import { contentAvailability } from "@/lib/site";
 
 export function ArticlesSection() {
+  if (!contentAvailability.hasRealArticles) {
+    return null;
+  }
+
   return (
     <SectionShell id="articles" labelledBy="articles-title">
       <div className="space-y-8">
@@ -13,7 +18,9 @@ export function ArticlesSection() {
           description="Short reads that show how I reason about systems, risk, and execution quality."
         />
         <ul className="grid gap-4 md:grid-cols-3">
-          {portfolioContent.articles.map((article) => (
+          {portfolioContent.articles
+            .filter((article) => article.isReal === true)
+            .map((article) => (
             <li key={article.title} className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5">
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-accent)]">{article.readTime}</p>
               <h3 className="mt-2 text-lg font-semibold text-[var(--color-ink)]">{article.title}</h3>

@@ -16,6 +16,7 @@
 - Personalization systems.
 
 ## Placeholder behavior
-- Contact API logs submissions to server output only.
-- External profile and case-study URLs are placeholders pending final profile links.
-- Site URL in metadata is placeholder and should be replaced before production launch.
+- Contact API includes validation, honeypot detection, and rate-limit scaffolding; provider delivery is still pending.
+- Unresolved external profile/project links are routed to contact-safe fallbacks to avoid generic placeholder destinations.
+- Articles section remains hidden until non-placeholder article URLs are provided.
+- Set `NEXT_PUBLIC_SITE_URL` before production launch for canonical URL fidelity.
