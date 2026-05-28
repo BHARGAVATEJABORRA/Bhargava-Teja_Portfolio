@@ -995,11 +995,7 @@ a {
   background-size: cover;
 }
 
-.adaline-footer-stars,
-.adaline-footer-hills,
-.adaline-footer-dock-reflection,
-.adaline-footer-dock,
-.adaline-footer-meteor {
+.adaline-footer-stars {
   background-repeat: no-repeat;
   background-position: center;
 }
@@ -1023,30 +1019,6 @@ a {
   background-image: url("/adaline-scenes/footer/footer-stars.png");
   background-repeat: repeat;
   background-size: 1180px auto;
-}
-
-.adaline-footer-hills {
-  background-image: url("/adaline-scenes/footer/footer-hills.webp");
-  background-position: center top;
-  background-size: contain;
-}
-
-.adaline-footer-dock-reflection {
-  background-image: url("/adaline-scenes/footer/footer-dock-reflection.webp");
-  background-position: center top;
-  background-size: contain;
-}
-
-.adaline-footer-dock {
-  background-image: url("/adaline-scenes/footer/footer-dock.webp");
-  background-position: center top;
-  background-size: contain;
-}
-
-.adaline-footer-meteor {
-  background-image: url("/adaline-scenes/footer/footer-meteor.jpg");
-  background-position: center;
-  background-size: 100% 100%;
 }
 
 @media (max-width: 767px) {

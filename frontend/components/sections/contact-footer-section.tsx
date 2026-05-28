@@ -59,7 +59,7 @@ export function ContactFooterSection() {
       id="contact"
       aria-labelledby="contact-title"
       className={`relative isolate overflow-hidden scroll-mt-28 text-[var(--color-ink)] transition-colors ${
-        isDarkTheme ? "bg-[#04080d]" : "bg-[#edf3ef]"
+        isDarkTheme ? "bg-[#04080d]" : "bg-[#f1e7d2]"
       }`}
     >
       <AdalineFooterScene />
