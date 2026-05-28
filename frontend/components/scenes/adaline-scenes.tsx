@@ -34,6 +34,13 @@ const footerCloudMask = {
   maskSize: "cover",
 } satisfies CSSProperties;
 
+const footerReflectionMask = {
+  WebkitMaskImage:
+    "linear-gradient(180deg, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.56) 22%, rgba(0, 0, 0, 0.22) 58%, transparent 100%)",
+  maskImage:
+    "linear-gradient(180deg, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.56) 22%, rgba(0, 0, 0, 0.22) 58%, transparent 100%)",
+} satisfies CSSProperties;
+
 const HERO_SEQUENCE_START = 2;
 const HERO_SEQUENCE_END = 281;
 const HERO_SEQUENCE_REVEAL_PROGRESS = 0.84;
@@ -371,37 +378,6 @@ export function AdalineHeroScene({ progress, enableSequence }: AdalineHeroSceneP
   );
 }
 
-// Adaline-style footer: one full-bleed sky that scroll-scrubs through a time-of-day
-// cycle. Theme picks the palette — light = day -> golden dusk, dark = dusk -> deep
-// night with a green aurora glow on the horizon. The "end" sky cross-fades in as the
-// footer scrolls into view, faint stars rise, and the green aurora swells at the base.
-const FOOTER_SKY = {
-  light: {
-    base: "#f1e7d2",
-    start:
-      "radial-gradient(120% 80% at 22% -8%, rgba(255,246,219,0.9) 0%, rgba(255,246,219,0) 46%), linear-gradient(180deg, #a7c6df 0%, #c7d9e2 30%, #e3e0d2 64%, #f4ecda 100%)",
-    end:
-      "radial-gradient(120% 70% at 50% 112%, rgba(255,196,120,0.55) 0%, rgba(255,196,120,0) 56%), linear-gradient(180deg, #5b5a86 0%, #936f8a 32%, #d39a72 66%, #f3c293 100%)",
-    cloud: "linear-gradient(180deg, rgba(255,253,247,0.85) 0%, rgba(255,247,233,0.5) 48%, rgba(255,240,220,0.15) 100%)",
-    starsMax: 0.14,
-    auroraMax: 0,
-    bottomFade:
-      "linear-gradient(180deg, rgba(241,231,210,0) 0%, rgba(241,231,210,0.18) 30%, rgba(241,231,210,0.74) 78%, #f1e7d2 100%)",
-  },
-  dark: {
-    base: "#04080d",
-    start:
-      "radial-gradient(120% 80% at 28% -6%, rgba(120,108,150,0.5) 0%, rgba(120,108,150,0) 44%), linear-gradient(180deg, #2a2950 0%, #4a3b5e 32%, #8a5f5a 66%, #c6885f 100%)",
-    end:
-      "radial-gradient(130% 78% at 50% 116%, rgba(58,226,170,0.45) 0%, rgba(20,118,108,0.16) 30%, rgba(20,118,108,0) 62%), linear-gradient(180deg, #050a14 0%, #061521 42%, #082b34 76%, #0a3f3e 100%)",
-    cloud: "linear-gradient(180deg, rgba(206,210,232,0.4) 0%, rgba(150,158,196,0.22) 50%, rgba(96,110,150,0.08) 100%)",
-    starsMax: 0.62,
-    auroraMax: 1,
-    bottomFade:
-      "linear-gradient(180deg, rgba(4,8,13,0) 0%, rgba(4,8,13,0.3) 26%, rgba(4,8,13,0.86) 78%, #04080d 100%)",
-  },
-} as const;
-
 export function AdalineFooterScene() {
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
@@ -412,68 +388,121 @@ export function AdalineFooterScene() {
     offset: ["start end", "end start"],
   });
 
+  const cloudY = useTransform(scrollYProgress, [0, 1], [48, -56]);
+  const starsY = useTransform(scrollYProgress, [0, 1], [24, -64]);
+  const starsNearY = useTransform(scrollYProgress, [0, 1], [40, -96]);
+  const hillsY = useTransform(scrollYProgress, [0, 1], [18, -12]);
+  const dockY = useTransform(scrollYProgress, [0, 1], [12, -8]);
+  const reflectionY = useTransform(scrollYProgress, [0, 1], [10, -20]);
+  const meteorY = useTransform(scrollYProgress, [0, 1], [0, -34]);
   const isDarkTheme = isHydrated && resolvedTheme === "dark";
-  const sky = isDarkTheme ? FOOTER_SKY.dark : FOOTER_SKY.light;
-
-  // End-of-day sky cross-fades in as the footer rises into view and deepens to full at the base.
-  const skyEndOpacity = useTransform(scrollYProgress, [0, 0.55, 1], [0, 0.78, 1]);
-  const starsOpacity = useTransform(scrollYProgress, [0.15, 1], [0, sky.starsMax]);
-  const auroraOpacity = useTransform(scrollYProgress, [0.32, 1], [0, sky.auroraMax]);
-  const cloudY = useTransform(scrollYProgress, [0, 1], [44, -64]);
-  const starsY = useTransform(scrollYProgress, [0, 1], [28, -78]);
-
-  // Static fallback for reduced motion / pre-hydration: rest near the end-of-day state.
-  const staticEnd = shouldReduceMotion ? 0.82 : undefined;
 
   return (
     <div ref={sceneRef} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      {/* Day / dusk start sky */}
-      <div className="absolute inset-0" style={{ background: sky.start }} />
-
-      {/* Dusk / night end sky, cross-faded by scroll */}
-      <motion.div
-        className="absolute inset-0"
-        style={{ background: sky.end, opacity: staticEnd ?? skyEndOpacity }}
+      <div
+        className={`absolute inset-0 ${
+          isDarkTheme
+            ? "bg-[radial-gradient(circle_at_50%_-8%,rgba(23,73,88,0.34),transparent_24%),linear-gradient(180deg,#071018_0%,#040b10_40%,#020608_100%)]"
+            : "bg-[radial-gradient(circle_at_18%_0%,rgba(255,228,166,0.9),transparent_22%),radial-gradient(circle_at_52%_18%,rgba(255,248,236,0.78),rgba(255,248,236,0.18)_26%,transparent_56%),linear-gradient(180deg,#eef6f3_0%,#dfece4_38%,#d5e4da_68%,#ceded3_100%)]"
+        }`}
       />
 
-      {/* Faint stars rising toward night */}
-      <motion.div
-        style={
-          shouldReduceMotion
-            ? { backgroundSize: "1180px auto", opacity: sky.starsMax * 0.85 }
-            : { y: starsY, backgroundSize: "1180px auto", opacity: starsOpacity }
-        }
-        animate={shouldReduceMotion || !isDarkTheme ? undefined : { filter: ["brightness(0.85)", "brightness(1.15)", "brightness(0.9)"] }}
-        transition={shouldReduceMotion || !isDarkTheme ? undefined : { duration: 16, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-        className="adaline-footer-stars absolute inset-[-14%]"
-      />
-
-      {/* Diagonal wispy cloud bands */}
-      <motion.div
-        style={
-          shouldReduceMotion
-            ? { ...footerCloudMask, background: sky.cloud }
-            : { ...footerCloudMask, background: sky.cloud, y: cloudY }
-        }
-        className={`absolute inset-[-8%] rotate-[-6deg] ${isDarkTheme ? "opacity-55" : "opacity-80"}`}
-      />
-
-      {/* Green aurora horizon glow (dark only) */}
       {isDarkTheme ? (
-        <>
-          <motion.div
-            style={{ opacity: staticEnd ?? auroraOpacity }}
-            className="absolute inset-x-[6%] bottom-[2rem] h-56 rounded-[50%] bg-[radial-gradient(circle,rgba(72,235,180,0.28)_0%,rgba(40,180,150,0.1)_38%,transparent_72%)] blur-[70px]"
-          />
-          <motion.div
-            style={{ opacity: staticEnd ?? auroraOpacity }}
-            className="absolute inset-x-[20%] bottom-[5rem] h-32 rounded-[50%] bg-[radial-gradient(circle,rgba(120,255,212,0.22)_0%,rgba(120,255,212,0.06)_42%,transparent_76%)] blur-[44px]"
-          />
-        </>
+        <motion.div
+          style={shouldReduceMotion ? { backgroundSize: "1180px auto" } : { y: starsY, backgroundSize: "1180px auto" }}
+          animate={shouldReduceMotion ? undefined : { opacity: [0.34, 0.52, 0.38] }}
+          transition={shouldReduceMotion ? undefined : { duration: 18, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
+          className="adaline-footer-stars absolute inset-[-12%] opacity-40"
+        />
       ) : null}
 
-      {/* Bottom fade into the footer content base color */}
-      <div className="absolute inset-x-0 bottom-0 h-[26rem]" style={{ background: sky.bottomFade }} />
+      {isDarkTheme ? (
+        <motion.div
+          style={shouldReduceMotion ? { backgroundSize: "760px auto" } : { y: starsNearY, backgroundSize: "760px auto" }}
+          className="adaline-footer-stars absolute inset-[-18%] opacity-15 blur-[0.8px]"
+        />
+      ) : null}
+
+      <motion.div
+        style={
+          shouldReduceMotion
+            ? {
+                ...footerCloudMask,
+                background: isDarkTheme
+                  ? "radial-gradient(circle at 50% 62%, rgba(36, 214, 171, 0.4) 0%, rgba(13, 84, 100, 0.22) 26%, transparent 58%), linear-gradient(180deg, rgba(5, 16, 24, 0) 0%, rgba(5, 16, 24, 0.12) 18%, rgba(5, 16, 24, 0.78) 100%)"
+                  : "radial-gradient(circle at 18% 8%, rgba(255, 217, 135, 0.78) 0%, rgba(255, 217, 135, 0.22) 18%, transparent 42%), radial-gradient(circle at 50% 26%, rgba(255, 250, 244, 0.88) 0%, rgba(255, 250, 244, 0.2) 24%, transparent 56%), linear-gradient(180deg, rgba(250, 247, 238, 0.66) 0%, rgba(250, 247, 238, 0.14) 24%, rgba(224, 236, 228, 0.2) 58%, rgba(214, 226, 218, 0.48) 100%)",
+              }
+            : {
+                ...footerCloudMask,
+                y: cloudY,
+                background: isDarkTheme
+                  ? "radial-gradient(circle at 50% 62%, rgba(36, 214, 171, 0.4) 0%, rgba(13, 84, 100, 0.22) 26%, transparent 58%), linear-gradient(180deg, rgba(5, 16, 24, 0) 0%, rgba(5, 16, 24, 0.12) 18%, rgba(5, 16, 24, 0.78) 100%)"
+                  : "radial-gradient(circle at 18% 8%, rgba(255, 217, 135, 0.78) 0%, rgba(255, 217, 135, 0.22) 18%, transparent 42%), radial-gradient(circle at 50% 26%, rgba(255, 250, 244, 0.88) 0%, rgba(255, 250, 244, 0.2) 24%, transparent 56%), linear-gradient(180deg, rgba(250, 247, 238, 0.66) 0%, rgba(250, 247, 238, 0.14) 24%, rgba(224, 236, 228, 0.2) 58%, rgba(214, 226, 218, 0.48) 100%)",
+              }
+        }
+        className={`absolute inset-0 ${isDarkTheme ? "opacity-85" : "opacity-95"}`}
+      />
+
+      {isDarkTheme ? (
+        <motion.div
+          style={shouldReduceMotion ? undefined : { y: meteorY }}
+          className="adaline-footer-meteor absolute right-[8%] top-[9%] h-[11rem] w-[0.8rem] rotate-[58deg] opacity-55 mix-blend-screen blur-[0.8px] sm:right-[12%] sm:h-[13rem]"
+        />
+      ) : null}
+
+      <motion.div
+        style={shouldReduceMotion ? undefined : { y: hillsY }}
+        animate={isDarkTheme && !shouldReduceMotion ? { opacity: [0.58, 0.72, 0.6] } : undefined}
+        transition={isDarkTheme && !shouldReduceMotion ? { duration: 14, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" } : undefined}
+        className={`absolute left-1/2 bottom-[12.75rem] h-[clamp(7rem,14vw,12rem)] w-[112%] -translate-x-1/2 sm:bottom-[14.25rem] lg:bottom-[15.75rem] ${
+          isDarkTheme ? "opacity-70" : "opacity-82"
+        }`}
+      >
+        <div className={`adaline-footer-hills absolute inset-0 ${isDarkTheme ? "" : "brightness-[1.42] saturate-[0.78]"}`} />
+      </motion.div>
+
+      {isDarkTheme ? (
+        <>
+          <div className="absolute inset-x-[14%] bottom-[12rem] h-28 rounded-full bg-[radial-gradient(circle,rgba(120,255,212,0.18)_0%,rgba(120,255,212,0.08)_24%,transparent_72%)] blur-[44px] sm:bottom-[16rem] sm:h-36" />
+          <div className="absolute inset-x-[8%] bottom-[14rem] h-40 rounded-full bg-[radial-gradient(circle,rgba(18,115,129,0.24)_0%,rgba(18,115,129,0.08)_36%,transparent_72%)] blur-[68px] sm:bottom-[18rem]" />
+        </>
+      ) : (
+        <>
+          <div className="absolute left-[10%] top-[4.5rem] h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(255,223,150,0.42)_0%,rgba(255,223,150,0.12)_28%,transparent_74%)] blur-[48px]" />
+          <div className="absolute inset-x-[16%] bottom-[12.75rem] h-24 rounded-full bg-[radial-gradient(circle,rgba(255,246,225,0.28)_0%,rgba(255,246,225,0.08)_26%,transparent_74%)] blur-[36px] sm:bottom-[15rem]" />
+        </>
+      )}
+
+      <motion.div
+        style={shouldReduceMotion ? footerReflectionMask : { ...footerReflectionMask, y: reflectionY }}
+        className={`absolute left-1/2 bottom-[5rem] h-[clamp(4rem,8vw,7rem)] w-[118%] -translate-x-1/2 lg:bottom-[5.5rem] ${
+          isDarkTheme ? "opacity-55" : "opacity-42"
+        }`}
+      >
+        <div className={`adaline-footer-dock-reflection absolute inset-0 ${isDarkTheme ? "" : "brightness-[1.38] saturate-[0.72]"}`} />
+      </motion.div>
+
+      <motion.div
+        style={shouldReduceMotion ? undefined : { y: dockY }}
+        className="absolute left-1/2 bottom-[-1.25rem] h-[clamp(8.5rem,15vw,13rem)] w-[118%] -translate-x-1/2 opacity-95"
+      >
+        <div className={`adaline-footer-dock absolute inset-0 ${isDarkTheme ? "" : "brightness-[1.14] saturate-[0.84]"}`} />
+      </motion.div>
+
+      <div
+        className={`absolute inset-x-0 bottom-0 ${
+          isDarkTheme
+            ? "h-[24rem] bg-[linear-gradient(180deg,rgba(3,7,10,0)_0%,rgba(3,7,10,0.3)_24%,rgba(3,7,10,0.86)_78%,#03070a_100%)]"
+            : "h-[22rem] bg-[linear-gradient(180deg,rgba(223,234,228,0)_0%,rgba(223,234,228,0.16)_24%,rgba(214,226,219,0.72)_80%,#d3e0d7_100%)]"
+        }`}
+      />
+      <div
+        className={`absolute inset-0 ${
+          isDarkTheme
+            ? "bg-[linear-gradient(180deg,rgba(6,10,12,0.18)_0%,rgba(6,10,12,0)_24%,rgba(6,10,12,0)_62%,rgba(6,10,12,0.08)_100%)]"
+            : "bg-[linear-gradient(180deg,rgba(255,252,246,0.26)_0%,rgba(255,252,246,0.08)_22%,rgba(255,252,246,0)_56%,rgba(112,134,120,0.08)_100%)]"
+        }`}
+      />
     </div>
   );
 }
