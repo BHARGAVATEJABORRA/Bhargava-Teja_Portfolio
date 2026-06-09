@@ -1959,16 +1959,38 @@ a {
   left: var(--meteor-left);
   width: var(--meteor-width);
   aspect-ratio: 23 / 360;
-  background-image: url("/adaline-scenes/footer/footer-meteor.jpg");
-  background-size: 100% 100%;
-  background-repeat: no-repeat;
+  /* Trail and head live in one element so they can never detach. The strip's
+     bottom end leads the motion (it travels down-right along its own axis), so
+     the gradient is brightest there and fades FULLY to transparent at the tail
+     — no opaque sprite box, no borders. */
+  background-image: linear-gradient(
+    to top,
+    rgba(235, 255, 251, 0.95) 0%,
+    rgba(204, 244, 255, 0.5) 22%,
+    rgba(204, 244, 255, 0.16) 52%,
+    transparent 100%
+  );
+  border-radius: 999px;
   opacity: 0;
   filter: blur(0.2px) drop-shadow(0 0 12px rgba(199, 255, 238, 0.45));
   transform: translate3d(0, 0, 0) rotate(var(--meteor-rotate));
-  transform-origin: 50% 50%;
+  transform-origin: 50% 100%;
   animation: adaline-meteor var(--meteor-duration) linear infinite;
   animation-delay: var(--meteor-delay);
   will-change: transform, opacity;
+}
+
+/* Head glow — same element (pseudo), pinned to the leading end of the trail. */
+.adaline-meteor::after {
+  content: "";
+  position: absolute;
+  bottom: -3px;
+  left: 50%;
+  width: 200%;
+  aspect-ratio: 1;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(199, 255, 238, 0.4) 48%, transparent 72%);
 }
 
 @keyframes adaline-meteor {

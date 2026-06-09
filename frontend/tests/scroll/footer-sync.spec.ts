@@ -91,7 +91,9 @@ test.describe("§3.2 shooting stars", () => {
         return {
           backgroundImage: cs.backgroundImage,
           backgroundColor: cs.backgroundColor,
-          border: cs.borderStyle,
+          // Tailwind preflight sets border-style: solid with width 0 globally;
+          // only a non-zero width would draw a visible box.
+          border: cs.borderWidth,
         };
       }),
     );
@@ -100,7 +102,7 @@ test.describe("§3.2 shooting stars", () => {
       expect(meteor.backgroundImage).toContain("gradient");
       expect(meteor.backgroundImage).not.toContain("url(");
       expect(["rgba(0, 0, 0, 0)", "transparent"]).toContain(meteor.backgroundColor);
-      expect(meteor.border).toBe("none");
+      expect(meteor.border).toBe("0px");
     }
   });
 });
