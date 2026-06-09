@@ -240,8 +240,6 @@ export function LiquidGlassPanel({
         className="liquid-panel__backdrop"
         style={{ WebkitBackdropFilter: backdropValue, backdropFilter: backdropValue }}
       />
-      <span aria-hidden="true" className="liquid-panel__shine" />
-      <span aria-hidden="true" className="liquid-panel__glow" />
       <span aria-hidden="true" className="liquid-panel__rim" />
       <div className={`liquid-panel__content ${contentClassName}`.trim()}>{children}</div>
     </>

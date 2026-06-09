@@ -2,13 +2,13 @@
 
 import { Command } from "cmdk";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useMemo, useState } from "react";
-import { LuFileText, LuHash, LuLogIn, LuMail, LuMoon, LuMonitor, LuSun } from "react-icons/lu";
-import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import { LuFileText, LuHash, LuLogIn, LuMail } from "react-icons/lu";
 
 import { portfolioContent } from "@/content/portfolio-content";
 import { trackEvent } from "@/lib/analytics";
 import { getResumeHref } from "@/lib/profile-links";
+import { scrollToSection } from "@/lib/scroll-to-section";
 import { contentAvailability } from "@/lib/site";
 
 const sections = [
@@ -21,28 +21,10 @@ const sections = [
   { id: "contact", label: "Contact" },
 ];
 
-type ThemeChoice = "light" | "dark" | "system";
-const themeOrder: ThemeChoice[] = ["system", "light", "dark"];
-
-function getSafeTheme(theme: string | undefined): ThemeChoice {
-  if (theme === "light" || theme === "dark" || theme === "system") {
-    return theme;
-  }
-
-  return "system";
-}
-
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
-  const { theme, setTheme } = useTheme();
   const resumeHref = getResumeHref();
   const email = portfolioContent.identity.contactEmail;
-  const activeTheme = getSafeTheme(theme);
-
-  const nextTheme = useMemo(() => {
-    const currentIndex = themeOrder.indexOf(activeTheme);
-    return themeOrder[(currentIndex + 1) % themeOrder.length];
-  }, [activeTheme]);
 
   useEffect(() => {
     const handleOpen = () => setOpen(true);
@@ -75,18 +57,9 @@ export function CommandPalette() {
 
   const navigateTo = (sectionId: string) => {
     setOpen(false);
-    const section = document.getElementById(sectionId);
-    if (!section) {
-      return;
-    }
-
-    const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
-    section.scrollIntoView({ behavior, block: "start" });
-    window.history.replaceState(null, "", `#${sectionId}`);
+    scrollToSection(sectionId);
     trackEvent("command_used", { command: `navigate_${sectionId}` });
   };
-
-  const ThemeIcon = activeTheme === "light" ? LuSun : activeTheme === "dark" ? LuMoon : LuMonitor;
 
   return (
     <AnimatePresence>
@@ -137,19 +110,6 @@ export function CommandPalette() {
                   heading="Actions"
                   className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1 [&_[cmdk-group-heading]]:text-[10px] [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-widest [&_[cmdk-group-heading]]:text-[var(--color-muted-ink)]"
                 >
-                  <Command.Item
-                    value="Toggle theme"
-                    onSelect={() => {
-                      setTheme(nextTheme);
-                      setOpen(false);
-                      trackEvent("theme_change", { theme: nextTheme, source: "command_palette" });
-                      trackEvent("command_used", { command: `theme_${nextTheme}` });
-                    }}
-                    className="aria-selected:bg-[color:var(--glass-bg-strong)] flex cursor-pointer items-center gap-3 rounded-full px-3 py-2.5 text-sm text-[var(--color-ink)]"
-                  >
-                    <ThemeIcon size={14} className="text-[var(--color-muted-ink)]" aria-hidden />
-                    Toggle theme
-                  </Command.Item>
                   <Command.Item
                     value="Open login page"
                     onSelect={() => {

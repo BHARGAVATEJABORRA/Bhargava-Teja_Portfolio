@@ -10,7 +10,7 @@ type ContactStatus = "idle" | "submitting" | "success" | "error";
 interface ContactFormState {
   name: string;
   email: string;
-  topic: string;
+  phone: string;
   message: string;
   website: string;
 }
@@ -18,15 +18,23 @@ interface ContactFormState {
 const initialForm: ContactFormState = {
   name: "",
   email: "",
-  topic: "Full-time opportunity",
+  phone: "",
   message: "",
   website: "",
 };
 
-export function ContactForm() {
+interface ContactFormProps {
+  className?: string;
+  compact?: boolean;
+}
+
+export function ContactForm({ className = "", compact = false }: ContactFormProps) {
   const [form, setForm] = useState<ContactFormState>(initialForm);
   const [status, setStatus] = useState<ContactStatus>("idle");
   const [feedback, setFeedback] = useState("");
+  const fieldClassName = `liquid-field w-full px-4 ${
+    compact ? "py-2" : "py-3"
+  } text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]`;
 
   const submitForm = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -55,18 +63,18 @@ export function ContactForm() {
       setStatus("success");
       setFeedback(payload.message ?? "Thanks. I will respond within one business day.");
       setForm(initialForm);
-      trackEvent("contact_submit_success", { topic: form.topic, source: "contact_footer" });
+      trackEvent("contact_submit_success", { source: "contact_footer" });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unable to submit right now.";
       setStatus("error");
       setFeedback(message);
-      trackEvent("contact_submit_error", { topic: form.topic, source: "contact_footer" });
+      trackEvent("contact_submit_error", { source: "contact_footer" });
     }
   };
 
   return (
-    <LiquidGlassPanel radius={36} className="p-6 sm:p-7">
-      <form onSubmit={submitForm} className="space-y-4">
+    <LiquidGlassPanel radius={compact ? 30 : 36} className={`${compact ? "p-3.5 sm:p-4" : "p-6 sm:p-7"} ${className}`.trim()}>
+      <form onSubmit={submitForm} className={compact ? "space-y-2" : "space-y-4"}>
         <div aria-hidden className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden">
           <label>
             Website
@@ -80,53 +88,50 @@ export function ContactForm() {
           </label>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-[var(--color-muted-ink)]">
+        <div className="grid gap-2.5 sm:grid-cols-2">
+          <label className={`${compact ? "space-y-1.5" : "space-y-2"} text-sm text-[var(--color-muted-ink)]`}>
             Name
             <input
               required
               name="name"
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
-              className="liquid-field w-full px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              className={fieldClassName}
             />
           </label>
-          <label className="space-y-2 text-sm text-[var(--color-muted-ink)]">
-            Work email
+          <label className={`${compact ? "space-y-1.5" : "space-y-2"} text-sm text-[var(--color-muted-ink)]`}>
+            Email
             <input
               required
               type="email"
               name="email"
               value={form.email}
               onChange={(event) => setForm({ ...form, email: event.target.value })}
-              className="liquid-field w-full px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+              className={fieldClassName}
             />
           </label>
         </div>
 
-        <label className="space-y-2 text-sm text-[var(--color-muted-ink)]">
-          Topic
-          <select
-            name="topic"
-            value={form.topic}
-            onChange={(event) => setForm({ ...form, topic: event.target.value })}
-            className="liquid-field w-full px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-          >
-            <option>Full-time opportunity</option>
-            <option>Contract project</option>
-            <option>Architecture advisory</option>
-          </select>
+        <label className={`${compact ? "space-y-1.5" : "space-y-2"} text-sm text-[var(--color-muted-ink)]`}>
+          Phone
+          <input
+            type="tel"
+            name="phone"
+            value={form.phone}
+            onChange={(event) => setForm({ ...form, phone: event.target.value })}
+            className={fieldClassName}
+          />
         </label>
 
-        <label className="space-y-2 text-sm text-[var(--color-muted-ink)]">
+        <label className={`${compact ? "space-y-1.5" : "space-y-2"} text-sm text-[var(--color-muted-ink)]`}>
           Message
           <textarea
             required
             name="message"
-            rows={5}
+            rows={compact ? 2 : 5}
             value={form.message}
             onChange={(event) => setForm({ ...form, message: event.target.value })}
-            className="liquid-field liquid-field--textarea w-full px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className={`${fieldClassName} liquid-field--textarea`}
           />
         </label>
 
@@ -134,7 +139,9 @@ export function ContactForm() {
           <button
             type="submit"
             disabled={status === "submitting"}
-            className="inline-flex min-h-11 items-center rounded-full bg-[rgba(245,249,255,0.94)] px-7 py-2.5 text-sm font-semibold text-[#1a2636] shadow-[0_18px_34px_rgba(4,10,17,0.18)] disabled:cursor-not-allowed disabled:opacity-70"
+            className={`inline-flex items-center rounded-full bg-[rgba(245,249,255,0.94)] ${
+              compact ? "min-h-10 px-6 py-2" : "min-h-11 px-7 py-2.5"
+            } text-sm font-semibold text-[#1a2636] shadow-[0_18px_34px_rgba(4,10,17,0.18)] disabled:cursor-not-allowed disabled:opacity-70`}
           >
             {status === "submitting" ? "Sending..." : "Send message"}
           </button>

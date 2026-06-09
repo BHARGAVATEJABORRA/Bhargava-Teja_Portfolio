@@ -6,6 +6,8 @@ export type AnalyticsEventName =
   | "login_icon_click"
   | "social_icon_click"
   | "ai_placeholder_click"
+  | "ai_companion_query"
+  | "ai_companion_voice_start"
   | "hero_primary_cta_click"
   | "hero_secondary_cta_click"
   | "flagship_case_study_click"

@@ -40,3 +40,8 @@ lh-*.json
 
 # Vercel
 .vercel
+
+# Agent scratch & references
+.claude/
+Adaline.ai Reference/
+.next-preview/

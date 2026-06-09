@@ -18,25 +18,33 @@ This Next.js app lives in `frontend/`, so local development variables belong in 
 Use this local template:
 
 ```bash
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://127.0.0.1:3000
+NEXTAUTH_URL=http://127.0.0.1:3000
+AUTH_URL=http://127.0.0.1:3000
+AUTH_TRUST_HOST=true
 NEXT_PUBLIC_GA_ID=
-SPOTIFY_CLIENT_ID=68491febe3f743e89dc6db78ee213b7f
-SPOTIFY_CLIENT_SECRET=6f56fc2d4ef14a3b9254efc275c8f24f
+SPOTIFY_CLIENT_ID=
+SPOTIFY_CLIENT_SECRET=
+SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/api/auth/callback/spotify
 SPOTIFY_REFRESH_TOKEN=
+OPENWEATHER_API_KEY=
+NEXT_PUBLIC_OPENWEATHER_API_KEY=
 ```
 
 Notes:
 
-- `NEXT_PUBLIC_SITE_URL` falls back to `http://localhost:3000` if it is missing.
+- `NEXT_PUBLIC_SITE_URL` falls back to `http://127.0.0.1:3000` if it is missing.
 - `NEXT_PUBLIC_GA_ID` is optional. Leave it blank to skip loading Google Analytics.
-- The Spotify widget stays in a safe placeholder state until all three Spotify env vars are set.
+- The Spotify widget stays in a safe placeholder state until Spotify credentials and a refresh token are set.
+- Spotify Web API development-mode apps require the app owner to have Spotify Premium. If Spotify returns a Premium-required `403`, the widget will show that status instead of exposing credentials or failing silently.
 
 To obtain `SPOTIFY_REFRESH_TOKEN`, use Spotify's authorization-code flow:
 
-1. Send the user through Spotify authorization for your app.
-2. Exchange the returned authorization code for an access token and refresh token.
-3. Paste the refresh token into `SPOTIFY_REFRESH_TOKEN` in `frontend/.env.local`.
-4. Set the same variables in your production deployment environment before release.
+1. In the Spotify app dashboard, add `http://127.0.0.1:3000/api/auth/callback/spotify` as a redirect URI.
+2. Start the local app and visit `http://127.0.0.1:3000/api/auth/signin`.
+3. Approve Spotify access. The callback exchanges the code server-side and saves `SPOTIFY_REFRESH_TOKEN` in `frontend/.env.local`.
+4. Restart `npm run dev` so the app reads the updated local environment.
+5. Set the same variables in your production deployment environment before release.
 
 ## Launch Content Checklist
 

@@ -1,10 +1,17 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { MotionValue } from "framer-motion";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
-import { useTheme } from "next-themes";
+import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
+
+const footerSceneTheme = {
+  "--color-ink": "#f2fbff",
+  "--color-muted-ink": "rgba(224, 243, 247, 0.72)",
+  "--color-border": "rgba(221, 244, 255, 0.24)",
+  "--color-accent": "#74ffd2",
+  "--color-accent-strong": "#42e9c0",
+} as CSSProperties;
 
 const heroLowerMask = {
   WebkitMaskImage: "linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.18) 18%, rgba(0, 0, 0, 0.82) 42%, rgba(0, 0, 0, 1) 72%)",
@@ -34,13 +41,6 @@ const footerCloudMask = {
   maskSize: "cover",
 } satisfies CSSProperties;
 
-const footerReflectionMask = {
-  WebkitMaskImage:
-    "linear-gradient(180deg, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.56) 22%, rgba(0, 0, 0, 0.22) 58%, transparent 100%)",
-  maskImage:
-    "linear-gradient(180deg, rgba(0, 0, 0, 0.88) 0%, rgba(0, 0, 0, 0.56) 22%, rgba(0, 0, 0, 0.22) 58%, transparent 100%)",
-} satisfies CSSProperties;
-
 const HERO_SEQUENCE_START = 2;
 const HERO_SEQUENCE_END = 281;
 const HERO_SEQUENCE_REVEAL_PROGRESS = 0.84;
@@ -51,16 +51,13 @@ const HERO_SEQUENCE_HIGH_FRAMES = [1, 89, 281] as const;
 
 type HeroFrameQuality = "standard" | "high";
 
-function subscribeToHydration() {
-  return () => {};
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value));
 }
 
-function getHydratedSnapshot() {
-  return true;
-}
-
-function getServerHydrationSnapshot() {
-  return false;
+function smoothStep(value: number) {
+  const clamped = clamp01(value);
+  return 3 * clamped ** 2 - 2 * clamped ** 3;
 }
 
 function buildHeroSequenceFrameUrl(frame: number) {
@@ -79,6 +76,267 @@ function progressToFrame(progress: number) {
   const clampedProgress = Math.min(1, Math.max(0, progress));
   const frameOffset = Math.round(clampedProgress * (HERO_SEQUENCE_FRAME_COUNT - 1));
   return clampFrame(HERO_SEQUENCE_START + frameOffset);
+}
+
+// RGB channel lerp helper for the dusk→night transition.
+function lerpChannel(from: number, to: number, t: number) {
+  return Math.round(from + (to - from) * t);
+}
+
+function mixRgb(from: readonly [number, number, number], to: readonly [number, number, number], t: number) {
+  return `rgb(${lerpChannel(from[0], to[0], t)}, ${lerpChannel(from[1], to[1], t)}, ${lerpChannel(from[2], to[2], t)})`;
+}
+
+// Sky band: a true sunset (progress 0) melting into night (progress 1).
+// Endpoint colors are sampled directly from the adaline.ai footer scroll:
+// sunset = indigo #38335c -> mauve #806b7d -> warm peach #c49979;
+// night = deep teal #0a1420 -> #08101a -> #050e11 (the page base color).
+const SKY_TOP: [readonly [number, number, number], readonly [number, number, number]] = [
+  [56, 51, 92],
+  [10, 20, 32],
+];
+const SKY_MIDDLE: [readonly [number, number, number], readonly [number, number, number]] = [
+  [128, 107, 125],
+  [8, 16, 26],
+];
+const SKY_BOTTOM: [readonly [number, number, number], readonly [number, number, number]] = [
+  [196, 153, 121],
+  [5, 14, 17],
+];
+
+function footerSkyGradient(progress: number) {
+  const p = clamp01(progress);
+  const top = mixRgb(SKY_TOP[0], SKY_TOP[1], p);
+  const middle = mixRgb(SKY_MIDDLE[0], SKY_MIDDLE[1], p);
+  const bottom = mixRgb(SKY_BOTTOM[0], SKY_BOTTOM[1], p);
+
+  return `linear-gradient(180deg, ${top} 0%, ${middle} 52%, ${bottom} 100%)`;
+}
+
+// Cloud tint rides slightly lighter/warmer than the sky so cloud tops catch the
+// last sunset light, then collapse into the night base.
+const CLOUD_TOP: [readonly [number, number, number], readonly [number, number, number]] = [
+  [120, 112, 140],
+  [14, 26, 34],
+];
+const CLOUD_BOTTOM: [readonly [number, number, number], readonly [number, number, number]] = [
+  [210, 170, 138],
+  [6, 16, 22],
+];
+
+function footerCloudGradient(progress: number) {
+  const p = clamp01(progress);
+  const top = mixRgb(CLOUD_TOP[0], CLOUD_TOP[1], p);
+  const bottom = mixRgb(CLOUD_BOTTOM[0], CLOUD_BOTTOM[1], p);
+
+  return `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)`;
+}
+
+// The aurora reads as soft vertical "northern-light" curtains in the green→teal
+// band (matching the adaline.ai footer). Each curtain is built from a few
+// bell-feathered vertical strips drawn with additive ("lighter") blending; the
+// softness comes from the CSS `blur(8px)` on the canvas, so we deliberately do
+// NO per-frame canvas blur filter — that was the expensive part that stuttered
+// the scroll into the footer.
+const AURORA_CURTAINS = [
+  { x: 0.12, half: 0.16, hue: 144, alpha: 0.28, phase: 0.1, speed: 0.12, height: 0.86 },
+  { x: 0.27, half: 0.13, hue: 150, alpha: 0.42, phase: 1.1, speed: 0.17, height: 0.98 },
+  { x: 0.44, half: 0.2, hue: 156, alpha: 0.52, phase: 2.4, speed: 0.11, height: 1.08 },
+  { x: 0.62, half: 0.15, hue: 162, alpha: 0.43, phase: 3.3, speed: 0.15, height: 0.94 },
+  { x: 0.81, half: 0.17, hue: 168, alpha: 0.34, phase: 4.8, speed: 0.13, height: 0.9 },
+] as const;
+
+type AuroraCurtain = (typeof AURORA_CURTAINS)[number];
+
+const SHOOTING_STARS = [
+  { left: "13%", top: "4%", width: "10px", rotate: "58deg", duration: "8.8s", delay: "0.7s", x: "18vw", y: "26vh", opacity: 0.24 },
+  { left: "68%", top: "1%", width: "9px", rotate: "57deg", duration: "11.4s", delay: "3.9s", x: "16vw", y: "23vh", opacity: 0.2 },
+  { left: "42%", top: "12%", width: "8px", rotate: "58deg", duration: "13.6s", delay: "7.1s", x: "14vw", y: "20vh", opacity: 0.18 },
+] as const;
+
+function drawAuroraCurtain(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  curtain: AuroraCurtain,
+  time: number,
+  alphaScale: number,
+) {
+  const center = width * curtain.x + Math.sin(time * curtain.speed + curtain.phase) * width * 0.035;
+  const half = width * curtain.half;
+  const topY = -height * 0.08;
+  const botY = height * curtain.height;
+  const flicker = 0.86 + 0.14 * Math.sin(time * 0.55 + curtain.phase * 1.7);
+  const peak = curtain.alpha * alphaScale * flicker;
+  const strips = 17;
+
+  for (let s = 0; s < strips; s += 1) {
+    const f = s / (strips - 1);
+    const edge = 1 - Math.abs(f - 0.5) * 2;
+    const stripAlpha = peak * (0.18 + edge * edge * 0.82);
+    if (stripAlpha < 0.004) {
+      continue;
+    }
+
+    const sweep = Math.sin(time * curtain.speed * 1.8 + f * 5.8 + curtain.phase) * width * 0.018;
+    const stripX = center + (f - 0.5) * 2 * half + sweep;
+    const stripWidth = Math.max(10, half * (0.22 + edge * 0.2));
+    const gradient = context.createLinearGradient(0, topY, 0, botY);
+
+    gradient.addColorStop(0, `hsla(${curtain.hue - 3}, 96%, 82%, ${stripAlpha * 0.78})`);
+    gradient.addColorStop(0.16, `hsla(${curtain.hue + 4}, 95%, 67%, ${stripAlpha})`);
+    gradient.addColorStop(0.42, `hsla(${curtain.hue + 12}, 92%, 54%, ${stripAlpha * 0.46})`);
+    gradient.addColorStop(0.7, `hsla(${curtain.hue + 22}, 88%, 45%, ${stripAlpha * 0.12})`);
+    gradient.addColorStop(1, `hsla(${curtain.hue + 22}, 80%, 44%, 0)`);
+
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.moveTo(stripX - stripWidth / 2, topY);
+    context.bezierCurveTo(
+      stripX - stripWidth * 0.95 + Math.sin(time * 0.25 + f * 4) * width * 0.018,
+      height * 0.24,
+      stripX + stripWidth * 0.55 + Math.cos(time * 0.2 + f * 5) * width * 0.018,
+      height * 0.58,
+      stripX - stripWidth * 0.15,
+      botY,
+    );
+    context.lineTo(stripX + stripWidth / 2, botY);
+    context.bezierCurveTo(
+      stripX + stripWidth * 1.05 + Math.cos(time * 0.24 + f * 3) * width * 0.016,
+      height * 0.56,
+      stripX - stripWidth * 0.38 + Math.sin(time * 0.2 + f * 6) * width * 0.014,
+      height * 0.26,
+      stripX + stripWidth / 2,
+      topY,
+    );
+    context.closePath();
+    context.fill();
+  }
+}
+
+function drawFooterAurora(context: CanvasRenderingContext2D, width: number, height: number, time: number, isDarkTheme: boolean) {
+  context.clearRect(0, 0, width, height);
+
+  const alphaScale = isDarkTheme ? 1 : 0.76;
+
+  const glow = context.createRadialGradient(width * 0.5, height * 0.18, 0, width * 0.5, height * 0.2, width * 0.56);
+  glow.addColorStop(0, `rgba(117, 255, 188, ${0.2 * alphaScale})`);
+  glow.addColorStop(0.36, `rgba(70, 233, 192, ${0.11 * alphaScale})`);
+  glow.addColorStop(0.72, `rgba(31, 157, 151, ${0.035 * alphaScale})`);
+  glow.addColorStop(1, "rgba(31, 157, 151, 0)");
+
+  context.save();
+  context.globalCompositeOperation = "screen";
+  context.fillStyle = glow;
+  context.fillRect(0, -height * 0.12, width, height * 0.92);
+  context.restore();
+
+  context.save();
+  context.globalCompositeOperation = "screen";
+  for (const curtain of AURORA_CURTAINS) {
+    drawAuroraCurtain(context, width, height, curtain, time, alphaScale);
+  }
+  context.restore();
+}
+
+interface AdalineFooterAuroraCanvasProps {
+  isDarkTheme: boolean;
+  reduceMotion: boolean;
+}
+
+function AdalineFooterAuroraCanvas({ isDarkTheme, reduceMotion }: AdalineFooterAuroraCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext("2d", { alpha: true });
+
+    if (!canvas || !context) {
+      return;
+    }
+
+    let animationFrame = 0;
+    let running = false;
+    let width = 0;
+    let height = 0;
+    const startedAt = performance.now();
+
+    const elapsed = () => (reduceMotion ? 0 : (performance.now() - startedAt) / 1000);
+
+    // Sizing is handled by the ResizeObserver / initial call only — never inside
+    // the render loop, so each frame is just the cheap aurora draw.
+    const resize = () => {
+      const bounds = canvas.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const nextWidth = Math.max(1, Math.round(bounds.width));
+      const nextHeight = Math.max(1, Math.round(bounds.height));
+      const nextCanvasWidth = Math.round(nextWidth * dpr);
+      const nextCanvasHeight = Math.round(nextHeight * dpr);
+
+      width = nextWidth;
+      height = nextHeight;
+
+      if (canvas.width !== nextCanvasWidth || canvas.height !== nextCanvasHeight) {
+        canvas.width = nextCanvasWidth;
+        canvas.height = nextCanvasHeight;
+      }
+
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const frame = () => {
+      drawFooterAurora(context, width, height, elapsed(), isDarkTheme);
+      animationFrame = requestAnimationFrame(frame);
+    };
+
+    const start = () => {
+      if (running || reduceMotion) {
+        return;
+      }
+      running = true;
+      animationFrame = requestAnimationFrame(frame);
+    };
+
+    const stop = () => {
+      running = false;
+      cancelAnimationFrame(animationFrame);
+    };
+
+    resize();
+    drawFooterAurora(context, width, height, elapsed(), isDarkTheme);
+
+    const resizeObserver = new ResizeObserver(() => {
+      resize();
+      if (!running) {
+        drawFooterAurora(context, width, height, elapsed(), isDarkTheme);
+      }
+    });
+    resizeObserver.observe(canvas);
+
+    // Only burn animation frames while the footer is actually on screen.
+    let intersectionObserver: IntersectionObserver | undefined;
+    if (!reduceMotion) {
+      intersectionObserver = new IntersectionObserver(
+        (entries) => {
+          if (entries[0]?.isIntersecting) {
+            start();
+          } else {
+            stop();
+          }
+        },
+        { rootMargin: "200px" },
+      );
+      intersectionObserver.observe(canvas);
+    }
+
+    return () => {
+      stop();
+      resizeObserver.disconnect();
+      intersectionObserver?.disconnect();
+    };
+  }, [isDarkTheme, reduceMotion]);
+
+  return <canvas ref={canvasRef} aria-hidden className="adaline-footer-aurora-canvas" />;
 }
 
 function drawImageCover(
@@ -378,131 +636,185 @@ export function AdalineHeroScene({ progress, enableSequence }: AdalineHeroSceneP
   );
 }
 
-export function AdalineFooterScene() {
-  const sceneRef = useRef<HTMLDivElement | null>(null);
+interface AdalineFooterSceneProps {
+  contact: ReactNode;
+  contactId?: string;
+  footer: ReactNode;
+}
+
+// Faithful reconstruction of the adaline.ai footer: a fixed sky gradient that
+// scrubs sunset → night as you scroll, a cloud-masked dusk band and a starfield
+// that scroll up inside a very tall container, a single aurora canvas in the CTA
+// band, and the hills + dock + reflection rendered as full-bleed 200vw images.
+// Only the foreground copy (contact + nav) is swapped for portfolio content.
+export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooterSceneProps) {
+  const skyRef = useRef<HTMLDivElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
-  const { resolvedTheme } = useTheme();
-  const isHydrated = useSyncExternalStore(subscribeToHydration, getHydratedSnapshot, getServerHydrationSnapshot);
-  const { scrollYProgress } = useScroll({
-    target: sceneRef,
-    offset: ["start end", "end start"],
+  // The tall day→night scroll zone drives the entire sky transition. By the time
+  // its end reaches the top of the viewport the sky has fully settled into night.
+  const { scrollYProgress: skyProgress } = useScroll({
+    target: skyRef,
+    offset: ["start end", "end 35%"],
   });
 
-  const cloudY = useTransform(scrollYProgress, [0, 1], [48, -56]);
-  const starsY = useTransform(scrollYProgress, [0, 1], [24, -64]);
-  const starsNearY = useTransform(scrollYProgress, [0, 1], [40, -96]);
-  const hillsY = useTransform(scrollYProgress, [0, 1], [18, -12]);
-  const dockY = useTransform(scrollYProgress, [0, 1], [12, -8]);
-  const reflectionY = useTransform(scrollYProgress, [0, 1], [10, -20]);
-  const meteorY = useTransform(scrollYProgress, [0, 1], [0, -34]);
-  const isDarkTheme = isHydrated && resolvedTheme === "dark";
+  // A light spring keeps the gradient tracking the scroll 1:1 (no laggy drift)
+  // while smoothing out per-frame jitter — the "one-on-one" feel Adaline has.
+  const smoothSkyProgress = useSpring(skyProgress, { stiffness: 140, damping: 42, mass: 0.18 });
+  const skyBackground = useTransform(smoothSkyProgress, (value) => footerSkyGradient(smoothStep(value)));
+  const skyOpacity = useTransform(smoothSkyProgress, (value) => smoothStep(clamp01(value / 0.32)));
+  const cloudBackground = useTransform(smoothSkyProgress, (value) => footerCloudGradient(smoothStep(value)));
+  const starsOpacity = useTransform(smoothSkyProgress, (value) => smoothStep(clamp01((value - 0.18) / 0.5)) * 0.96);
 
   return (
-    <div ref={sceneRef} aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        className={`absolute inset-0 ${
-          isDarkTheme
-            ? "bg-[radial-gradient(circle_at_50%_-8%,rgba(23,73,88,0.34),transparent_24%),linear-gradient(180deg,#071018_0%,#040b10_40%,#020608_100%)]"
-            : "bg-[radial-gradient(circle_at_18%_0%,rgba(255,228,166,0.9),transparent_22%),radial-gradient(circle_at_52%_18%,rgba(255,248,236,0.78),rgba(255,248,236,0.18)_26%,transparent_56%),linear-gradient(180deg,#eef6f3_0%,#dfece4_38%,#d5e4da_68%,#ceded3_100%)]"
-        }`}
+    <div className="adaline-footer-scene relative flex flex-col overflow-clip bg-[#050e11] text-[#f4fbf7]" style={footerSceneTheme}>
+      {/* #home-footer-bg-gradient — the fixed sunset→night sky behind everything. */}
+      <motion.div
+        aria-hidden
+        data-scroll-scene="sky-gradient"
+        style={{ background: skyBackground, opacity: skyOpacity }}
+        className="pointer-events-none fixed inset-0"
       />
 
-      {isDarkTheme ? (
+      {/* Tall scroll zone: only the cloud band + stars move through it. */}
+      <div ref={skyRef} className="relative -mb-[80vh] h-[200vw] min-h-[300vh]">
+        <div aria-hidden className="adaline-footer-top-fade pointer-events-none absolute inset-x-0 top-0 h-[55vh]" />
+        {/* #home-footer-clouds-gradient — sky-tinted gradient masked to the cloud shape. */}
         <motion.div
-          style={shouldReduceMotion ? { backgroundSize: "1180px auto" } : { y: starsY, backgroundSize: "1180px auto" }}
-          animate={shouldReduceMotion ? undefined : { opacity: [0.34, 0.52, 0.38] }}
-          transition={shouldReduceMotion ? undefined : { duration: 18, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" }}
-          className="adaline-footer-stars absolute inset-[-12%] opacity-40"
+          aria-hidden
+          data-scroll-scene="clouds"
+          style={{ ...footerCloudMask, background: cloudBackground }}
+          className="absolute inset-0"
         />
-      ) : null}
-
-      {isDarkTheme ? (
+        {/* #home-footer-stars — repeating starfield that rises with the scroll. */}
         <motion.div
-          style={shouldReduceMotion ? { backgroundSize: "760px auto" } : { y: starsNearY, backgroundSize: "760px auto" }}
-          className="adaline-footer-stars absolute inset-[-18%] opacity-15 blur-[0.8px]"
+          aria-hidden
+          data-scroll-scene="stars"
+          style={{ opacity: starsOpacity }}
+          className="adaline-footer-stars pointer-events-none absolute inset-0 -bottom-[30rem]"
         />
-      ) : null}
-
-      <motion.div
-        style={
-          shouldReduceMotion
-            ? {
-                ...footerCloudMask,
-                background: isDarkTheme
-                  ? "radial-gradient(circle at 50% 62%, rgba(36, 214, 171, 0.4) 0%, rgba(13, 84, 100, 0.22) 26%, transparent 58%), linear-gradient(180deg, rgba(5, 16, 24, 0) 0%, rgba(5, 16, 24, 0.12) 18%, rgba(5, 16, 24, 0.78) 100%)"
-                  : "radial-gradient(circle at 18% 8%, rgba(255, 217, 135, 0.78) 0%, rgba(255, 217, 135, 0.22) 18%, transparent 42%), radial-gradient(circle at 50% 26%, rgba(255, 250, 244, 0.88) 0%, rgba(255, 250, 244, 0.2) 24%, transparent 56%), linear-gradient(180deg, rgba(250, 247, 238, 0.66) 0%, rgba(250, 247, 238, 0.14) 24%, rgba(224, 236, 228, 0.2) 58%, rgba(214, 226, 218, 0.48) 100%)",
+        <motion.div
+          aria-hidden
+          data-scroll-scene="shooting-stars"
+          style={{ opacity: starsOpacity }}
+          className="adaline-footer-shooting-stars pointer-events-none absolute inset-0"
+        >
+          {SHOOTING_STARS.map((star, index) => (
+            <span
+              key={`meteor-${index}`}
+              className="adaline-meteor"
+              style={
+                {
+                  "--meteor-left": star.left,
+                  "--meteor-top": star.top,
+                  "--meteor-width": star.width,
+                  "--meteor-rotate": star.rotate,
+                  "--meteor-duration": star.duration,
+                  "--meteor-delay": star.delay,
+                  "--meteor-travel-x": star.x,
+                  "--meteor-travel-y": star.y,
+                  "--meteor-opacity": star.opacity,
+                } as CSSProperties
               }
-            : {
-                ...footerCloudMask,
-                y: cloudY,
-                background: isDarkTheme
-                  ? "radial-gradient(circle at 50% 62%, rgba(36, 214, 171, 0.4) 0%, rgba(13, 84, 100, 0.22) 26%, transparent 58%), linear-gradient(180deg, rgba(5, 16, 24, 0) 0%, rgba(5, 16, 24, 0.12) 18%, rgba(5, 16, 24, 0.78) 100%)"
-                  : "radial-gradient(circle at 18% 8%, rgba(255, 217, 135, 0.78) 0%, rgba(255, 217, 135, 0.22) 18%, transparent 42%), radial-gradient(circle at 50% 26%, rgba(255, 250, 244, 0.88) 0%, rgba(255, 250, 244, 0.2) 24%, transparent 56%), linear-gradient(180deg, rgba(250, 247, 238, 0.66) 0%, rgba(250, 247, 238, 0.14) 24%, rgba(224, 236, 228, 0.2) 58%, rgba(214, 226, 218, 0.48) 100%)",
-              }
-        }
-        className={`absolute inset-0 ${isDarkTheme ? "opacity-85" : "opacity-95"}`}
-      />
+            />
+          ))}
+        </motion.div>
+      </div>
 
-      {isDarkTheme ? (
+      {/* CTA band: aurora canvas + foreground contact card. */}
+      <div className="relative flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-[#050e11] to-100%">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-0 h-[90%] w-full [mask-image:linear-gradient(to_bottom,transparent_0%,black_30%)]"
+        >
+          <div className="absolute inset-0 w-full">
+            <AdalineFooterAuroraCanvas isDarkTheme reduceMotion={Boolean(shouldReduceMotion)} />
+          </div>
+        </div>
         <motion.div
-          style={shouldReduceMotion ? undefined : { y: meteorY }}
-          className="adaline-footer-meteor absolute right-[8%] top-[9%] h-[11rem] w-[0.8rem] rotate-[58deg] opacity-55 mix-blend-screen blur-[0.8px] sm:right-[12%] sm:h-[13rem]"
+          aria-hidden
+          data-scroll-scene="cta-shooting-stars"
+          style={{ opacity: starsOpacity }}
+          className="adaline-footer-shooting-stars pointer-events-none absolute inset-x-0 top-0 h-[78%]"
+        >
+          {SHOOTING_STARS.map((star, index) => (
+            <span
+              key={`cta-meteor-${index}`}
+              className="adaline-meteor"
+              style={
+                {
+                  "--meteor-left": star.left,
+                  "--meteor-top": star.top,
+                  "--meteor-width": star.width,
+                  "--meteor-rotate": star.rotate,
+                  "--meteor-duration": star.duration,
+                  "--meteor-delay": star.delay,
+                  "--meteor-travel-x": star.x,
+                  "--meteor-travel-y": star.y,
+                  "--meteor-opacity": star.opacity,
+                } as CSSProperties
+              }
+            />
+          ))}
+        </motion.div>
+        <div aria-hidden className="adaline-footer-aurora-veils pointer-events-none absolute top-[4%] h-[62%] w-full" />
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-40 bottom-0 w-full overflow-clip bg-black mix-blend-plus-lighter [mask-image:linear-gradient(to_bottom,transparent_0%,black_5%)]"
         />
-      ) : null}
 
-      <motion.div
-        style={shouldReduceMotion ? undefined : { y: hillsY }}
-        animate={isDarkTheme && !shouldReduceMotion ? { opacity: [0.58, 0.72, 0.6] } : undefined}
-        transition={isDarkTheme && !shouldReduceMotion ? { duration: 14, repeat: Number.POSITIVE_INFINITY, ease: "easeInOut" } : undefined}
-        className={`absolute left-1/2 bottom-[12.75rem] h-[clamp(7rem,14vw,12rem)] w-[112%] -translate-x-1/2 sm:bottom-[14.25rem] lg:bottom-[15.75rem] ${
-          isDarkTheme ? "opacity-70" : "opacity-82"
-        }`}
-      >
-        <div className={`adaline-footer-hills absolute inset-0 ${isDarkTheme ? "" : "brightness-[1.42] saturate-[0.78]"}`} />
-      </motion.div>
+        <div className="relative z-20 w-full px-6 pt-[28vh] pb-[18vh] sm:px-8 lg:px-12">
+          <div className="mx-auto max-w-[120rem]">
+            <div id={contactId} className="mx-auto w-full max-w-[34rem] scroll-mt-28">
+              {contact}
+            </div>
+          </div>
+        </div>
+      </div>
 
-      {isDarkTheme ? (
-        <>
-          <div className="absolute inset-x-[14%] bottom-[12rem] h-28 rounded-full bg-[radial-gradient(circle,rgba(120,255,212,0.18)_0%,rgba(120,255,212,0.08)_24%,transparent_72%)] blur-[44px] sm:bottom-[16rem] sm:h-36" />
-          <div className="absolute inset-x-[8%] bottom-[14rem] h-40 rounded-full bg-[radial-gradient(circle,rgba(18,115,129,0.24)_0%,rgba(18,115,129,0.08)_36%,transparent_72%)] blur-[68px] sm:bottom-[18rem]" />
-        </>
-      ) : (
-        <>
-          <div className="absolute left-[10%] top-[4.5rem] h-40 w-40 rounded-full bg-[radial-gradient(circle,rgba(255,223,150,0.42)_0%,rgba(255,223,150,0.12)_28%,transparent_74%)] blur-[48px]" />
-          <div className="absolute inset-x-[16%] bottom-[12.75rem] h-24 rounded-full bg-[radial-gradient(circle,rgba(255,246,225,0.28)_0%,rgba(255,246,225,0.08)_26%,transparent_74%)] blur-[36px] sm:bottom-[15rem]" />
-        </>
-      )}
+      {/* Docking-port band: hills, dock + water reflection, and the nav.
+          Mirrors the adaline.ai source (see Adaline reference) — hills 100vw at
+          -16vw, dock+reflection a 200vw masked image group, nav z-100 overlaying
+          on xl. The one intentional deviation is the dock anchor (see below):
+          our footer's content proportions differ from Adaline's, so their exact
+          left/bottom-0 anchor detached the pier — we center + lift it instead. */}
+      <div className="relative bg-[#050e11] xl:h-[40vw]">
+        <div aria-hidden className="pointer-events-none absolute -top-[16vw] w-full">
+          <img src="/adaline-scenes/footer/footer-hills.webp" alt="" aria-hidden className="w-full object-cover" />
+        </div>
 
-      <motion.div
-        style={shouldReduceMotion ? footerReflectionMask : { ...footerReflectionMask, y: reflectionY }}
-        className={`absolute left-1/2 bottom-[5rem] h-[clamp(4rem,8vw,7rem)] w-[118%] -translate-x-1/2 lg:bottom-[5.5rem] ${
-          isDarkTheme ? "opacity-55" : "opacity-42"
-        }`}
-      >
-        <div className={`adaline-footer-dock-reflection absolute inset-0 ${isDarkTheme ? "" : "brightness-[1.38] saturate-[0.72]"}`} />
-      </motion.div>
+        {/* Dock + reflection: a 200vw image group centered on the scene and
+            lifted (top-[-4vw]) so the pier deck sits *in* the lake at the hills'
+            waterline rather than detaching below it. Both hills and dock scale
+            in vw, so this single vw offset composes identically at every width.
+            The fade mask blends the foreground planks into the #050e11 base. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-[-4vw] w-[200vw] -translate-x-1/2"
+          style={{
+            WebkitMaskImage: "linear-gradient(to bottom, black 30%, transparent 100%)",
+            maskImage: "linear-gradient(to bottom, black 30%, transparent 100%)",
+          }}
+        >
+          <img
+            src="/adaline-scenes/footer/footer-dock-reflection.webp"
+            alt=""
+            aria-hidden
+            className="absolute left-0 top-0 aspect-[3] w-[200vw] object-cover opacity-60"
+          />
+          <img
+            src="/adaline-scenes/footer/footer-dock.webp"
+            alt=""
+            aria-hidden
+            className="relative aspect-[3] w-[200vw] object-cover"
+          />
+        </div>
 
-      <motion.div
-        style={shouldReduceMotion ? undefined : { y: dockY }}
-        className="absolute left-1/2 bottom-[-1.25rem] h-[clamp(8.5rem,15vw,13rem)] w-[118%] -translate-x-1/2 opacity-95"
-      >
-        <div className={`adaline-footer-dock absolute inset-0 ${isDarkTheme ? "" : "brightness-[1.14] saturate-[0.84]"}`} />
-      </motion.div>
-
-      <div
-        className={`absolute inset-x-0 bottom-0 ${
-          isDarkTheme
-            ? "h-[24rem] bg-[linear-gradient(180deg,rgba(3,7,10,0)_0%,rgba(3,7,10,0.3)_24%,rgba(3,7,10,0.86)_78%,#03070a_100%)]"
-            : "h-[22rem] bg-[linear-gradient(180deg,rgba(223,234,228,0)_0%,rgba(223,234,228,0.16)_24%,rgba(214,226,219,0.72)_80%,#d3e0d7_100%)]"
-        }`}
-      />
-      <div
-        className={`absolute inset-0 ${
-          isDarkTheme
-            ? "bg-[linear-gradient(180deg,rgba(6,10,12,0.18)_0%,rgba(6,10,12,0)_24%,rgba(6,10,12,0)_62%,rgba(6,10,12,0.08)_100%)]"
-            : "bg-[linear-gradient(180deg,rgba(255,252,246,0.26)_0%,rgba(255,252,246,0.08)_22%,rgba(255,252,246,0)_56%,rgba(112,134,120,0.08)_100%)]"
-        }`}
-      />
+        <div className="footer-transparent-nav relative right-0 bottom-0 left-0 z-[100] px-6 pb-16 sm:px-8 lg:px-12 xl:absolute xl:pb-24">
+          <div className="mx-auto flex max-w-[120rem] flex-col pt-[30vw] pr-12 pb-6 md:flex-row md:flex-wrap md:justify-between xl:pt-0">
+            {footer}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

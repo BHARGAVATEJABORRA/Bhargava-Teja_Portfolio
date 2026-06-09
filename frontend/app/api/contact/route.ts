@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 interface ContactPayload {
   name?: unknown;
   email?: unknown;
+  phone?: unknown;
   topic?: unknown;
   message?: unknown;
   website?: unknown;
@@ -15,6 +16,7 @@ type ContactValidationResult =
       data: {
         name: string;
         email: string;
+        phone: string;
         topic: string;
         message: string;
         website: string;
@@ -24,6 +26,7 @@ type ContactValidationResult =
 interface ContactSubmission {
   name: string;
   email: string;
+  phone?: string;
   topic: string;
   message: string;
 }
@@ -39,6 +42,7 @@ function getString(value: unknown): string {
 function validatePayload(payload: ContactPayload): ContactValidationResult {
   const name = getString(payload.name);
   const email = getString(payload.email);
+  const phone = getString(payload.phone);
   const topic = getString(payload.topic);
   const message = getString(payload.message);
   const website = getString(payload.website);
@@ -51,8 +55,8 @@ function validatePayload(payload: ContactPayload): ContactValidationResult {
     return { ok: false, message: "Please provide a valid email address." };
   }
 
-  if (!topic) {
-    return { ok: false, message: "Please select a topic." };
+  if (phone && phone.length < 7) {
+    return { ok: false, message: "Please provide a valid phone number or leave it blank." };
   }
 
   if (!message || message.length < 10) {
@@ -64,6 +68,7 @@ function validatePayload(payload: ContactPayload): ContactValidationResult {
     data: {
       name,
       email,
+      phone,
       topic,
       message,
       website,
@@ -105,13 +110,37 @@ function isLikelyBotSubmission(website: string): boolean {
 }
 
 async function deliverContactSubmission(submission: ContactSubmission): Promise<void> {
-  // Provider integration hook:
-  // 1) map submission fields to provider payload
-  // 2) await provider client call
-  // 3) throw on provider failure to return a 5xx response
+  const webhookUrl = process.env.CONTACT_WEBHOOK_URL?.trim();
+  const toEmail = process.env.CONTACT_TO_EMAIL?.trim();
+  const payload = {
+    ...submission,
+    to: toEmail || undefined,
+    submittedAt: new Date().toISOString(),
+  };
+
+  if (webhookUrl) {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.CONTACT_WEBHOOK_SECRET
+          ? { Authorization: `Bearer ${process.env.CONTACT_WEBHOOK_SECRET}` }
+          : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Contact webhook failed with ${response.status}`);
+    }
+
+    return;
+  }
+
   console.info("[contact_submission]", {
     name: submission.name,
     email: submission.email,
+    phone: submission.phone || undefined,
     topic: submission.topic,
     messagePreview: `${submission.message.slice(0, 80)}${submission.message.length > 80 ? "..." : ""}`,
   });
@@ -150,7 +179,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { name, email, topic, message, website } = validation.data;
+  const { name, email, phone, topic, message, website } = validation.data;
   const clientKey = getClientKey(request);
 
   if (isLikelyBotSubmission(website)) {
@@ -180,7 +209,8 @@ export async function POST(request: Request) {
     await deliverContactSubmission({
       name,
       email,
-      topic,
+      phone,
+      topic: topic || "Portfolio contact",
       message,
     });
   } catch {

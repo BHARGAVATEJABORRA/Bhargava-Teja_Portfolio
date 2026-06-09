@@ -23,10 +23,10 @@ const HEATMAP_DAYS = 365;
 const HEATMAP_COLUMNS = Math.ceil(HEATMAP_DAYS / 7);
 
 const LEVEL_STYLES: Record<number, string> = {
-  0: "border-[color:var(--color-border)/0.28] bg-[color:var(--color-border)/0.14]",
-  1: "border-[color:var(--color-accent)/0.2] bg-[color:var(--color-accent)/0.2]",
-  2: "border-[color:var(--color-accent)/0.32] bg-[color:var(--color-accent)/0.38]",
-  3: "border-[color:var(--color-accent)/0.4] bg-[color:var(--color-accent)/0.6]",
+  0: "tint-border-bd-28 tint-border-bg-14",
+  1: "tint-accent-bd-20 tint-accent-bg-20",
+  2: "tint-accent-bd-32 tint-accent-bg-38",
+  3: "tint-accent-bd-40 tint-accent-bg-60",
   4: "border-[color:var(--color-accent)] bg-[var(--color-accent)]",
 };
 
@@ -62,10 +62,10 @@ export function GitHubContributions() {
     : null;
 
   return (
-    <ControlCenterPanel radius={32} className="flex h-full min-h-[17.5rem] flex-col p-4 sm:min-h-[18.5rem] sm:p-5">
-      <div className="flex items-center gap-2.5 text-[var(--color-ink)]">
-        <FaGithub size={18} aria-hidden />
-        <h3 className="text-base font-semibold sm:text-lg">GitHub Contributions</h3>
+    <ControlCenterPanel radius={32} className="flex h-full min-h-[16rem] flex-col p-4 sm:p-5">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+        <FaGithub size={15} aria-hidden />
+        <span>GitHub Contributions</span>
       </div>
 
       {error || data?.error ? (
@@ -76,7 +76,7 @@ export function GitHubContributions() {
             {Array.from({ length: HEATMAP_COLUMNS }).map((_, weekIndex) => (
               <div key={weekIndex} className="flex flex-col gap-0.5 sm:gap-1">
                 {Array.from({ length: 7 }).map((__, dayIndex) => (
-                  <div key={dayIndex} className="h-2.5 w-2.5 animate-pulse rounded-full bg-[color:var(--color-border)/0.22] sm:h-3 sm:w-3" />
+                  <div key={dayIndex} className="h-2.5 w-2.5 animate-pulse rounded-full tint-border-bg-22 sm:h-3 sm:w-3" />
                 ))}
               </div>
             ))}

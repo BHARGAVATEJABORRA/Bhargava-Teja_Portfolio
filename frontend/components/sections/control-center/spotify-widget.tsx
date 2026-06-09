@@ -12,85 +12,65 @@ const fetcher = async (url: string): Promise<SpotifyData> => {
   return (await response.json()) as SpotifyData;
 };
 
-interface SpotifyWidgetProps {
-  isConfigured: boolean;
-}
-
-export function SpotifyWidget({ isConfigured }: SpotifyWidgetProps) {
-  const { data, error } = useSWR(isConfigured ? "/api/spotify" : null, fetcher, {
-    refreshInterval: 10_000,
+export function SpotifyWidget() {
+  const { data, error } = useSWR("/api/spotify", fetcher, {
+    refreshInterval: 30_000,
+    revalidateOnFocus: true,
   });
 
-  if (!isConfigured) {
-    return (
-      <ControlCenterPanel radius={28} className="space-y-3 p-4">
-        <div className="flex items-center gap-1.5">
-          <SiSpotify size={12} className="text-[#1DB954]" aria-hidden />
-          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-accent)]">
-            Spotify
-          </p>
-        </div>
-        <div className="space-y-1">
-          <p className="text-sm font-semibold text-[var(--color-ink)]">Spotify integration coming soon</p>
-          <p className="text-xs leading-relaxed text-[var(--color-muted-ink)]">
-            Add a Spotify refresh token in <code>.env.local</code> to enable this widget locally.
-          </p>
-        </div>
-      </ControlCenterPanel>
-    );
-  }
-
   const isLoading = !data && !error;
-
-  if (isLoading) {
-    return (
-      <ControlCenterPanel radius={28} className="space-y-3 p-4">
-        <div className="h-3 w-24 animate-pulse rounded bg-[var(--color-border)]" />
-        <div className="flex gap-3">
-          <div className="h-14 w-14 animate-pulse rounded-full bg-[var(--color-border)]" />
-          <div className="flex-1 space-y-2 pt-1">
-            <div className="h-3 w-3/4 animate-pulse rounded bg-[var(--color-border)]" />
-            <div className="h-2.5 w-1/2 animate-pulse rounded bg-[var(--color-border)]" />
-          </div>
-        </div>
-      </ControlCenterPanel>
-    );
-  }
+  const hasTrack = Boolean(data?.songUrl && data.songUrl !== "#");
+  const label = data?.sourceLabel ?? (data?.isPlaying ? "Now Playing" : hasTrack ? "Last Played" : "Spotify");
 
   return (
-    <ControlCenterPanel radius={28} className="space-y-3 p-4">
-      <div className="flex items-center gap-1.5">
-        <SiSpotify size={12} className="text-[#1DB954]" aria-hidden />
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-accent)]">
-          {data?.isPlaying ? "Now Playing" : "Last Played"}
-        </p>
+    <ControlCenterPanel radius={28} className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden p-3 sm:p-4">
+      <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+        <SiSpotify size={14} className="shrink-0 text-[#1DB954]" aria-hidden />
+        <span className="truncate">{label}</span>
       </div>
 
-      {data?.songUrl && data.songUrl !== "#" ? (
-        <a href={data.songUrl} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3">
-          {data.albumImageUrl ? (
-            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-full">
-              <img
-                src={data.albumImageUrl}
-                alt={`Album art for ${data.title}`}
-                className={`h-full w-full rounded-full object-cover ${data.isPlaying ? "animate-[spin_8s_linear_infinite]" : ""}`}
-              />
-            </div>
+      {isLoading ? (
+        <div className="mt-3 flex min-h-0 items-center gap-3">
+          <div className="h-10 w-10 shrink-0 animate-pulse rounded-full tint-border-bg-22" />
+          <div className="flex-1 space-y-2">
+            <div className="h-3 w-3/4 animate-pulse rounded tint-border-bg-22" />
+            <div className="h-2.5 w-1/2 animate-pulse rounded tint-border-bg-22" />
+          </div>
+        </div>
+      ) : hasTrack ? (
+        <a
+          href={data!.songUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group mt-3 flex min-h-0 items-center gap-3"
+        >
+          {data!.albumImageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data!.albumImageUrl}
+              alt={`Album art for ${data!.title}`}
+              className={`h-10 w-10 shrink-0 rounded-full object-cover ${data!.isPlaying ? "animate-[spin_8s_linear_infinite]" : ""}`}
+            />
           ) : (
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-[var(--color-border)]">
-              <SiSpotify size={20} className="text-[#1DB954]" aria-hidden />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full tint-border-bg-22">
+              <SiSpotify size={18} className="text-[#1DB954]" aria-hidden />
             </div>
           )}
 
-          <div className="min-w-0 space-y-0.5">
+          <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold text-[var(--color-ink)] transition-colors group-hover:text-[var(--color-accent)]">
-              {data.title}
+              {data!.title}
             </p>
-            <p className="truncate text-xs text-[var(--color-muted-ink)]">{data.artist}</p>
+            <p className="truncate text-xs text-[var(--color-muted-ink)]">{data!.artist}</p>
           </div>
         </a>
       ) : (
-        <p className="text-xs text-[var(--color-muted-ink)]">Spotify is configured, but playback data is unavailable right now.</p>
+        <div className="mt-3 min-h-0 space-y-1 overflow-hidden">
+          <p className="truncate text-sm font-semibold text-[var(--color-ink)]">{data?.title ?? "Not listening right now"}</p>
+          <p className="line-clamp-2 text-xs leading-snug text-[var(--color-muted-ink)]">
+            {data?.artist || "Live track appears here when I press play."}
+          </p>
+        </div>
       )}
     </ControlCenterPanel>
   );

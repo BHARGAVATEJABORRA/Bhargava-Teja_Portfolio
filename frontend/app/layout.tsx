@@ -3,7 +3,7 @@ import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 
 import { AnalyticsBootstrap } from "@/components/analytics/analytics-bootstrap";
 import { LiquidGlassFilterDefs } from "@/components/layout/liquid-glass-filter-defs";
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { SmoothScrollProvider } from "@/components/providers/smooth-scroll-provider";
 import { siteConfig } from "@/lib/site";
 
 import "./globals.css";
@@ -62,9 +62,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} bg-[var(--color-bg)] antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <SmoothScrollProvider>
           <LiquidGlassFilterDefs />
           <a
             href="#main-content"
@@ -74,7 +74,7 @@ export default function RootLayout({
           </a>
           <AnalyticsBootstrap />
           <div className="relative min-h-screen">{children}</div>
-        </ThemeProvider>
+        </SmoothScrollProvider>
       </body>
     </html>
   );

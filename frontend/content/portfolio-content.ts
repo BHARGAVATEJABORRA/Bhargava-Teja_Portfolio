@@ -82,6 +82,16 @@ export interface ArticleSummary {
   tags?: string[];
   premise: string;
   takeaway: string;
+  /** Short kicker shown in the card header, e.g. "Cloud Cost · FinOps". */
+  source?: string;
+  /** One-line hook rendered under the title in the stacking deck. */
+  tagline?: string;
+  /** Longer body paragraph shown when the card is the active/expanded one. */
+  body?: string;
+  /** Cosmetic like count for the deck card (placeholder social proof). */
+  likes?: number;
+  /** Accent color for the card image panel / gradient. */
+  accent?: string;
 }
 
 export interface ControlCenterModule {
@@ -136,8 +146,10 @@ export const portfolioContent = {
       timezone: "Central Time (CT)",
       coffeeCount: 847,
       githubUsername: "BHARGAVATEJABORRA",
-      weatherLocation: "Dallas",
+      weatherLocation: "Dallas, TX",
       weatherTimezone: "America/Chicago",
+      weatherLat: 32.7767,
+      weatherLng: -96.797,
     },
   },
   hero: {
@@ -430,36 +442,152 @@ export const portfolioContent = {
       ],
     },
   ] as SkillCategory[],
+  // NOTE: Placeholder ("cooked up") stories themed on the resume. Swap in real
+  // published posts later; `isReal: false` keeps them flagged as samples.
   articles: [
     {
-      slug: "resilient-microservices-patterns",
-      title: "Building Resilient Cloud Microservices: Practical Patterns from Production",
-      excerpt:
-        "Lessons from migrating Capital One services to AWS serverless - deployment safety, observability checkpoints, and cost-aware scaling patterns.",
-      publishedAt: "2024-11",
+      slug: "cutting-aws-bill-35-percent",
+      title: "Cutting a Fortune 500 Bank's AWS Bill by 35% Without Shipping Less",
+      source: "Cloud Cost · FinOps",
+      excerpt: "Rightsizing, savings plans, and a ruthless audit of idle capacity — how a banking platform got 35% cheaper while uptime stayed at 99.9%.",
+      tagline: "The cheapest server is the one you turned off on Friday.",
+      body:
+        "When monthly cloud spend creeps past six figures, the savings hide in the boring places. I walked through EC2 rightsizing, S3 lifecycle tiers, and Savings Plans coverage, then automated the cleanup so idle dev environments shut themselves down overnight. The result: ~$40K in annual savings and a cost dashboard the whole org could actually read.",
+      publishedAt: "March 2025",
       readTime: "8 min read",
       href: "#",
       isReal: false,
-      tags: ["AWS", "Microservices", "Cloud"],
-      premise:
-        "Lessons from migrating Capital One services to AWS serverless - deployment safety, observability checkpoints, and cost-aware scaling patterns.",
-      takeaway:
-        "Use release gating, service-level telemetry, and cost-aware autoscaling policies together to keep cloud migration reliable and sustainable.",
+      likes: 42,
+      accent: "#fcbc1d",
+      tags: ["AWS", "FinOps", "Cost Optimization"],
+      premise: "Where cloud savings actually hide on a high-scale banking platform.",
+      takeaway: "Rightsizing plus automated idle-resource shutdown beats heroic one-off cleanups every time.",
     },
     {
-      slug: "terraform-multi-region",
-      title: "Terraform Multi-Region Deployments Without Drift",
-      excerpt:
-        "How we standardized environment parity across AWS and Azure using Terraform modules and GitHub Actions, reducing configuration drift to near zero.",
-      publishedAt: "2024-09",
+      slug: "three-week-releases-to-two-day-ships",
+      title: "From 3-Week Releases to 2-Day Ships: Rebuilding a Banking CI/CD Pipeline",
+      source: "DevOps · CI/CD",
+      excerpt: "Replacing manual change windows with Jenkins + CodePipeline gates cut release cycles from three weeks to two days and dropped deploy failures 70%.",
+      tagline: "Slow releases aren't safe releases — they're just rare ones.",
+      body:
+        "Enterprise banking treats every deploy as a risk event, which is exactly why the pipeline had calcified into three-week change windows. I introduced automated test gates, progressive rollouts, and one-click rollback. Releases that once needed a committee now ship in two days, and deployment failures fell by 70% because the safety lived in the pipeline, not in people.",
+      publishedAt: "January 2025",
       readTime: "7 min read",
       href: "#",
       isReal: false,
-      tags: ["Terraform", "IaC", "CI/CD"],
-      premise:
-        "How we standardized environment parity across AWS and Azure using Terraform modules and GitHub Actions, reducing configuration drift to near zero.",
-      takeaway:
-        "Modular IaC with opinionated validation and CI pipelines prevents region drift before it reaches production environments.",
+      likes: 37,
+      accent: "#6aa6ff",
+      tags: ["CI/CD", "Jenkins", "AWS CodePipeline"],
+      premise: "How automated gates made frequent banking deploys safer, not scarier.",
+      takeaway: "Encode safety into the pipeline and release frequency stops being a liability.",
+    },
+    {
+      slug: "designing-for-15-minute-rto",
+      title: "Designing for a 15-Minute RTO: Disaster Recovery That Survives Real Outages",
+      source: "Reliability · DR",
+      excerpt: "Multi-AZ failover, VPC isolation, and IAM guardrails that meet SOC2 and PCI-DSS while keeping recovery under fifteen minutes.",
+      tagline: "Your DR plan is a hypothesis until a region goes dark.",
+      body:
+        "A recovery-time objective only matters if you've actually rehearsed it. I designed failover across availability zones with hardened VPCs, scoped security groups, and least-privilege IAM, then ran game days until 15-minute recovery was routine rather than aspirational — all while satisfying SOC2 and PCI-DSS auditors.",
+      publishedAt: "November 2024",
+      readTime: "9 min read",
+      href: "#",
+      isReal: false,
+      likes: 51,
+      accent: "#c084fc",
+      tags: ["Disaster Recovery", "AWS", "Compliance"],
+      premise: "Building disaster recovery you can prove, not just document.",
+      takeaway: "Rehearsed failover beats a beautiful runbook nobody has tested.",
+    },
+    {
+      slug: "terraform-without-drift",
+      title: "Terraform at Scale: Killing Configuration Drift Across AWS and Azure",
+      source: "IaC · Platform",
+      excerpt: "Opinionated modules plus CI validation drove multi-cloud environment parity and pushed configuration drift to near zero.",
+      tagline: "Drift is just undocumented decisions piling up in production.",
+      body:
+        "Two clouds, five teams, and endless 'just one quick console change' — that's how drift starts. I built reusable Terraform modules with policy validation baked into GitHub Actions, so every environment came from the same source of truth. Provisioning time dropped 60% and the gap between staging and prod effectively disappeared.",
+      publishedAt: "September 2024",
+      readTime: "7 min read",
+      href: "#",
+      isReal: false,
+      likes: 29,
+      accent: "#34d399",
+      tags: ["Terraform", "IaC", "Multi-Cloud"],
+      premise: "Standardizing multi-cloud environments before drift reaches prod.",
+      takeaway: "Modular IaC with CI validation keeps every environment honest.",
+    },
+    {
+      slug: "oauth2-jwt-at-500k-calls",
+      title: "OAuth2 + JWT at 500K Calls a Day: Hardening Spring Security in Production",
+      source: "Security · APIs",
+      excerpt: "Token rotation, scoped claims, and Redis-backed sessions cut authentication failures 85% on a half-million daily API calls.",
+      tagline: "Auth bugs don't scale gracefully — they fail loudly at 3 a.m.",
+      body:
+        "At 500K calls a day, a sloppy auth layer becomes a pager magnet. I tightened Spring Security with short-lived JWTs, scoped OAuth2 claims, and Redis-backed token state, then load-tested the failure modes. Authentication failures dropped 85% and the on-call rotation finally got quiet.",
+      publishedAt: "June 2024",
+      readTime: "6 min read",
+      href: "#",
+      isReal: false,
+      likes: 33,
+      accent: "#f97316",
+      tags: ["Spring Security", "OAuth2", "JWT"],
+      premise: "Making high-volume API authentication boringly reliable.",
+      takeaway: "Short-lived, scoped tokens plus load-tested failure modes keep auth quiet.",
+    },
+    {
+      slug: "serverless-on-a-budget",
+      title: "Serverless on a Budget: Replacing EC2 Fleets with Lambda + API Gateway",
+      source: "Serverless · AWS",
+      excerpt: "Moving 500K daily events from always-on EC2 to event-driven Lambda trimmed infrastructure cost 30% with no throughput loss.",
+      tagline: "Stop paying for servers that spend the night doing nothing.",
+      body:
+        "An always-on EC2 fleet for bursty, event-driven work is a standing invoice for idle time. I rebuilt the workflow around Lambda, API Gateway, and S3 so capacity followed demand instead of the clock. Handling 500K daily events got 30% cheaper, and scaling stopped being a capacity-planning meeting.",
+      publishedAt: "March 2024",
+      readTime: "6 min read",
+      href: "#",
+      isReal: false,
+      likes: 24,
+      accent: "#22d3c2",
+      tags: ["Serverless", "Lambda", "API Gateway"],
+      premise: "When event-driven serverless beats an always-on fleet.",
+      takeaway: "Match capacity to demand and idle time stops showing up on the bill.",
+    },
+    {
+      slug: "postgres-dynamodb-40-percent-latency",
+      title: "Taming PostgreSQL and DynamoDB: A 40% Latency Win with Redis Caching",
+      source: "Data · Performance",
+      excerpt: "Query tuning, smart indexing, and a Redis cache layer sped API responses 40% and cut database load 60%.",
+      tagline: "The fastest query is the one you never send to the database.",
+      body:
+        "Hot read paths were hammering the primary database long after the data stopped changing. I profiled the slow queries, fixed the indexing, and put a Redis cache in front of the expensive lookups. API responses got 40% faster and database load fell 60% — headroom the team spent on features instead of firefighting.",
+      publishedAt: "December 2023",
+      readTime: "7 min read",
+      href: "#",
+      isReal: false,
+      likes: 31,
+      accent: "#60a5fa",
+      tags: ["PostgreSQL", "DynamoDB", "Redis"],
+      premise: "Cutting database load without rewriting the application.",
+      takeaway: "Profile first, index well, then cache the lookups that don't change.",
+    },
+    {
+      slug: "cloudwatch-dashboards-3x-faster",
+      title: "CloudWatch Dashboards That Actually Catch Incidents 3x Faster",
+      source: "Observability · SRE",
+      excerpt: "Signal-first dashboards and SNS alerting detected incidents three times faster and prevented 95% of would-be outages.",
+      tagline: "A dashboard nobody watches is just expensive wallpaper.",
+      body:
+        "Most monitoring dies of noise — a hundred green tiles and the one red one nobody notices. I rebuilt the CloudWatch dashboards around the handful of signals that actually predict failure, wired SNS alerts to the right humans, and tuned thresholds against real incident history. Detection got 3x faster and 95% of outages were caught before customers ever felt them.",
+      publishedAt: "October 2023",
+      readTime: "5 min read",
+      href: "#",
+      isReal: false,
+      likes: 28,
+      accent: "#a78bfa",
+      tags: ["CloudWatch", "Observability", "Alerting"],
+      premise: "Designing monitoring around signal instead of noise.",
+      takeaway: "Alert on the few signals that predict failure and the rest is wallpaper.",
     },
   ] as ArticleSummary[],
 };

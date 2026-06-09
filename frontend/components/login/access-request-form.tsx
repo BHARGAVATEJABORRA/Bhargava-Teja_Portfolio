@@ -87,7 +87,7 @@ export function AccessRequestForm() {
             name="name"
             value={form.name}
             onChange={(event) => setForm({ ...form, name: event.target.value })}
-            className="w-full rounded-[1.5rem] border border-[color:var(--color-border)/0.78] bg-[color:var(--color-card)/0.74] px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className="w-full rounded-[1.5rem] border tint-border-bd-78 tint-card-bg-74 px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           />
         </label>
 
@@ -99,7 +99,7 @@ export function AccessRequestForm() {
             name="email"
             value={form.email}
             onChange={(event) => setForm({ ...form, email: event.target.value })}
-            className="w-full rounded-[1.5rem] border border-[color:var(--color-border)/0.78] bg-[color:var(--color-card)/0.74] px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+            className="w-full rounded-[1.5rem] border tint-border-bd-78 tint-card-bg-74 px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           />
         </label>
       </div>
@@ -113,7 +113,7 @@ export function AccessRequestForm() {
           value={form.message}
           onChange={(event) => setForm({ ...form, message: event.target.value })}
           placeholder="Share whether you need recruiter review access, project walkthrough details, or a private demo."
-          className="w-full rounded-[1.5rem] border border-[color:var(--color-border)/0.78] bg-[color:var(--color-card)/0.74] px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+          className="w-full rounded-[1.5rem] border tint-border-bd-78 tint-card-bg-74 px-4 py-3 text-sm text-[var(--color-ink)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
         />
       </label>
 

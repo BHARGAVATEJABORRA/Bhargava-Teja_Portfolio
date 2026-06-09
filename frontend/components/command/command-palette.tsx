@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { trackEvent } from "@/lib/analytics";
 import { getResolvedSocialLink, getResumeHref } from "@/lib/profile-links";
+import { scrollToSection } from "@/lib/scroll-to-section";
 import { contentAvailability } from "@/lib/site";
 
 interface PaletteCommand {
@@ -13,24 +14,6 @@ interface PaletteCommand {
   label: string;
   keywords: string;
   run: () => void;
-}
-
-function scrollToSection(id: string) {
-  const section = document.getElementById(id);
-
-  if (!section) {
-    window.location.assign(`/#${id}`);
-    return;
-  }
-
-  const isReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  section.scrollIntoView({
-    behavior: isReducedMotion ? "auto" : "smooth",
-    block: "start",
-  });
-
-  window.history.replaceState(null, "", `#${id}`);
 }
 
 export function CommandPalette() {
@@ -177,7 +160,7 @@ export function CommandPalette() {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[color:var(--color-ink)/0.45] px-4 pt-[14vh] backdrop-blur-[1px]"
+      className="fixed inset-0 z-50 tint-ink-bg-45 px-4 pt-[14vh] backdrop-blur-[1px]"
       onPointerDown={() => {
         setIsOpen(false);
       }}

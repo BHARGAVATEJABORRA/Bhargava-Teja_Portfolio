@@ -2,9 +2,10 @@
 
 import { motion, type MotionValue } from "framer-motion";
 
-import { FocusTrack } from "./focus-track";
-import { AvailabilityStatus } from "./availability-status";
+import { GitHubContributions } from "./github-contributions";
+import { GlobeWidget } from "./globe-widget";
 import { LocalTimeClock } from "./local-time-clock";
+import { SpotifyWidget } from "./spotify-widget";
 import { WeatherWidget } from "./weather-widget";
 
 interface HeroControlWindowProps {
@@ -23,34 +24,33 @@ export function HeroControlWindow({
   className = "",
 }: HeroControlWindowProps) {
   return (
-    <motion.div
+    <motion.section
       id="control-center"
-      aria-label="Control center window"
+      aria-label="At a glance — live control center"
       style={{ opacity, y, scale }}
-      className={`w-[min(90vw,44rem)] rounded-[1.75rem] border border-[rgba(255,255,255,0.62)] bg-[rgba(255,249,242,0.32)] p-3 shadow-[0_28px_70px_rgba(74,50,23,0.24)] backdrop-blur-[22px] transition-[opacity,transform] sm:rounded-[2rem] sm:p-4 ${
+      className={`w-[min(94vw,68rem)] transition-[opacity,transform] ${
         visible ? "pointer-events-auto" : "pointer-events-none"
       } ${className}`.trim()}
     >
-      <div className="flex items-center justify-between gap-4 border-b border-[rgba(188,152,112,0.22)] px-2 pb-3">
-        <div className="flex items-center gap-2">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#f58f6c]" aria-hidden />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#f0c96f]" aria-hidden />
-          <span className="h-2.5 w-2.5 rounded-full bg-[#85c98d]" aria-hidden />
-        </div>
-        <div className="text-right">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[rgba(40,90,94,0.88)]">
-            Control Center
-          </p>
-          <p className="mt-1 text-xs text-[rgba(68,65,59,0.74)] sm:text-sm">A live 2x2 window anchored in the room.</p>
-        </div>
+      <div className="mb-3 flex items-baseline justify-between gap-4 px-1 sm:mb-4">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--color-accent)]">At a Glance</h2>
       </div>
 
-      <div className="mt-3 grid gap-3 sm:mt-4 sm:grid-cols-2">
-        <AvailabilityStatus />
-        <LocalTimeClock />
-        <WeatherWidget />
-        <FocusTrack />
+      <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:grid-rows-[16rem_13.75rem] lg:items-stretch">
+        <div className="min-h-[16rem] min-w-0 lg:min-h-0">
+          <GlobeWidget />
+        </div>
+        <div className="min-h-[16rem] min-w-0 lg:min-h-0">
+          <GitHubContributions />
+        </div>
+        <div className="min-h-[13.75rem] min-w-0 lg:min-h-0">
+          <WeatherWidget />
+        </div>
+        <div className="grid min-h-[13.75rem] min-w-0 gap-3 sm:gap-4 lg:min-h-0 lg:grid-rows-2 [&>.control-center-panel]:min-h-0 [&>.control-center-panel]:overflow-hidden [&>.control-center-panel]:!p-3 sm:[&>.control-center-panel]:!p-4">
+          <LocalTimeClock />
+          <SpotifyWidget />
+        </div>
       </div>
-    </motion.div>
+    </motion.section>
   );
 }

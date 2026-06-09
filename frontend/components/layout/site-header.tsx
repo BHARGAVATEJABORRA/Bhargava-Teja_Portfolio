@@ -1,31 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { LuLogIn } from "react-icons/lu";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LuLogIn, LuMoon, LuSun } from "react-icons/lu";
 
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { portfolioContent } from "@/content/portfolio-content";
 import { trackEvent } from "@/lib/analytics";
 import { scrollToSection } from "@/lib/scroll-to-section";
 import { coreSectionLinks } from "@/lib/site";
+import { getActiveLenis } from "@/lib/smooth-scroll-instance";
+
+function sectionIdToActiveHref(sectionId: string) {
+  return sectionId === "hero" ? null : `/#${sectionId}`;
+}
+
+function getViewportHeaderOffset() {
+  const header = document.querySelector<HTMLElement>("[data-site-header='true']");
+
+  if (!header) {
+    return 0;
+  }
+
+  const headerBottom = header.getBoundingClientRect().bottom;
+
+  return Number.isFinite(headerBottom) && headerBottom > 0 ? headerBottom : 0;
+}
 
 function SectionNavigation({
   activeHref,
   source,
+  onNavigate,
   compact = false,
   liquidEnabled = false,
+  isScrolled = false,
 }: {
   activeHref: string | null;
   source: "sticky_header" | "sticky_header_mobile";
+  onNavigate: (href: string) => void;
   compact?: boolean;
   liquidEnabled?: boolean;
+  isScrolled?: boolean;
 }) {
   return (
     <nav
       aria-label="Section navigation"
       data-compact={compact ? "true" : "false"}
       data-liquid-glass={liquidEnabled ? "on" : "off"}
+      data-scrolled={isScrolled ? "true" : "false"}
       className="index-bar-surface index-pill-nav rounded-full p-1.5"
     >
       <span aria-hidden className="index-bar-warp" />
@@ -43,6 +64,7 @@ function SectionNavigation({
                 onClick={(event) => {
                   if (item.href.startsWith("/#")) {
                     event.preventDefault();
+                    onNavigate(item.href);
                     scrollToSection(item.href.replace("/#", ""));
                   }
 
@@ -66,25 +88,64 @@ function SectionNavigation({
   );
 }
 
+function ThemeToggle() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const savedTheme = window.localStorage.getItem("portfolio-theme");
+    const nextTheme = savedTheme === "light" ? "light" : "dark";
+
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    const frameId = window.requestAnimationFrame(() => setTheme(nextTheme));
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  const toggleTheme = useCallback(() => {
+    setTheme((currentTheme) => {
+      const nextTheme = currentTheme === "dark" ? "light" : "dark";
+
+      document.documentElement.classList.toggle("dark", nextTheme === "dark");
+      window.localStorage.setItem("portfolio-theme", nextTheme);
+      trackEvent("theme_change", { theme: nextTheme, source: "sticky_header" });
+
+      return nextTheme;
+    });
+  }, []);
+
+  const isDark = theme === "dark";
+
+  return (
+    <button
+      type="button"
+      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-pressed={isDark}
+      onClick={toggleTheme}
+      data-liquid-glass="on"
+      className="liquid-control inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
+    >
+      {isDark ? <LuMoon size={16} aria-hidden /> : <LuSun size={16} aria-hidden />}
+    </button>
+  );
+}
+
 export function SiteHeader() {
   const observedSectionIds = useMemo(
     () => ["hero", ...coreSectionLinks.map((item) => item.href.replace("/#", "")).filter((id) => id.length > 0)],
     [],
   );
   const [activeHref, setActiveHref] = useState<string | null>(null);
-  const [liquidEnabled] = useState(() => {
-    if (typeof window === "undefined") {
-      return false;
+  const [isScrolled, setIsScrolled] = useState(false);
+  const manualActiveUntilRef = useRef(0);
+  const [liquidEnabled, setLiquidEnabled] = useState(false);
+
+  const syncActiveHrefToViewport = useCallback(() => {
+    if (Date.now() < manualActiveUntilRef.current) {
+      return;
     }
 
-    const ua = window.navigator.userAgent;
-    const isChromium = /(Chrome|Chromium|Edg)\//.test(ua) && !/Firefox\//.test(ua);
-    const hasBackdropFilter = typeof CSS !== "undefined" && CSS.supports("backdrop-filter: blur(1px)");
-
-    return isChromium && hasBackdropFilter;
-  });
-
-  useEffect(() => {
     const sections = observedSectionIds
       .map((id) => document.getElementById(id))
       .filter((section): section is HTMLElement => section !== null);
@@ -93,29 +154,100 @@ export function SiteHeader() {
       return;
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+    const headerOffset = getViewportHeaderOffset();
+    const anchorY = window.scrollY + headerOffset + Math.max(120, (window.innerHeight - headerOffset) * 0.38);
+    let nextId = sections[0]?.id ?? "hero";
 
-        if (visible.length > 0) {
-          const currentId = visible[0].target.id;
-          setActiveHref(currentId === "hero" ? null : `/#${currentId}`);
-        }
-      },
-      { rootMargin: "-35% 0px -50% 0px", threshold: [0.15, 0.35, 0.6] },
-    );
+    for (const section of sections) {
+      const top = section.getBoundingClientRect().top + window.scrollY;
+      const bottom = top + section.offsetHeight;
 
-    sections.forEach((section) => observer.observe(section));
+      if (anchorY >= top && anchorY < bottom) {
+        nextId = section.id;
+        break;
+      }
 
-    return () => {
-      observer.disconnect();
-    };
+      if (anchorY >= top) {
+        nextId = section.id;
+      }
+    }
+
+    const nextHref = sectionIdToActiveHref(nextId);
+    setActiveHref((currentHref) => (currentHref === nextHref ? currentHref : nextHref));
   }, [observedSectionIds]);
 
+  const handleNavigate = useCallback((href: string) => {
+    manualActiveUntilRef.current = Date.now() + 900;
+    setActiveHref(href);
+  }, []);
+
+  useEffect(() => {
+    const ua = window.navigator.userAgent;
+    const isChromium = /(Chrome|Chromium|Edg)\//.test(ua) && !/Firefox\//.test(ua);
+    const hasBackdropFilter = typeof CSS !== "undefined" && CSS.supports("backdrop-filter: blur(1px)");
+    const frameId = window.requestAnimationFrame(() => {
+      setLiquidEnabled(isChromium && hasBackdropFilter);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateScrollState = () => {
+      setIsScrolled(window.scrollY > 72);
+    };
+
+    updateScrollState();
+    window.addEventListener("scroll", updateScrollState, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", updateScrollState);
+    };
+  }, []);
+
+  useEffect(() => {
+    let frameId: number | null = null;
+
+    const requestSync = () => {
+      if (frameId !== null) {
+        return;
+      }
+
+      frameId = window.requestAnimationFrame(() => {
+        frameId = null;
+        syncActiveHrefToViewport();
+      });
+    };
+
+    requestSync();
+    window.addEventListener("scroll", requestSync, { passive: true });
+    window.addEventListener("resize", requestSync);
+
+    const lenis = getActiveLenis();
+    lenis?.on("scroll", requestSync);
+
+    const timeouts = [120, 420, 900].map((delay) => window.setTimeout(requestSync, delay));
+
+    return () => {
+      if (frameId !== null) {
+        window.cancelAnimationFrame(frameId);
+      }
+
+      window.removeEventListener("scroll", requestSync);
+      window.removeEventListener("resize", requestSync);
+      lenis?.off("scroll", requestSync);
+      timeouts.forEach((timeout) => window.clearTimeout(timeout));
+    };
+  }, [syncActiveHrefToViewport]);
+
   return (
-    <header data-site-header="true" className="pointer-events-none fixed inset-x-0 top-0 z-40 px-4 pt-4 sm:px-5">
+    <header
+      data-site-header="true"
+      data-scrolled={isScrolled ? "true" : "false"}
+      className="pointer-events-none fixed inset-x-0 top-0 z-[80] translate-y-0 px-4 pt-4 opacity-100 transition-all duration-500 sm:px-5"
+    >
       <div className="pointer-events-auto relative z-10 flex items-center gap-3">
         <Link
           href="/#hero"
@@ -126,13 +258,20 @@ export function SiteHeader() {
           }}
           className="inline-flex h-10 shrink-0 items-center px-1 text-sm font-semibold tracking-tight text-[var(--color-ink)]"
         >
-          {portfolioContent.identity.name}
+          <span className="text-sm font-semibold tracking-tight text-[var(--color-ink)]">{portfolioContent.identity.name}</span>
         </Link>
 
         <div className="ml-auto hidden min-w-0 items-center gap-2 md:flex">
           <div className="min-w-0">
-            <SectionNavigation activeHref={activeHref} source="sticky_header" liquidEnabled={liquidEnabled} />
+            <SectionNavigation
+              activeHref={activeHref}
+              source="sticky_header"
+              onNavigate={handleNavigate}
+              liquidEnabled={liquidEnabled}
+              isScrolled={isScrolled}
+            />
           </div>
+          <ThemeToggle />
           <Link
             href="/login"
             aria-label="Open login page"
@@ -142,10 +281,10 @@ export function SiteHeader() {
           >
             <LuLogIn size={17} aria-hidden />
           </Link>
-          <ThemeToggle buttonClassName="h-10 w-10 min-h-0 min-w-0" />
         </div>
 
         <div className="flex shrink-0 items-center gap-2 md:hidden">
+          <ThemeToggle />
           <Link
             href="/login"
             aria-label="Open login page"
@@ -155,12 +294,18 @@ export function SiteHeader() {
           >
             <LuLogIn size={17} aria-hidden />
           </Link>
-          <ThemeToggle buttonClassName="h-10 w-10 min-h-0 min-w-0" />
         </div>
       </div>
 
       <div className="pointer-events-auto relative z-10 mt-3 md:hidden">
-        <SectionNavigation activeHref={activeHref} source="sticky_header_mobile" compact liquidEnabled={liquidEnabled} />
+        <SectionNavigation
+          activeHref={activeHref}
+          source="sticky_header_mobile"
+          onNavigate={handleNavigate}
+          compact
+          liquidEnabled={liquidEnabled}
+          isScrolled={isScrolled}
+        />
       </div>
     </header>
   );

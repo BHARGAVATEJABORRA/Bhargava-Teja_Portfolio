@@ -76,17 +76,6 @@ export function ReflectiveAccessCard() {
               yChannelSelector="G"
               result="warped"
             />
-            <feSpecularLighting
-              in="noise"
-              surfaceScale="6"
-              specularConstant="0.8"
-              specularExponent="18"
-              lightingColor="#ffffff"
-              result="glint"
-            >
-              <fePointLight x="-120" y="-60" z="240" />
-            </feSpecularLighting>
-            <feBlend in="warped" in2="glint" mode="screen" />
           </filter>
         </defs>
       </svg>

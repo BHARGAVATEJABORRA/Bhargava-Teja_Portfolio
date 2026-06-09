@@ -20,7 +20,7 @@ export default function LoginPage() {
   return (
     <main id="main-content" className="relative min-h-screen overflow-hidden">
       <div aria-hidden className="pointer-events-none absolute inset-0">
-        <div className="absolute left-[6%] top-[10%] h-72 w-72 rounded-full bg-[color:var(--color-accent)/0.2] blur-3xl" />
+        <div className="absolute left-[6%] top-[10%] h-72 w-72 rounded-full tint-accent-bg-20 blur-3xl" />
         <div className="absolute right-[-10%] top-[-8%] h-[28rem] w-[28rem] rounded-full bg-[rgba(82,126,255,0.16)] blur-3xl" />
         <div className="absolute bottom-[-14%] left-[24%] h-[24rem] w-[24rem] rounded-full bg-[rgba(255,146,88,0.14)] blur-3xl" />
       </div>
@@ -108,7 +108,7 @@ export default function LoginPage() {
 
               <AccessRequestForm />
 
-              <div className="rounded-2xl border border-[color:var(--color-border)/0.72] bg-[color:var(--color-card)/0.56] p-4 text-sm text-[var(--color-muted-ink)]">
+              <div className="rounded-2xl border tint-border-bd-72 tint-card-bg-56 p-4 text-sm text-[var(--color-muted-ink)]">
                 Need immediate access instead? Email{" "}
                 <a href={`mailto:${portfolioContent.identity.contactEmail}`} className="font-semibold text-[var(--color-ink)] underline underline-offset-4">
                   {portfolioContent.identity.contactEmail}
