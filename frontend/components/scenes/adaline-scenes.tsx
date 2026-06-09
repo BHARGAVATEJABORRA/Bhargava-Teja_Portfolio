@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import type { MotionValue } from "framer-motion";
-import { motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 
 const footerSceneTheme = {
   "--color-ink": "#f2fbff",
@@ -657,13 +657,14 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
     offset: ["start end", "end 35%"],
   });
 
-  // A light spring keeps the gradient tracking the scroll 1:1 (no laggy drift)
-  // while smoothing out per-frame jitter — the "one-on-one" feel Adaline has.
-  const smoothSkyProgress = useSpring(skyProgress, { stiffness: 140, damping: 42, mass: 0.18 });
-  const skyBackground = useTransform(smoothSkyProgress, (value) => footerSkyGradient(smoothStep(value)));
-  const skyOpacity = useTransform(smoothSkyProgress, (value) => smoothStep(clamp01(value / 0.32)));
-  const cloudBackground = useTransform(smoothSkyProgress, (value) => footerCloudGradient(smoothStep(value)));
-  const starsOpacity = useTransform(smoothSkyProgress, (value) => smoothStep(clamp01((value - 0.18) / 0.5)) * 0.96);
+  // Lenis is the single smoothing layer for the whole page: it eases the native
+  // scroll position itself, and every layer below is a *pure function* of that
+  // position. No spring/lerp on top — a second clock here is exactly what made
+  // the sky and star opacity keep drifting after the page had stopped.
+  const skyBackground = useTransform(skyProgress, (value) => footerSkyGradient(smoothStep(value)));
+  const skyOpacity = useTransform(skyProgress, (value) => smoothStep(clamp01(value / 0.32)));
+  const cloudBackground = useTransform(skyProgress, (value) => footerCloudGradient(smoothStep(value)));
+  const starsOpacity = useTransform(skyProgress, (value) => smoothStep(clamp01((value - 0.18) / 0.5)) * 0.96);
 
   return (
     <div className="adaline-footer-scene relative flex flex-col overflow-clip bg-[#050e11] text-[#f4fbf7]" style={footerSceneTheme}>
