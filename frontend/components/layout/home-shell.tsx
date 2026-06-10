@@ -5,6 +5,7 @@ import { useCallback, useState } from "react";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { SiteHeader } from "@/components/layout/site-header";
 import { EntranceCurtain } from "@/components/motion/entrance-curtain";
+import { AmbientAurora } from "@/components/scenes/ambient-aurora";
 import { AboutSection } from "@/components/sections/about-section";
 import { AiCompanionDock } from "@/components/sections/ai-companion-dock";
 import { BlogsSection } from "@/components/sections/blogs-section";
@@ -24,6 +25,11 @@ export function HomeShell() {
   return (
     <>
       <EntranceCurtain onDone={handleEntranceDone} />
+
+      {/* Site-wide ambient aurora (§3.3): one fixed canvas, one continuous
+          clock, identical on every section — intensity follows global scroll. */}
+      <AmbientAurora />
+
       <SiteHeader />
 
       {showContent ? (

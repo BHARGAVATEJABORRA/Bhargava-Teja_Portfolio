@@ -132,212 +132,11 @@ function footerCloudGradient(progress: number) {
   return `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)`;
 }
 
-// The aurora reads as soft vertical "northern-light" curtains in the green→teal
-// band (matching the adaline.ai footer). Each curtain is built from a few
-// bell-feathered vertical strips drawn with additive ("lighter") blending; the
-// softness comes from the CSS `blur(8px)` on the canvas, so we deliberately do
-// NO per-frame canvas blur filter — that was the expensive part that stuttered
-// the scroll into the footer.
-const AURORA_CURTAINS = [
-  { x: 0.12, half: 0.16, hue: 144, alpha: 0.28, phase: 0.1, speed: 0.12, height: 0.86 },
-  { x: 0.27, half: 0.13, hue: 150, alpha: 0.42, phase: 1.1, speed: 0.17, height: 0.98 },
-  { x: 0.44, half: 0.2, hue: 156, alpha: 0.52, phase: 2.4, speed: 0.11, height: 1.08 },
-  { x: 0.62, half: 0.15, hue: 162, alpha: 0.43, phase: 3.3, speed: 0.15, height: 0.94 },
-  { x: 0.81, half: 0.17, hue: 168, alpha: 0.34, phase: 4.8, speed: 0.13, height: 0.9 },
-] as const;
-
-type AuroraCurtain = (typeof AURORA_CURTAINS)[number];
-
 const SHOOTING_STARS = [
   { left: "13%", top: "4%", width: "10px", rotate: "58deg", duration: "8.8s", delay: "0.7s", x: "18vw", y: "26vh", opacity: 0.24 },
   { left: "68%", top: "1%", width: "9px", rotate: "57deg", duration: "11.4s", delay: "3.9s", x: "16vw", y: "23vh", opacity: 0.2 },
   { left: "42%", top: "12%", width: "8px", rotate: "58deg", duration: "13.6s", delay: "7.1s", x: "14vw", y: "20vh", opacity: 0.18 },
 ] as const;
-
-function drawAuroraCurtain(
-  context: CanvasRenderingContext2D,
-  width: number,
-  height: number,
-  curtain: AuroraCurtain,
-  time: number,
-  alphaScale: number,
-) {
-  const center = width * curtain.x + Math.sin(time * curtain.speed + curtain.phase) * width * 0.035;
-  const half = width * curtain.half;
-  const topY = -height * 0.08;
-  const botY = height * curtain.height;
-  const flicker = 0.86 + 0.14 * Math.sin(time * 0.55 + curtain.phase * 1.7);
-  const peak = curtain.alpha * alphaScale * flicker;
-  const strips = 17;
-
-  for (let s = 0; s < strips; s += 1) {
-    const f = s / (strips - 1);
-    const edge = 1 - Math.abs(f - 0.5) * 2;
-    const stripAlpha = peak * (0.18 + edge * edge * 0.82);
-    if (stripAlpha < 0.004) {
-      continue;
-    }
-
-    const sweep = Math.sin(time * curtain.speed * 1.8 + f * 5.8 + curtain.phase) * width * 0.018;
-    const stripX = center + (f - 0.5) * 2 * half + sweep;
-    const stripWidth = Math.max(10, half * (0.22 + edge * 0.2));
-    const gradient = context.createLinearGradient(0, topY, 0, botY);
-
-    gradient.addColorStop(0, `hsla(${curtain.hue - 3}, 96%, 82%, ${stripAlpha * 0.78})`);
-    gradient.addColorStop(0.16, `hsla(${curtain.hue + 4}, 95%, 67%, ${stripAlpha})`);
-    gradient.addColorStop(0.42, `hsla(${curtain.hue + 12}, 92%, 54%, ${stripAlpha * 0.46})`);
-    gradient.addColorStop(0.7, `hsla(${curtain.hue + 22}, 88%, 45%, ${stripAlpha * 0.12})`);
-    gradient.addColorStop(1, `hsla(${curtain.hue + 22}, 80%, 44%, 0)`);
-
-    context.fillStyle = gradient;
-    context.beginPath();
-    context.moveTo(stripX - stripWidth / 2, topY);
-    context.bezierCurveTo(
-      stripX - stripWidth * 0.95 + Math.sin(time * 0.25 + f * 4) * width * 0.018,
-      height * 0.24,
-      stripX + stripWidth * 0.55 + Math.cos(time * 0.2 + f * 5) * width * 0.018,
-      height * 0.58,
-      stripX - stripWidth * 0.15,
-      botY,
-    );
-    context.lineTo(stripX + stripWidth / 2, botY);
-    context.bezierCurveTo(
-      stripX + stripWidth * 1.05 + Math.cos(time * 0.24 + f * 3) * width * 0.016,
-      height * 0.56,
-      stripX - stripWidth * 0.38 + Math.sin(time * 0.2 + f * 6) * width * 0.014,
-      height * 0.26,
-      stripX + stripWidth / 2,
-      topY,
-    );
-    context.closePath();
-    context.fill();
-  }
-}
-
-function drawFooterAurora(context: CanvasRenderingContext2D, width: number, height: number, time: number, isDarkTheme: boolean) {
-  context.clearRect(0, 0, width, height);
-
-  const alphaScale = isDarkTheme ? 1 : 0.76;
-
-  const glow = context.createRadialGradient(width * 0.5, height * 0.18, 0, width * 0.5, height * 0.2, width * 0.56);
-  glow.addColorStop(0, `rgba(117, 255, 188, ${0.2 * alphaScale})`);
-  glow.addColorStop(0.36, `rgba(70, 233, 192, ${0.11 * alphaScale})`);
-  glow.addColorStop(0.72, `rgba(31, 157, 151, ${0.035 * alphaScale})`);
-  glow.addColorStop(1, "rgba(31, 157, 151, 0)");
-
-  context.save();
-  context.globalCompositeOperation = "screen";
-  context.fillStyle = glow;
-  context.fillRect(0, -height * 0.12, width, height * 0.92);
-  context.restore();
-
-  context.save();
-  context.globalCompositeOperation = "screen";
-  for (const curtain of AURORA_CURTAINS) {
-    drawAuroraCurtain(context, width, height, curtain, time, alphaScale);
-  }
-  context.restore();
-}
-
-interface AdalineFooterAuroraCanvasProps {
-  isDarkTheme: boolean;
-  reduceMotion: boolean;
-}
-
-function AdalineFooterAuroraCanvas({ isDarkTheme, reduceMotion }: AdalineFooterAuroraCanvasProps) {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d", { alpha: true });
-
-    if (!canvas || !context) {
-      return;
-    }
-
-    let animationFrame = 0;
-    let running = false;
-    let width = 0;
-    let height = 0;
-    const startedAt = performance.now();
-
-    const elapsed = () => (reduceMotion ? 0 : (performance.now() - startedAt) / 1000);
-
-    // Sizing is handled by the ResizeObserver / initial call only — never inside
-    // the render loop, so each frame is just the cheap aurora draw.
-    const resize = () => {
-      const bounds = canvas.getBoundingClientRect();
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const nextWidth = Math.max(1, Math.round(bounds.width));
-      const nextHeight = Math.max(1, Math.round(bounds.height));
-      const nextCanvasWidth = Math.round(nextWidth * dpr);
-      const nextCanvasHeight = Math.round(nextHeight * dpr);
-
-      width = nextWidth;
-      height = nextHeight;
-
-      if (canvas.width !== nextCanvasWidth || canvas.height !== nextCanvasHeight) {
-        canvas.width = nextCanvasWidth;
-        canvas.height = nextCanvasHeight;
-      }
-
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-
-    const frame = () => {
-      drawFooterAurora(context, width, height, elapsed(), isDarkTheme);
-      animationFrame = requestAnimationFrame(frame);
-    };
-
-    const start = () => {
-      if (running || reduceMotion) {
-        return;
-      }
-      running = true;
-      animationFrame = requestAnimationFrame(frame);
-    };
-
-    const stop = () => {
-      running = false;
-      cancelAnimationFrame(animationFrame);
-    };
-
-    resize();
-    drawFooterAurora(context, width, height, elapsed(), isDarkTheme);
-
-    const resizeObserver = new ResizeObserver(() => {
-      resize();
-      if (!running) {
-        drawFooterAurora(context, width, height, elapsed(), isDarkTheme);
-      }
-    });
-    resizeObserver.observe(canvas);
-
-    // Only burn animation frames while the footer is actually on screen.
-    let intersectionObserver: IntersectionObserver | undefined;
-    if (!reduceMotion) {
-      intersectionObserver = new IntersectionObserver(
-        (entries) => {
-          if (entries[0]?.isIntersecting) {
-            start();
-          } else {
-            stop();
-          }
-        },
-        { rootMargin: "200px" },
-      );
-      intersectionObserver.observe(canvas);
-    }
-
-    return () => {
-      stop();
-      resizeObserver.disconnect();
-      intersectionObserver?.disconnect();
-    };
-  }, [isDarkTheme, reduceMotion]);
-
-  return <canvas ref={canvasRef} aria-hidden className="adaline-footer-aurora-canvas" />;
-}
 
 function drawImageCover(
   context: CanvasRenderingContext2D,
@@ -649,7 +448,6 @@ interface AdalineFooterSceneProps {
 // Only the foreground copy (contact + nav) is swapped for portfolio content.
 export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooterSceneProps) {
   const skyRef = useRef<HTMLDivElement | null>(null);
-  const shouldReduceMotion = useReducedMotion();
   // The tall day→night scroll zone drives the entire sky transition. By the time
   // its end reaches the top of the viewport the sky has fully settled into night.
   const { scrollYProgress: skyProgress } = useScroll({
@@ -721,16 +519,11 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         </motion.div>
       </div>
 
-      {/* CTA band: aurora canvas + foreground contact card. */}
+      {/* CTA band: foreground contact card. The aurora itself is the site-wide
+          ambient layer (AmbientAurora at the app root, §3.3) — it swells to full
+          intensity here via global scroll progress instead of being a local,
+          IntersectionObserver-gated canvas that froze everywhere else. */}
       <div className="relative flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-[#050e11] to-100%">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-0 h-[90%] w-full [mask-image:linear-gradient(to_bottom,transparent_0%,black_30%)]"
-        >
-          <div className="absolute inset-0 w-full">
-            <AdalineFooterAuroraCanvas isDarkTheme reduceMotion={Boolean(shouldReduceMotion)} />
-          </div>
-        </div>
         <motion.div
           aria-hidden
           data-scroll-scene="cta-shooting-stars"
