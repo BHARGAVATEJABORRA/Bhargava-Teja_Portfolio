@@ -1,32 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import type { MotionValue } from "framer-motion";
+import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
 import { Container } from "@/components/ui/container";
 import { portfolioContent } from "@/content/portfolio-content";
 import type { ArticleSummary } from "@/content/portfolio-content";
 
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function smoothStep(value: number) {
+  const clamped = clamp01(value);
+  return 3 * clamped ** 2 - 2 * clamped ** 3;
+}
+
+// How far card `index` has shrunk back into the deck: 0 while it is on top,
+// ramping to 1 as the next card pins over it. Pure function of the deck's
+// scroll progress — the same shared scroll source as every other layer.
+function coverage(progress: number, index: number, total: number) {
+  if (total <= 1) return 0;
+  return clamp01(progress * (total - 1) - index);
+}
+
 function ArticleCard({
   article,
   index,
+  total,
+  deckProgress,
 }: {
   article: ArticleSummary;
   index: number;
+  total: number;
+  deckProgress: MotionValue<number>;
 }) {
   const accent = article.accent ?? "#fcbc1d";
+  const shouldReduceMotion = useReducedMotion();
   const [liked, setLiked] = useState(false);
   const [hovered, setHovered] = useState(false);
   const likeCount = (article.likes ?? 0) + (liked ? 1 : 0);
 
+  // Stacked-deck reveal: each card eases 1 → 0.92 scale with a slight opacity
+  // falloff as the next card pins over it. No per-property transition — the
+  // values are scroll-bound, so they stop and reverse with the scroll itself.
+  const scale = useTransform(deckProgress, (p) => 1 - 0.08 * smoothStep(coverage(p, index, total)));
+  const opacity = useTransform(deckProgress, (p) => 1 - 0.2 * smoothStep(coverage(p, index, total)));
+
   return (
-    <article
+    <motion.article
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="article-card group"
       style={{
         zIndex: hovered ? 999 : index + 1,
         ["--article-accent" as string]: accent,
+        ...(shouldReduceMotion ? {} : { scale, opacity }),
       }}
     >
       {hovered ? <span className="article-tooltip">{article.title}</span> : null}
@@ -85,12 +116,21 @@ function ArticleCard({
         <span className="article-image-label">{article.source ?? "Article"}</span>
         <span className="article-image-likes">Likes: {likeCount}</span>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
 export function BlogsSection() {
   const articles = portfolioContent.articles ?? [];
+  const deckRef = useRef<HTMLDivElement | null>(null);
+
+  // One container-scoped scroll progress drives every card (0 = deck top pins,
+  // 1 = deck fully scrolled). Cards derive their scale/opacity from it as pure
+  // functions, so the stack tracks scroll one-to-one in both directions.
+  const { scrollYProgress: deckProgress } = useScroll({
+    target: deckRef,
+    offset: ["start start", "end end"],
+  });
 
   return (
     <section id="blogs" aria-labelledby="blogs-title" className="scroll-mt-28 pb-32 pt-20 sm:pt-24">
@@ -109,12 +149,14 @@ export function BlogsSection() {
           card to bring it forward.
         </p>
 
-        <div className="article-deck mt-12">
+        <div ref={deckRef} className="article-deck mt-12">
           {articles.map((article, index) => (
             <ArticleCard
               key={article.slug}
               article={article}
               index={index}
+              total={articles.length}
+              deckProgress={deckProgress}
             />
           ))}
         </div>
