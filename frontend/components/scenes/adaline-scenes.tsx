@@ -5,6 +5,8 @@ import { useCallback, useEffect, useRef } from "react";
 import type { MotionValue } from "framer-motion";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 
+import { FooterDockThree } from "@/components/scenes/footer-dock-three";
+
 const footerSceneTheme = {
   "--color-ink": "#f2fbff",
   "--color-muted-ink": "rgba(224, 243, 247, 0.72)",
@@ -448,6 +450,7 @@ interface AdalineFooterSceneProps {
 // Only the foreground copy (contact + nav) is swapped for portfolio content.
 export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooterSceneProps) {
   const skyRef = useRef<HTMLDivElement | null>(null);
+  const shouldReduceMotion = useReducedMotion();
   // The tall day→night scroll zone drives the entire sky transition. By the time
   // its end reaches the top of the viewport the sky has fully settled into night.
   const { scrollYProgress: skyProgress } = useScroll({
@@ -589,18 +592,26 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
             maskImage: "linear-gradient(to bottom, black 30%, transparent 100%)",
           }}
         >
-          <img
-            src="/adaline-scenes/footer/footer-dock-reflection.webp"
-            alt=""
-            aria-hidden
-            className="absolute left-0 top-0 aspect-[3] w-[200vw] object-cover opacity-60"
-          />
-          <img
-            src="/adaline-scenes/footer/footer-dock.webp"
-            alt=""
-            aria-hidden
-            className="relative aspect-[3] w-[200vw] object-cover"
-          />
+          {shouldReduceMotion ? (
+            <>
+              <img
+                src="/adaline-scenes/footer/footer-dock-reflection.webp"
+                alt=""
+                aria-hidden
+                className="absolute left-0 top-0 aspect-[3] w-[200vw] object-cover opacity-60"
+              />
+              <img
+                src="/adaline-scenes/footer/footer-dock.webp"
+                alt=""
+                aria-hidden
+                className="relative aspect-[3] w-[200vw] object-cover"
+              />
+            </>
+          ) : (
+            // Three.js + GSAP ScrollTrigger night scene: same dock/reflection
+            // textures, plus the scroll-driven glow path and lamp ignition.
+            <FooterDockThree />
+          )}
         </div>
 
         <div className="footer-transparent-nav relative right-0 bottom-0 left-0 z-[100] px-6 pb-16 sm:px-8 lg:px-12 xl:absolute xl:pb-24">
