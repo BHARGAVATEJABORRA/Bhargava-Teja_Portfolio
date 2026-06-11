@@ -10,18 +10,19 @@ async function deckRange(page: import("@playwright/test").Page) {
     return {
       top: rect.top + window.scrollY,
       bottom: rect.bottom + window.scrollY,
-      cardCount: deck.querySelectorAll(".article-card").length,
+      cardCount: deck.querySelectorAll(".scroll-stack-card").length,
     };
   });
 }
 
 function scaleOf(transform: number[]): number {
-  // computed transform is matrix(a, b, c, d, tx, ty) — a is the x scale.
+  // computed transform is matrix(a, ...) or matrix3d(m11, ...) — in both
+  // encodings the first number is the x scale.
   return transform.length >= 6 ? transform[0] : 1;
 }
 
-test.describe("§4 articles sticky-stacking deck", () => {
-  test("cards scale down as the next card pins over, tracking scroll 1:1", async ({ page }) => {
+test.describe("§4 articles ScrollStack deck", () => {
+  test("cards scale down as they pin into the stack, tracking scroll 1:1", async ({ page }) => {
     await gotoReady(page);
 
     const range = await deckRange(page);
@@ -30,7 +31,9 @@ test.describe("§4 articles sticky-stacking deck", () => {
 
     const viewport = page.viewportSize()!;
     const start = Math.max(0, range!.top - viewport.height * 0.5);
-    const end = range!.bottom - viewport.height;
+    // ScrollStack releases the pin once its end sentinel crosses mid-viewport,
+    // so bottom - vh/2 is the "stack complete" scroll position.
+    const end = range!.bottom - viewport.height / 2;
     const steps = 12;
 
     const scaleHistory: number[][] = [];
@@ -44,13 +47,20 @@ test.describe("§4 articles sticky-stacking deck", () => {
     const finalScales = scaleHistory[scaleHistory.length - 1];
 
     // Every covered card (all but the last) must have shrunk below 1 by the
-    // time the deck is fully scrolled, but never collapse past ~0.85.
+    // time the stack completes, but never collapse past ~0.85.
     for (let card = 0; card < range!.cardCount - 1; card += 1) {
       expect.soft(finalScales[card], `card ${card} final scale`).toBeLessThan(0.995);
       expect.soft(finalScales[card], `card ${card} final scale floor`).toBeGreaterThan(0.85);
     }
-    // The last (topmost) card stays at full scale.
+    // The last (topmost) card pins at full scale.
     expect.soft(finalScales[range!.cardCount - 1], "last card stays unscaled").toBeGreaterThan(0.995);
+
+    // Deeper cards sit further back: scales must ascend toward the top card.
+    for (let card = 1; card < range!.cardCount; card += 1) {
+      expect
+        .soft(finalScales[card], `card ${card} sits above card ${card - 1}`)
+        .toBeGreaterThan(finalScales[card - 1]);
+    }
 
     // Scales must fall monotonically with scroll — scroll-linked, not time-linked.
     for (let card = 0; card < range!.cardCount - 1; card += 1) {
@@ -83,8 +93,11 @@ test.describe("§4 articles sticky-stacking deck", () => {
     const viewport = page.viewportSize()!;
     await scrollToAndSettle(page, range!.bottom - viewport.height);
     const transforms = await page.evaluate(() =>
-      [...document.querySelectorAll(".article-card")].map((card) => getComputedStyle(card).transform),
+      [...document.querySelectorAll(".article-deck .scroll-stack-card")].map(
+        (card) => getComputedStyle(card).transform,
+      ),
     );
+    expect(transforms.length).toBeGreaterThanOrEqual(5);
     for (const transform of transforms) {
       expect.soft(["none", "matrix(1, 0, 0, 1, 0, 0)"]).toContain(transform);
     }

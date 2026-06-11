@@ -1,63 +1,28 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { MotionValue } from "framer-motion";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import type { CSSProperties } from "react";
+import { useState } from "react";
 import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
+import ScrollStack, { ScrollStackItem } from "@/components/reactbits/ScrollStack";
 import { Container } from "@/components/ui/container";
 import { portfolioContent } from "@/content/portfolio-content";
 import type { ArticleSummary } from "@/content/portfolio-content";
 
-function clamp01(value: number) {
-  return Math.min(1, Math.max(0, value));
-}
-
-function smoothStep(value: number) {
-  const clamped = clamp01(value);
-  return 3 * clamped ** 2 - 2 * clamped ** 3;
-}
-
-// How far card `index` has shrunk back into the deck: 0 while it is on top,
-// ramping to 1 as the next card pins over it. Pure function of the deck's
-// scroll progress — the same shared scroll source as every other layer.
-function coverage(progress: number, index: number, total: number) {
-  if (total <= 1) return 0;
-  return clamp01(progress * (total - 1) - index);
-}
-
-function ArticleCard({
-  article,
-  index,
-  total,
-  deckProgress,
-}: {
-  article: ArticleSummary;
-  index: number;
-  total: number;
-  deckProgress: MotionValue<number>;
-}) {
+function ArticleCard({ article, index }: { article: ArticleSummary; index: number }) {
   const accent = article.accent ?? "#fcbc1d";
-  const shouldReduceMotion = useReducedMotion();
   const [liked, setLiked] = useState(false);
   const [hovered, setHovered] = useState(false);
   const likeCount = (article.likes ?? 0) + (liked ? 1 : 0);
 
-  // Stacked-deck reveal: each card eases 1 → 0.92 scale with a slight opacity
-  // falloff as the next card pins over it. No per-property transition — the
-  // values are scroll-bound, so they stop and reverse with the scroll itself.
-  const scale = useTransform(deckProgress, (p) => 1 - 0.08 * smoothStep(coverage(p, index, total)));
-  const opacity = useTransform(deckProgress, (p) => 1 - 0.2 * smoothStep(coverage(p, index, total)));
-
   return (
-    <motion.article
+    <article
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className="article-card group"
       style={{
         zIndex: hovered ? 999 : index + 1,
         ["--article-accent" as string]: accent,
-        ...(shouldReduceMotion ? {} : { scale, opacity }),
       }}
     >
       {hovered ? <span className="article-tooltip">{article.title}</span> : null}
@@ -65,7 +30,7 @@ function ArticleCard({
       {/* Like button */}
       <button
         type="button"
-        onClick={() => setLiked((value) => !value)}
+        onClick={() => setLiked((v) => !v)}
         aria-pressed={liked}
         aria-label={liked ? "Unlike article" : "Like article"}
         className="article-like"
@@ -87,7 +52,7 @@ function ArticleCard({
 
         <span className="article-rule" aria-hidden />
 
-        {article.tagline ? <p className="article-tagline">“{article.tagline}”</p> : null}
+        {article.tagline ? <p className="article-tagline">&quot;{article.tagline}&quot;</p> : null}
 
         <p className="article-body">{article.body ?? article.excerpt}</p>
 
@@ -110,37 +75,48 @@ function ArticleCard({
         </a>
       </div>
 
-      {/* Preview panel — gradient placeholder standing in for a cover image */}
+      {/* Preview panel */}
       <div className="article-image" aria-hidden>
         <div className="article-image-glow" />
         <span className="article-image-label">{article.source ?? "Article"}</span>
         <span className="article-image-likes">Likes: {likeCount}</span>
       </div>
-    </motion.article>
+    </article>
   );
 }
 
+// Per-card scale falloff in the stacked deck. ScrollStack pins card `i` at
+// `baseScale + i * step`, so baseScale must be derived from the card count:
+// the topmost (last) card pins at exactly 1 and each covered card sits one
+// step below the card above it, never collapsing past ~0.9.
+const CARD_SCALE_STEP = 0.012;
+
+// Cloud-shaped mask for the section-bottom dissolve: the same cloud plate the
+// footer uses, anchored to the bottom edge so card tops vanish into the puffs.
+const cloudDissolveMask = {
+  WebkitMaskImage: "url('/adaline-scenes/footer/footer-clouds.png')",
+  maskImage: "url('/adaline-scenes/footer/footer-clouds.png')",
+  WebkitMaskRepeat: "no-repeat",
+  maskRepeat: "no-repeat",
+  WebkitMaskPosition: "center bottom",
+  maskPosition: "center bottom",
+  WebkitMaskSize: "cover",
+  maskSize: "cover",
+  background: "linear-gradient(180deg, transparent 0%, #050e11 85%)",
+} satisfies CSSProperties;
+
 export function BlogsSection() {
   const articles = portfolioContent.articles ?? [];
-  const deckRef = useRef<HTMLDivElement | null>(null);
-
-  // One container-scoped scroll progress drives every card (0 = deck top pins,
-  // 1 = deck fully scrolled). Cards derive their scale/opacity from it as pure
-  // functions, so the stack tracks scroll one-to-one in both directions.
-  const { scrollYProgress: deckProgress } = useScroll({
-    target: deckRef,
-    offset: ["start start", "end end"],
-  });
 
   return (
-    <section id="blogs" aria-labelledby="blogs-title" className="scroll-mt-28 pb-32 pt-20 sm:pt-24">
+    <section id="blogs" aria-labelledby="blogs-title" className="relative scroll-mt-28 pb-32 pt-20 sm:pt-24">
       <Container className="w-full">
         <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
           Writing
         </p>
         <h2
           id="blogs-title"
-          className="article-section-title mt-2 text-center text-4xl font-bold tracking-tight text-[var(--color-ink)] sm:text-5xl"
+          className="mt-2 text-center text-4xl font-bold tracking-tight text-[var(--color-ink)] sm:text-5xl"
         >
           My Articles
         </h2>
@@ -149,18 +125,37 @@ export function BlogsSection() {
           card to bring it forward.
         </p>
 
-        <div ref={deckRef} className="article-deck mt-12">
-          {articles.map((article, index) => (
-            <ArticleCard
-              key={article.slug}
-              article={article}
-              index={index}
-              total={articles.length}
-              deckProgress={deckProgress}
-            />
-          ))}
+        <div className="article-deck mt-12">
+          <ScrollStack
+            itemDistance={80}
+            itemScale={CARD_SCALE_STEP}
+            itemStackDistance={20}
+            stackPosition="18%"
+            scaleEndPosition="8%"
+            baseScale={1 - Math.max(0, articles.length - 1) * CARD_SCALE_STEP}
+            blurAmount={1.5}
+          >
+            {articles.map((article, index) => (
+              <ScrollStackItem key={article.slug}>
+                <ArticleCard article={article} index={index} />
+              </ScrollStackItem>
+            ))}
+          </ScrollStack>
         </div>
       </Container>
+
+      {/* Cloud dissolve into the footer night sky: the last cards rise into a
+          cloud-masked gradient that lands exactly on the footer base #050e11,
+          so the section boundary never shows as a hard cut. The plain seam
+          layer underneath guarantees the bottom edge is solid even where the
+          cloud plate's alpha has holes. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[50vh]">
+        <div
+          className="absolute inset-0"
+          style={{ background: "linear-gradient(180deg, transparent 0%, transparent 35%, #050e11 100%)" }}
+        />
+        <div className="absolute inset-0" style={cloudDissolveMask} />
+      </div>
     </section>
   );
 }

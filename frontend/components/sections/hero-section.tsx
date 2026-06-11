@@ -7,6 +7,7 @@ import { FaInstagram, FaTwitter } from "react-icons/fa";
 import { LuArrowRight, LuLink2, LuMail } from "react-icons/lu";
 import { SiCredly, SiSnapchat } from "react-icons/si";
 
+import { GlareHover } from "@/components/reactbits/glare-hover";
 import DecryptedText from "@/components/reactbits/decrypted-text";
 import { Iridescence } from "@/components/reactbits/iridescence";
 import TextType from "@/components/reactbits/text-type";
@@ -392,20 +393,39 @@ export function HeroSection() {
 
           <AiCompanion />
 
-          <button
-            type="button"
-            onClick={() => {
-              scrollToSection("control-center");
-              trackEvent("hero_primary_cta_click", {
-                target: "#control-center",
-                label: "enter_portfolio",
-              });
+          <GlareHover
+            background="rgba(255,255,255,0.96)"
+            borderColor="rgba(255,255,255,0.72)"
+            borderRadius="9999px"
+            width="auto"
+            height="auto"
+            glareColor="#ffffff"
+            glareOpacity={0.4}
+            glareAngle={-30}
+            glareSize={300}
+            transitionDuration={750}
+            className="relative z-10 mt-8 transition-transform duration-200 hover:-translate-y-0.5 [@media(max-height:700px)]:mt-5"
+            style={{
+              display: "inline-block",
+              boxShadow: "0 22px 50px rgba(0,0,0,0.28)",
+              backdropFilter: "blur(12px)",
             }}
-            className="relative z-10 mt-8 inline-flex min-h-12 items-center gap-2 rounded-full border border-white/72 bg-[rgba(255,255,255,0.96)] px-6 text-sm font-semibold text-[#07111e] shadow-[0_22px_50px_rgba(0,0,0,0.28)] backdrop-blur-xl transition-transform duration-200 hover:-translate-y-0.5 hover:bg-white focus-visible:ring-2 focus-visible:ring-white [@media(max-height:700px)]:mt-5"
           >
-            Enter Portfolio
-            <LuArrowRight size={16} aria-hidden />
-          </button>
+            <button
+              type="button"
+              onClick={() => {
+                scrollToSection("control-center");
+                trackEvent("hero_primary_cta_click", {
+                  target: "#control-center",
+                  label: "enter_portfolio",
+                });
+              }}
+              className="inline-flex min-h-12 items-center gap-2 px-6 text-sm font-semibold text-[#07111e] hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+            >
+              Enter Portfolio
+              <LuArrowRight size={16} aria-hidden />
+            </button>
+          </GlareHover>
         </div>
       </div>
 
