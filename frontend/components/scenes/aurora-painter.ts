@@ -4,12 +4,15 @@
 // softness comes from the CSS blur on the canvas element, so we deliberately do
 // NO per-frame canvas blur filter — that was the expensive part that stuttered
 // the scroll into the footer.
+// Alphas are kept deliberately quiet (central curtain capped at 0.17, the rest
+// at half their old values) so the aurora reads as atmospheric background
+// shimmer behind the contact form, never as bright columns in front of text.
 const AURORA_CURTAINS = [
-  { x: 0.12, half: 0.16, hue: 144, alpha: 0.28, phase: 0.1, speed: 0.12, height: 0.86 },
-  { x: 0.27, half: 0.13, hue: 150, alpha: 0.42, phase: 1.1, speed: 0.17, height: 0.98 },
-  { x: 0.44, half: 0.2, hue: 156, alpha: 0.52, phase: 2.4, speed: 0.11, height: 1.08 },
-  { x: 0.62, half: 0.15, hue: 162, alpha: 0.43, phase: 3.3, speed: 0.15, height: 0.94 },
-  { x: 0.81, half: 0.17, hue: 168, alpha: 0.34, phase: 4.8, speed: 0.13, height: 0.9 },
+  { x: 0.12, half: 0.16, hue: 144, alpha: 0.1, phase: 0.1, speed: 0.12, height: 0.86 },
+  { x: 0.27, half: 0.13, hue: 150, alpha: 0.15, phase: 1.1, speed: 0.17, height: 0.98 },
+  { x: 0.44, half: 0.2, hue: 156, alpha: 0.17, phase: 2.4, speed: 0.11, height: 1.08 },
+  { x: 0.62, half: 0.15, hue: 162, alpha: 0.155, phase: 3.3, speed: 0.15, height: 0.94 },
+  { x: 0.81, half: 0.17, hue: 168, alpha: 0.12, phase: 4.8, speed: 0.13, height: 0.9 },
 ] as const;
 
 type AuroraCurtain = (typeof AURORA_CURTAINS)[number];

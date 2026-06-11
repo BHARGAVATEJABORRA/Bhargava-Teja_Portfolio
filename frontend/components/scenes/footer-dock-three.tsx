@@ -112,9 +112,7 @@ const FRAGMENT_SHADER = /* glsl */ `
     col += (glow + head) * warm * uGlowStrength * onDock;
     col += (lamp1 + lamp2) * lampWarm * 0.42 * max(onDock, glowBleed);
 
-    // The bleed needs alpha of its own — off-dock texels have tex.a = 0 and
-    // would otherwise blend to nothing.
-    gl_FragColor = vec4(col, max(tex.a, min(glowBleed, 1.0)) * uOpacity);
+    gl_FragColor = vec4(col, tex.a * uOpacity);
   }
 `;
 

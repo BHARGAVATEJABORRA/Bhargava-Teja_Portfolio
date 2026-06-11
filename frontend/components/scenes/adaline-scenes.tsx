@@ -3,9 +3,18 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef } from "react";
 import type { MotionValue } from "framer-motion";
-import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useTransform } from "framer-motion";
 
 import { FooterDockThree } from "@/components/scenes/footer-dock-three";
+import {
+  clamp01,
+  cloudTint,
+  footerSkyKey,
+  paintFooterClouds,
+  paintFooterSky,
+  starsAlpha,
+} from "@/components/scenes/footer-sky-painter";
+import { subscribeToScroll } from "@/lib/scroll-progress";
 
 const footerSceneTheme = {
   "--color-ink": "#f2fbff",
@@ -32,17 +41,6 @@ const heroFrameMask = {
     "linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0) 72%, rgba(0, 0, 0, 0.44) 90%, rgba(0, 0, 0, 0.8) 100%)",
 } satisfies CSSProperties;
 
-const footerCloudMask = {
-  WebkitMaskImage: "url('/adaline-scenes/footer/footer-clouds.png')",
-  maskImage: "url('/adaline-scenes/footer/footer-clouds.png')",
-  WebkitMaskRepeat: "no-repeat",
-  maskRepeat: "no-repeat",
-  WebkitMaskPosition: "center top",
-  maskPosition: "center top",
-  WebkitMaskSize: "cover",
-  maskSize: "cover",
-} satisfies CSSProperties;
-
 const HERO_SEQUENCE_START = 2;
 const HERO_SEQUENCE_END = 281;
 const HERO_SEQUENCE_REVEAL_PROGRESS = 0.84;
@@ -52,15 +50,6 @@ const HERO_SEQUENCE_PRIORITY_FRAMES = [2, 3, 4, 8, 18, 40, 72, 89, 120, 160, 200
 const HERO_SEQUENCE_HIGH_FRAMES = [1, 89, 281] as const;
 
 type HeroFrameQuality = "standard" | "high";
-
-function clamp01(value: number) {
-  return Math.min(1, Math.max(0, value));
-}
-
-function smoothStep(value: number) {
-  const clamped = clamp01(value);
-  return 3 * clamped ** 2 - 2 * clamped ** 3;
-}
 
 function buildHeroSequenceFrameUrl(frame: number) {
   return `/adaline-scenes/hero-sequence/desktop/graded_4K_100_gm_50_1080_3-${String(frame).padStart(3, "0")}.jpg`;
@@ -80,64 +69,12 @@ function progressToFrame(progress: number) {
   return clampFrame(HERO_SEQUENCE_START + frameOffset);
 }
 
-// RGB channel lerp helper for the dusk→night transition.
-function lerpChannel(from: number, to: number, t: number) {
-  return Math.round(from + (to - from) * t);
-}
-
-function mixRgb(from: readonly [number, number, number], to: readonly [number, number, number], t: number) {
-  return `rgb(${lerpChannel(from[0], to[0], t)}, ${lerpChannel(from[1], to[1], t)}, ${lerpChannel(from[2], to[2], t)})`;
-}
-
-// Sky band: a true sunset (progress 0) melting into night (progress 1).
-// Endpoint colors are sampled directly from the adaline.ai footer scroll:
-// sunset = indigo #38335c -> mauve #806b7d -> warm peach #c49979;
-// night = deep teal #0a1420 -> #08101a -> #050e11 (the page base color).
-const SKY_TOP: [readonly [number, number, number], readonly [number, number, number]] = [
-  [56, 51, 92],
-  [10, 20, 32],
-];
-const SKY_MIDDLE: [readonly [number, number, number], readonly [number, number, number]] = [
-  [128, 107, 125],
-  [8, 16, 26],
-];
-const SKY_BOTTOM: [readonly [number, number, number], readonly [number, number, number]] = [
-  [196, 153, 121],
-  [5, 14, 17],
-];
-
-function footerSkyGradient(progress: number) {
-  const p = clamp01(progress);
-  const top = mixRgb(SKY_TOP[0], SKY_TOP[1], p);
-  const middle = mixRgb(SKY_MIDDLE[0], SKY_MIDDLE[1], p);
-  const bottom = mixRgb(SKY_BOTTOM[0], SKY_BOTTOM[1], p);
-
-  return `linear-gradient(180deg, ${top} 0%, ${middle} 52%, ${bottom} 100%)`;
-}
-
-// Cloud tint rides slightly lighter/warmer than the sky so cloud tops catch the
-// last sunset light, then collapse into the night base.
-const CLOUD_TOP: [readonly [number, number, number], readonly [number, number, number]] = [
-  [120, 112, 140],
-  [14, 26, 34],
-];
-const CLOUD_BOTTOM: [readonly [number, number, number], readonly [number, number, number]] = [
-  [210, 170, 138],
-  [6, 16, 22],
-];
-
-function footerCloudGradient(progress: number) {
-  const p = clamp01(progress);
-  const top = mixRgb(CLOUD_TOP[0], CLOUD_TOP[1], p);
-  const bottom = mixRgb(CLOUD_BOTTOM[0], CLOUD_BOTTOM[1], p);
-
-  return `linear-gradient(180deg, ${top} 0%, ${bottom} 100%)`;
-}
-
 const SHOOTING_STARS = [
-  { left: "13%", top: "4%", width: "10px", rotate: "58deg", duration: "8.8s", delay: "0.7s", x: "18vw", y: "26vh", opacity: 0.24 },
-  { left: "68%", top: "1%", width: "9px", rotate: "57deg", duration: "11.4s", delay: "3.9s", x: "16vw", y: "23vh", opacity: 0.2 },
-  { left: "42%", top: "12%", width: "8px", rotate: "58deg", duration: "13.6s", delay: "7.1s", x: "14vw", y: "20vh", opacity: 0.18 },
+  { left: "13%", top: "4%", width: "10px", rotate: "58deg", duration: "8.8s", delay: "0.7s", x: "18vw", y: "26vh", opacity: 0.36 },
+  { left: "68%", top: "1%", width: "9px", rotate: "57deg", duration: "11.4s", delay: "3.9s", x: "16vw", y: "23vh", opacity: 0.32 },
+  { left: "42%", top: "12%", width: "8px", rotate: "58deg", duration: "13.6s", delay: "7.1s", x: "14vw", y: "20vh", opacity: 0.28 },
+  { left: "31%", top: "8%", width: "9px", rotate: "57deg", duration: "15.2s", delay: "5.4s", x: "16vw", y: "22vh", opacity: 0.22 },
+  { left: "77%", top: "3%", width: "8px", rotate: "59deg", duration: "10.8s", delay: "11.2s", x: "14vw", y: "20vh", opacity: 0.2 },
 ] as const;
 
 function drawImageCover(
@@ -449,55 +386,142 @@ interface AdalineFooterSceneProps {
 // band, and the hills + dock + reflection rendered as full-bleed 200vw images.
 // Only the foreground copy (contact + nav) is swapped for portfolio content.
 export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooterSceneProps) {
-  const skyRef = useRef<HTMLDivElement | null>(null);
+  const bandRef = useRef<HTMLDivElement | null>(null);
+  const skyCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cloudsCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const starsRef = useRef<HTMLDivElement | null>(null);
+  const meteorsRef = useRef<HTMLDivElement | null>(null);
+  const ctaMeteorsRef = useRef<HTMLDivElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
-  // The tall day→night scroll zone drives the entire sky transition. By the time
-  // its end reaches the top of the viewport the sky has fully settled into night.
-  const { scrollYProgress: skyProgress } = useScroll({
-    target: skyRef,
-    offset: ["start end", "end 35%"],
-  });
 
-  // Lenis is the single smoothing layer for the whole page: it eases the native
-  // scroll position itself, and every layer below is a *pure function* of that
-  // position. No spring/lerp on top — a second clock here is exactly what made
-  // the sky and star opacity keep drifting after the page had stopped.
-  const skyBackground = useTransform(skyProgress, (value) => footerSkyGradient(smoothStep(value)));
-  const skyOpacity = useTransform(skyProgress, (value) => smoothStep(clamp01(value / 0.32)));
-  const cloudBackground = useTransform(skyProgress, (value) => footerCloudGradient(smoothStep(value)));
-  const starsOpacity = useTransform(skyProgress, (value) => smoothStep(clamp01((value - 0.18) / 0.5)) * 0.96);
+  // Lenis is the single clock for the whole sequence: it eases the native
+  // scroll position itself, and every layer below is a *pure function* of
+  // that position — repainted only on scroll/resize, never from a second
+  // spring/lerp/rAF clock. This is the adaline.ai architecture: the sky and
+  // the sunset cloud streaks are hand-painted on canvases and recolored
+  // continuously per scroll, so the streaks always catch the current light.
+  useEffect(() => {
+    const band = bandRef.current;
+    const skyCanvas = skyCanvasRef.current;
+    const cloudsCanvas = cloudsCanvasRef.current;
+    const skyContext = skyCanvas?.getContext("2d");
+    const cloudsContext = cloudsCanvas?.getContext("2d");
+
+    if (!band || !skyCanvas || !cloudsCanvas || !skyContext || !cloudsContext) {
+      return;
+    }
+
+    const cloudImage = new Image();
+    cloudImage.decoding = "async";
+    cloudImage.src = "/adaline-scenes/footer/footer-clouds.png";
+
+    let lastSkyKey = "";
+    let lastCloudsKey = "";
+    let lastStarsKey = "";
+
+    // The tall day→night zone drives the whole transition — same mapping as
+    // the previous useScroll offset ["start end", "end 35%"]: 0 when the
+    // band's top reaches the viewport bottom, 1 when its bottom reaches 35%
+    // of the viewport, at which point the sky has fully settled into night.
+    const bandProgress = () => {
+      const rect = band.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      return clamp01((viewportHeight - rect.top) / (viewportHeight * 0.65 + rect.height));
+    };
+
+    const paint = () => {
+      const progress = bandProgress();
+
+      const skyWidth = Math.max(1, window.innerWidth);
+      const skyHeight = Math.max(1, window.innerHeight);
+      if (skyCanvas.width !== skyWidth || skyCanvas.height !== skyHeight) {
+        skyCanvas.width = skyWidth;
+        skyCanvas.height = skyHeight;
+        lastSkyKey = "";
+      }
+
+      // Tints are quantized inside the painter curves, so the key both skips
+      // no-op repaints and guarantees the same scroll position always shows
+      // byte-identical pixels regardless of scroll history.
+      const skyKey = footerSkyKey(progress);
+      if (skyKey !== lastSkyKey) {
+        paintFooterSky(skyContext, skyWidth, skyHeight, progress);
+        lastSkyKey = skyKey;
+      }
+
+      if (cloudImage.complete && cloudImage.naturalWidth > 0) {
+        const cloudsWidth = Math.round(cloudImage.naturalWidth / 2);
+        const cloudsHeight = Math.round(cloudImage.naturalHeight / 2);
+        if (cloudsCanvas.width !== cloudsWidth || cloudsCanvas.height !== cloudsHeight) {
+          cloudsCanvas.width = cloudsWidth;
+          cloudsCanvas.height = cloudsHeight;
+          lastCloudsKey = "";
+        }
+
+        const cloudsKey = String(cloudTint(progress));
+        if (cloudsKey !== lastCloudsKey) {
+          paintFooterClouds(cloudsContext, cloudsWidth, cloudsHeight, progress, cloudImage);
+          lastCloudsKey = cloudsKey;
+        }
+      }
+
+      const starsKey = String(starsAlpha(progress));
+      if (starsKey !== lastStarsKey) {
+        for (const layer of [starsRef.current, meteorsRef.current, ctaMeteorsRef.current]) {
+          if (layer) {
+            layer.style.opacity = starsKey;
+          }
+        }
+        lastStarsKey = starsKey;
+      }
+    };
+
+    cloudImage.addEventListener("load", paint);
+    paint();
+    const unsubscribe = subscribeToScroll(paint);
+
+    return () => {
+      cloudImage.removeEventListener("load", paint);
+      unsubscribe();
+    };
+  }, []);
 
   return (
     <div className="adaline-footer-scene relative flex flex-col overflow-clip bg-[#050e11] text-[#f4fbf7]" style={footerSceneTheme}>
-      {/* #home-footer-bg-gradient — the fixed sunset→night sky behind everything. */}
-      <motion.div
+      {/* #home-footer-bg-gradient — the fixed sunset→night sky behind
+          everything, hand-painted per scroll exactly like adaline. */}
+      <canvas
+        ref={skyCanvasRef}
         aria-hidden
         data-scroll-scene="sky-gradient"
-        style={{ background: skyBackground, opacity: skyOpacity }}
-        className="pointer-events-none fixed inset-0"
+        className="pointer-events-none fixed inset-0 h-full w-full"
       />
 
       {/* Tall scroll zone: only the cloud band + stars move through it. */}
-      <div ref={skyRef} className="relative -mb-[80vh] h-[200vw] min-h-[300vh]">
+      <div ref={bandRef} data-scroll-scene="sky-band" className="relative -mb-[80vh] h-[200vw] min-h-[300vh]">
         <div aria-hidden className="adaline-footer-top-fade pointer-events-none absolute inset-x-0 top-0 h-[55vh]" />
-        {/* #home-footer-clouds-gradient — sky-tinted gradient masked to the cloud shape. */}
-        <motion.div
+        {/* #home-footer-clouds-gradient — the adaline cloud plate, painted on
+            canvas with the current sky light (tint gradient masked by the
+            plate's alpha), never a static-tint CSS mask. */}
+        <canvas
+          ref={cloudsCanvasRef}
           aria-hidden
           data-scroll-scene="clouds"
-          style={{ ...footerCloudMask, background: cloudBackground }}
-          className="absolute inset-0"
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
         />
         {/* #home-footer-stars — repeating starfield that rises with the scroll. */}
-        <motion.div
+        <div
+          ref={starsRef}
           aria-hidden
           data-scroll-scene="stars"
-          style={{ opacity: starsOpacity }}
+          style={{ opacity: 0 }}
           className="adaline-footer-stars pointer-events-none absolute inset-0 -bottom-[30rem]"
         />
-        <motion.div
+        <div
+          ref={meteorsRef}
           aria-hidden
           data-scroll-scene="shooting-stars"
-          style={{ opacity: starsOpacity }}
+          style={{ opacity: 0 }}
           className="adaline-footer-shooting-stars pointer-events-none absolute inset-0"
         >
           {SHOOTING_STARS.map((star, index) => (
@@ -519,7 +543,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
               }
             />
           ))}
-        </motion.div>
+        </div>
       </div>
 
       {/* CTA band: foreground contact card. The aurora itself is the site-wide
@@ -527,10 +551,11 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           intensity here via global scroll progress instead of being a local,
           IntersectionObserver-gated canvas that froze everywhere else. */}
       <div className="relative flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-[#050e11] to-100%">
-        <motion.div
+        <div
+          ref={ctaMeteorsRef}
           aria-hidden
           data-scroll-scene="cta-shooting-stars"
-          style={{ opacity: starsOpacity }}
+          style={{ opacity: 0 }}
           className="adaline-footer-shooting-stars pointer-events-none absolute inset-x-0 top-0 h-[78%]"
         >
           {SHOOTING_STARS.map((star, index) => (
@@ -552,7 +577,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
               }
             />
           ))}
-        </motion.div>
+        </div>
         <div aria-hidden className="adaline-footer-aurora-veils pointer-events-none absolute top-[4%] h-[62%] w-full" />
         <div
           aria-hidden
@@ -570,26 +595,26 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
 
       {/* Docking-port band: hills, dock + water reflection, and the nav.
           Mirrors the adaline.ai source (see Adaline reference) — hills 100vw at
-          -16vw, dock+reflection a 200vw masked image group, nav z-100 overlaying
+          -14vw, dock+reflection a 200vw masked image group, nav z-100 overlaying
           on xl. The one intentional deviation is the dock anchor (see below):
           our footer's content proportions differ from Adaline's, so their exact
           left/bottom-0 anchor detached the pier — we center + lift it instead. */}
       <div className="relative bg-[#050e11] xl:h-[40vw]">
-        <div aria-hidden className="pointer-events-none absolute -top-[16vw] w-full">
+        <div aria-hidden className="pointer-events-none absolute -top-[14vw] w-full">
           <img src="/adaline-scenes/footer/footer-hills.webp" alt="" aria-hidden className="w-full object-cover" />
         </div>
 
         {/* Dock + reflection: a 200vw image group centered on the scene and
-            lifted (top-[-4vw]) so the pier deck sits *in* the lake at the hills'
+            lifted (top-[-6vw]) so the pier deck sits *in* the lake at the hills'
             waterline rather than detaching below it. Both hills and dock scale
             in vw, so this single vw offset composes identically at every width.
             The fade mask blends the foreground planks into the #050e11 base. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[-4vw] w-[200vw] -translate-x-1/2"
+          className="pointer-events-none absolute left-1/2 top-[-6vw] w-[200vw] -translate-x-1/2"
           style={{
-            WebkitMaskImage: "linear-gradient(to bottom, black 30%, transparent 100%)",
-            maskImage: "linear-gradient(to bottom, black 30%, transparent 100%)",
+            WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
+            maskImage: "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
           }}
         >
           {shouldReduceMotion ? (

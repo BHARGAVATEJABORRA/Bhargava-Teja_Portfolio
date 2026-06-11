@@ -6,11 +6,12 @@ export interface LayerSample {
   /** viewport-relative top of the in-flow starfield (moves 1:1 with scroll) */
   starsTop: number | null;
   starsOpacity: number | null;
-  /** rgb channels parsed from the fixed sky gradient */
+  /** rgba pixels sampled from the hand-painted sky canvas (top/mid/bottom) */
   sky: number[] | null;
-  /** rgb channels parsed from the cloud-band gradient */
+  /** rgba of the brightest streak pixel on three rows of the cloud canvas */
   clouds: number[] | null;
-  /** computed transform matrix + opacity per article card */
+  /** computed transform matrix + opacity per article-deck ScrollStack wrapper
+   *  (ScrollStack transforms the wrapper, not the inner .article-card) */
   cards: { transform: number[]; opacity: number }[];
 }
 
@@ -19,16 +20,49 @@ const SAMPLE_FN = `(() => {
   const q = (sel) => document.querySelector(sel);
 
   const stars = q('[data-scroll-scene="stars"]');
-  const sky = q('[data-scroll-scene="sky-gradient"]');
-  const clouds = q('[data-scroll-scene="clouds"]');
+  const skyCanvas = q('[data-scroll-scene="sky-gradient"]');
+  const cloudsCanvas = q('[data-scroll-scene="clouds"]');
+
+  // RGB readback of near-transparent premultiplied pixels is quantization
+  // noise, so report those as pure alpha.
+  const pixel = (data, offset) =>
+    data[offset + 3] < 8 ? [0, 0, 0, data[offset + 3]] : [data[offset], data[offset + 1], data[offset + 2], data[offset + 3]];
+
+  let sky = null;
+  if (skyCanvas instanceof HTMLCanvasElement && skyCanvas.width > 0) {
+    const context = skyCanvas.getContext("2d");
+    sky = [];
+    for (const fy of [0.05, 0.5, 0.95]) {
+      const y = Math.min(skyCanvas.height - 1, Math.round(skyCanvas.height * fy));
+      const data = context.getImageData(Math.round(skyCanvas.width / 2), y, 1, 1).data;
+      sky.push(...pixel(data, 0));
+    }
+  }
+
+  // The cloud plate's alpha is sparse: probe each row for its densest streak
+  // pixel — a stable, scroll-deterministic read on the tinted plate.
+  let clouds = null;
+  if (cloudsCanvas instanceof HTMLCanvasElement && cloudsCanvas.width > 0) {
+    const context = cloudsCanvas.getContext("2d");
+    clouds = [];
+    for (const fy of [0.35, 0.5, 0.65]) {
+      const y = Math.min(cloudsCanvas.height - 1, Math.round(cloudsCanvas.height * fy));
+      const row = context.getImageData(0, y, cloudsCanvas.width, 1).data;
+      let best = 0;
+      for (let i = 4; i < row.length; i += 4) {
+        if (row[i + 3] > row[best + 3]) best = i;
+      }
+      clouds.push(...pixel(row, best));
+    }
+  }
 
   return {
     scrollY: window.scrollY,
     starsTop: stars ? stars.getBoundingClientRect().top : null,
     starsOpacity: stars ? Number(getComputedStyle(stars).opacity) : null,
-    sky: sky ? nums(getComputedStyle(sky).backgroundImage || getComputedStyle(sky).background) : null,
-    clouds: clouds ? nums(getComputedStyle(clouds).backgroundImage || getComputedStyle(clouds).background) : null,
-    cards: [...document.querySelectorAll(".article-card")].map((c) => {
+    sky,
+    clouds,
+    cards: [...document.querySelectorAll(".article-deck .scroll-stack-card")].map((c) => {
       const cs = getComputedStyle(c);
       return { transform: nums(cs.transform), opacity: Number(cs.opacity) };
     }),
