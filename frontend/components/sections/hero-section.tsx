@@ -9,7 +9,6 @@ import { SiCredly, SiSnapchat } from "react-icons/si";
 
 import { GlareHover } from "@/components/reactbits/glare-hover";
 import DecryptedText from "@/components/reactbits/decrypted-text";
-import { Iridescence } from "@/components/reactbits/iridescence";
 import TextType from "@/components/reactbits/text-type";
 import { AiCompanion } from "@/components/sections/ai-companion";
 import { portfolioContent } from "@/content/portfolio-content";
@@ -155,7 +154,7 @@ function HeroSocialMenuButton({
   );
 }
 
-function HeroSocialDock({ isSuppressed }: { isSuppressed: boolean }) {
+export function HeroSocialDock({ isSuppressed = false }: { isSuppressed?: boolean }) {
   const github = getResolvedSocialLink("github");
   const linkedIn = getResolvedSocialLink("linkedin");
   const [isOpen, setIsOpen] = useState(false);
@@ -342,22 +341,12 @@ export function HeroSection() {
     <section
       id="hero"
       aria-labelledby="hero-title"
-      className="relative isolate min-h-screen overflow-hidden scroll-mt-24 bg-[#0b1020]"
+      className="relative isolate min-h-screen overflow-hidden scroll-mt-24"
     >
-      {/* React Bits Iridescence — animated holographic field tuned to a violet
-          base so its teal/magenta bands bridge into the sunset→night footer. */}
-      <Iridescence
-        color={[0.45, 0.32, 0.62]}
-        speed={0.7}
-        amplitude={0.1}
-        mouseReact
-        className="absolute inset-0 -z-10 h-full w-full"
-      />
-
-      {/* Soft scrim for headline legibility over the saturated shader. */}
+      {/* The hero backdrop uses a soft scrim to keep the headline legible. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_42%,rgba(6,10,22,0.34)_0%,rgba(6,10,22,0.12)_38%,transparent_70%)]"
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(6,10,22,0.42)_0%,rgba(6,10,22,0.18)_40%,transparent_72%)]"
       />
 
       <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 pb-24 pt-[max(6.5rem,12svh)] sm:px-8 md:pb-28">
@@ -428,14 +417,6 @@ export function HeroSection() {
           </GlareHover>
         </div>
       </div>
-
-      {/* Blend the shader's bottom edge into the page background. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[24vh] bg-[linear-gradient(180deg,transparent_0%,color-mix(in_oklab,var(--color-bg),transparent_30%)_60%,var(--color-bg)_100%)]"
-      />
-
-      <HeroSocialDock isSuppressed={false} />
     </section>
   );
 }

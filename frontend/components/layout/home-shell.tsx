@@ -12,7 +12,7 @@ import { BlogsSection } from "@/components/sections/blogs-section";
 import { ContactFooterSection } from "@/components/sections/contact-footer-section";
 import { ControlCenterSection } from "@/components/sections/control-center-section";
 import { ExperienceSection } from "@/components/sections/experience-section";
-import { HeroSection } from "@/components/sections/hero-section";
+import { HeroSection, HeroSocialDock } from "@/components/sections/hero-section";
 import { ProjectsSection } from "@/components/sections/projects-section";
 import { SkillsSection } from "@/components/sections/skills-section";
 
@@ -32,17 +32,20 @@ export function HomeShell() {
 
       <SiteHeader />
 
-      {showContent ? (
-        <>
-          <main id="main-content">
-            {/* Iridescent hero (React Bits shader). */}
-            <HeroSection />
 
-            {/* Everything between the hero and the footer carries a faint
-                iridescence "echo" so the page reads as one continuous field,
-                settling into the Adaline sunset→night footer. */}
+      <main id="main-content">
+        {/* Hero copy sits over the backdrop. Rendered immediately so it is
+            already in place under the curtain: greeting → hero, nothing else. */}
+        <HeroSection />
+
+        {/* Everything below the fold is heavier (Three.js footer scene, etc.)
+            and never visible during the reveal — defer it until the greeting is
+            done so the curtain stays smooth. */}
+        {showContent ? (
+          <>
+            {/* Content floats over the day-cycling sky; sections are
+                background-less so the sky shows through behind them. */}
             <div className="relative isolate">
-              <div aria-hidden className="iridescence-echo pointer-events-none absolute inset-0 -z-10" />
               <ControlCenterSection />
               <AboutSection />
               <SkillsSection />
@@ -52,10 +55,17 @@ export function HomeShell() {
             </div>
 
             <ContactFooterSection />
-          </main>
+          </>
+        ) : null}
+      </main>
 
+      {showContent ? (
+        <>
           {/* Command palette — keyboard only (Cmd/Ctrl+K) */}
           <CommandPalette />
+
+          {/* Floating links dock — chain-icon, expands social orbs (bottom-left) */}
+          <HeroSocialDock />
 
           {/* Floating AI companion — spins on hover, opens a chat window on click */}
           <AiCompanionDock />
