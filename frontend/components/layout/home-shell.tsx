@@ -13,6 +13,7 @@ import { ContactFooterSection } from "@/components/sections/contact-footer-secti
 import { ControlCenterSection } from "@/components/sections/control-center-section";
 import { ExperienceSection } from "@/components/sections/experience-section";
 import { HeroSection, HeroSocialDock } from "@/components/sections/hero-section";
+import { TidesBackground } from "@/components/scenes/tides-background";
 import { ProjectsSection } from "@/components/sections/projects-section";
 import { SkillsSection } from "@/components/sections/skills-section";
 
@@ -32,6 +33,7 @@ export function HomeShell() {
 
       <SiteHeader />
 
+      <TidesBackground />
 
       <main id="main-content">
         {/* Hero copy sits over the backdrop. Rendered immediately so it is
