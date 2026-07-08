@@ -85,6 +85,51 @@ model ChangeLog {
   @@index([entity])
 }
 
+// First-party, privacy-first analytics (no cookies, no third party). Written via
+// raw SQL from /api/track; aggregated for the admin dashboard.
+model AnalyticsEvent {
+  id        String   @id
+  type      String // "pageview" | "event"
+  name      String // path for pageviews, event name for events
+  path      String?
+  referrer  String?
+  sessionId String? // anonymous, rotating per-visit id (not PII)
+  meta      String? // optional JSON
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+  @@index([name])
+}
+
+// AI companion Q&A transcript, for the admin "conversation history" view.
+model AiConversation {
+  id        String   @id
+  sessionId String?
+  question  String
+  answer    String
+  mode      String? // "openai" | "local-preview"
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Persisted contact-form submissions for the admin inbox/manager.
+model ContactSubmission {
+  id        String   @id
+  name      String
+  email     String
+  phone     String?
+  topic     String?
+  message   String
+  status    String   @default("new") // "new" | "read" | "replied" | "spam"
+  tag       String? // "freelance" | "fulltime" | "spam" | custom
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
+
 model Skill {
   id         String   @id @default(cuid())
   category   String

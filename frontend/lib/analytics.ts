@@ -22,6 +22,39 @@ export type AnalyticsEventName =
   | "contact_submit_success"
   | "contact_submit_error";
 
+/**
+ * Anonymous, per-tab session id (sessionStorage). Not an identifier — it rotates
+ * each new browser session and carries no PII. Used only to estimate reach.
+ */
+export function getSessionId(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    let sid = window.sessionStorage.getItem("pf_sid");
+    if (!sid) {
+      sid = crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      window.sessionStorage.setItem("pf_sid", sid);
+    }
+    return sid;
+  } catch {
+    return "";
+  }
+}
+
+/** Fire-and-forget beacon to the first-party ingest (/api/track). */
+export function sendBeacon(body: Record<string, unknown>): void {
+  if (typeof window === "undefined") return;
+  try {
+    const payload = JSON.stringify({ ...body, sessionId: getSessionId() });
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon("/api/track", new Blob([payload], { type: "application/json" }));
+    } else {
+      void fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, keepalive: true });
+    }
+  } catch {
+    /* never let analytics break the UI */
+  }
+}
+
 export function trackEvent(
   event: AnalyticsEventName,
   properties: Record<string, string | number | boolean> = {},
@@ -42,6 +75,9 @@ export function trackEvent(
   if (typeof window.gtag === "function") {
     window.gtag("event", event, properties);
   }
+
+  // First-party ingest (own your data — no third-party script required).
+  sendBeacon({ type: "event", name: event, path: window.location?.pathname, meta: properties });
 
   if (process.env.NODE_ENV !== "production") {
     console.info("[analytics]", payload);

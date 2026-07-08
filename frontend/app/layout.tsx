@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 
 import { AnalyticsBootstrap } from "@/components/analytics/analytics-bootstrap";
+import { PageBeacon } from "@/components/analytics/page-beacon";
 import { LiquidGlassFilterDefs } from "@/components/layout/liquid-glass-filter-defs";
 import { SmoothScrollProvider } from "@/components/providers/smooth-scroll-provider";
 import { siteConfig } from "@/lib/site";
@@ -73,6 +74,7 @@ export default function RootLayout({
             Skip to main content
           </a>
           <AnalyticsBootstrap />
+          <PageBeacon />
           <div className="relative min-h-screen">{children}</div>
         </SmoothScrollProvider>
       </body>

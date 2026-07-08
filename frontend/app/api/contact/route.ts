@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 
+import { recordChange } from "@/lib/change-log";
+import { createContactSubmission } from "@/lib/insights-store";
+
 interface ContactPayload {
   name?: unknown;
   email?: unknown;
@@ -203,6 +206,24 @@ export async function POST(request: Request) {
       },
       { status: 429 },
     );
+  }
+
+  // Persist to the admin inbox first (best-effort — never blocks delivery).
+  const submissionId = await createContactSubmission({
+    name,
+    email,
+    phone: phone || null,
+    topic: topic || "Portfolio contact",
+    message,
+  });
+  if (submissionId) {
+    await recordChange({
+      entity: "settings",
+      action: "create",
+      entityId: submissionId,
+      field: "contact",
+      summary: `New contact message from ${name}`,
+    });
   }
 
   try {

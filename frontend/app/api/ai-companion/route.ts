@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { portfolioContent } from "@/content/portfolio-content";
 import { getSiteConfig } from "@/lib/content-store";
+import { recordAiConversation } from "@/lib/insights-store";
 
 export const runtime = "nodejs";
 
@@ -94,8 +95,10 @@ export async function POST(request: Request) {
   const config = await getSiteConfig().catch(() => null);
 
   if (config && config.aiEnabled === false && !process.env.OPENAI_API_KEY) {
+    const preview = fallbackAnswer(message);
+    await recordAiConversation({ question: message, answer: preview, mode: "local-preview" });
     return NextResponse.json({
-      answer: fallbackAnswer(message),
+      answer: preview,
       mode: "local-preview",
     });
   }
@@ -103,8 +106,10 @@ export async function POST(request: Request) {
   const apiKey = config?.openaiApiKey || process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
+    const preview = fallbackAnswer(message);
+    await recordAiConversation({ question: message, answer: preview, mode: "local-preview" });
     return NextResponse.json({
-      answer: fallbackAnswer(message),
+      answer: preview,
       mode: "local-preview",
     });
   }
@@ -152,6 +157,7 @@ export async function POST(request: Request) {
     const data = (await response.json()) as { output_text?: string };
     const answer = cleanText(data.output_text) || fallbackAnswer(message);
 
+    await recordAiConversation({ question: message, answer, mode: "openai" });
     return NextResponse.json({ answer, mode: "openai" });
   } catch (error) {
     return NextResponse.json(
