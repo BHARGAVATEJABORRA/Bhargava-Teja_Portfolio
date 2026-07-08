@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
+  LuActivity,
   LuBot,
   LuCheck,
   LuChevronDown,
@@ -130,10 +131,17 @@ const SECTIONS: SectionDef[] = [
     icon: LuGlobe,
     accent: "text-blue-400",
     fields: [
-      { key: "titleTemplate", label: "Page title template", type: "text" },
-      { key: "metaDescription", label: "Meta description", type: "textarea" },
-      { key: "ogImageUrl", label: "OG image URL", type: "text", half: true },
-      { key: "analyticsId", label: "Analytics ID (optional)", type: "text", half: true },
+      { key: "titleTemplate", label: "Page title template", type: "text", hint: "Shown in browser tabs and search results" },
+      { key: "metaDescription", label: "Meta description", type: "textarea", hint: "~150–160 chars; the search-result snippet" },
+      {
+        key: "ogImageUrl",
+        label: "Social share image (OG)",
+        type: "file",
+        accept: "image/png,image/jpeg,image/webp",
+        uploadKind: "media",
+        hint: "Recommended 1200×630 px. Used when your site is shared on social/link previews.",
+      },
+      { key: "analyticsId", label: "External analytics ID (optional)", type: "text", half: true, hint: "Built-in analytics already run; only needed for GA/etc." },
     ],
   },
   {
@@ -174,6 +182,21 @@ const SECTIONS: SectionDef[] = [
       { key: "showExperience", label: "Show Experience section", type: "toggle", half: true },
       { key: "showSkills", label: "Show Skills section", type: "toggle", half: true },
       { key: "showArticles", label: "Show Articles / blog section", type: "toggle", half: true },
+    ],
+  },
+  {
+    id: "now",
+    title: "H · “Now” page",
+    icon: LuActivity,
+    accent: "text-amber-400",
+    fields: [
+      {
+        key: "nowText",
+        label: "What you're up to now",
+        type: "textarea",
+        hint: "Shown at /now. Separate paragraphs with a blank line (e.g. working on / learning / open to).",
+      },
+      { key: "nowUpdatedAt", label: "Last updated label", type: "text", half: true, placeholder: "July 2026" },
     ],
   },
 ];

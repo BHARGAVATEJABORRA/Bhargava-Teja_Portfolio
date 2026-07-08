@@ -784,6 +784,11 @@ const mergedAvailability = {
   show: flag(sc?.showAvailabilityBadge),
 };
 
+const mergedNow = {
+  text: sc?.nowText ?? "",
+  updatedAt: sc?.nowUpdatedAt ?? "",
+};
+
 export const portfolioContent = {
   ...basePortfolioContent,
   identity: mergedIdentity,
@@ -792,6 +797,7 @@ export const portfolioContent = {
   meta: mergedMeta,
   features: mergedFeatures,
   availability: mergedAvailability,
+  now: mergedNow,
   projects: overrides.projects?.length ? overrides.projects : basePortfolioContent.projects,
   experience: overrides.experience ?? basePortfolioContent.experience,
   skills: overrides.skills?.length ? overrides.skills : basePortfolioContent.skills,

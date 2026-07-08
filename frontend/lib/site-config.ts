@@ -66,6 +66,9 @@ export interface SiteConfigShape {
   showExperience: boolean;
   showSkills: boolean;
   showArticles: boolean;
+  // H. "Now" page
+  nowText: string; // what you're currently working on / learning / open to
+  nowUpdatedAt: string; // e.g. "July 2026"
 }
 
 export type SiteConfigKey = keyof SiteConfigShape;
@@ -129,6 +132,10 @@ export const DEFAULT_SITE_CONFIG: SiteConfigShape = {
   showExperience: true,
   showSkills: true,
   showArticles: true,
+  // H. "Now" page
+  nowText:
+    "Currently at Capital One building AWS platform tooling.\n\nLearning: deeper Kubernetes internals and platform-engineering patterns.\n\nOpen to: senior IC and tech-lead conversations in cloud, platform, and backend.",
+  nowUpdatedAt: "July 2026",
 };
 
 /** Availability status → public badge label + tailwind-ish accent color. */
