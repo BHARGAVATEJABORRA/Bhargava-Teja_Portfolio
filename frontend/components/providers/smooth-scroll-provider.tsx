@@ -12,7 +12,10 @@ if (typeof window !== "undefined") {
   gsap.registerPlugin(ScrollTrigger);
 }
 
-const SCROLL_DURATION = 0.7;
+// Lower duration = the view settles faster after each wheel/tap; the wheel and
+// touch multipliers move more distance per input so scrolling feels quick and
+// responsive rather than floaty, while Lenis keeps it smooth.
+const SCROLL_DURATION = 0.6;
 const easeOutExpo = (time: number) => Math.min(1, 1.001 - 2 ** (-10 * time));
 
 function usePrefersReducedMotion() {
@@ -44,8 +47,8 @@ export function SmoothScrollProvider({ children }: { children: ReactNode }) {
       easing: easeOutExpo,
       smoothWheel: !prefersReducedMotion,
       syncTouch: false,
-      touchMultiplier: 1,
-      wheelMultiplier: 1,
+      touchMultiplier: 1.6,
+      wheelMultiplier: 1.4,
       anchors: prefersReducedMotion
         ? { immediate: true }
         : {

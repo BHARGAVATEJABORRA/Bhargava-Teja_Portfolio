@@ -49,7 +49,7 @@ export function ContactFooterSection() {
           <>
             <div className="max-w-sm">
               <p className="text-[clamp(2.3rem,5vw,4.85rem)] font-semibold leading-none tracking-normal text-white">
-                {portfolioContent.identity.name.split(" ")[0]}
+                Bhargav
               </p>
               <p className="mt-4 max-w-[22rem] text-sm leading-6 text-white/68">
                 Software Engineer focused on cloud, platform, and reliable systems.
@@ -103,6 +103,10 @@ export function ContactFooterSection() {
                 </div>
               </div>
             </div>
+
+            <p className="basis-full pt-10 text-center text-[0.7rem] font-medium uppercase tracking-[0.32em] text-white/40">
+              Built with Accuracy and Precision
+            </p>
           </>
         }
       />

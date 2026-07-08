@@ -40,12 +40,12 @@ export function SpotifyWidget() {
     />
   ) : (
     /* Plain ring — no brand icon */
-    <div className="h-16 w-16 shrink-0 rounded-full border-2 border-[var(--color-accent)]/30 bg-[var(--color-accent)]/10 sm:h-20 sm:w-20" />
+    <div className="h-16 w-16 shrink-0 rounded-full border-2 border-[#1DB954]/30 bg-[#1DB954]/10 sm:h-20 sm:w-20" />
   );
 
   const trackInfo = (
     <div className="w-full min-w-0">
-      <p className="truncate text-sm font-semibold text-[var(--color-ink)] transition-colors group-hover:text-[var(--color-accent)]">
+      <p className="truncate text-sm font-semibold text-[var(--color-ink)] transition-colors group-hover:text-[#1DB954]">
         {hasTrack ? data!.title : (data?.title ?? "Not listening right now")}
       </p>
       <p className="line-clamp-2 text-xs leading-snug text-[var(--color-muted-ink)]">
@@ -58,11 +58,11 @@ export function SpotifyWidget() {
     <ControlCenterPanel radius={28} className="flex h-full w-full min-h-0 min-w-0 flex-col overflow-hidden p-4">
 
       {/* Header — no icon, just label + optional live dot */}
-      <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
+      <div className="flex min-w-0 items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#1DB954]">
         {isPlaying && (
           <span className="relative flex h-2 w-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--color-accent)] opacity-60" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--color-accent)]" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#1DB954] opacity-60" />
+            <span className="relative inline-flex h-2 w-2 rounded-full bg-[#1DB954]" />
           </span>
         )}
         <span className="truncate">{label}</span>

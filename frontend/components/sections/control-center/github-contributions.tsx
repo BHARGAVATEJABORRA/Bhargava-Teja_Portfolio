@@ -39,13 +39,14 @@ interface RepoResponse {
   pushed_at?: string;
 }
 
-/** Theme-aware heat colors: empty ink tint → full accent. */
+/** GitHub's own contribution greens (empty cell stays a theme-aware ink tint). */
+const GH_GREEN = "#39d353";
 const LEVEL_FILLS = [
   "color-mix(in srgb, var(--color-ink) 10%, transparent)",
-  "color-mix(in srgb, var(--color-accent) 28%, transparent)",
-  "color-mix(in srgb, var(--color-accent) 52%, transparent)",
-  "color-mix(in srgb, var(--color-accent) 76%, transparent)",
-  "var(--color-accent)",
+  "#0e4429",
+  "#006d32",
+  "#26a641",
+  GH_GREEN,
 ];
 
 const jsonFetcher = async <T,>(url: string): Promise<T> => {
@@ -185,7 +186,7 @@ export function GitHubContributions() {
                     height={CELL}
                     rx={2.5}
                     fill={day ? LEVEL_FILLS[day.level] : LEVEL_FILLS[0]}
-                    stroke={isHovered ? "var(--color-accent)" : "transparent"}
+                    stroke={isHovered ? GH_GREEN : "transparent"}
                     strokeWidth={isHovered ? 1.5 : 0}
                     className={day ? "cursor-pointer" : "animate-pulse"}
                     onMouseEnter={day ? () => setHovered(day) : undefined}
