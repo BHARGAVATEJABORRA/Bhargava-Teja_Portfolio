@@ -5,6 +5,7 @@ import { LuClock, LuCalendar } from "react-icons/lu";
 import { BackToArticles } from "@/components/articles/back-to-articles";
 
 import { portfolioContent } from "@/content/portfolio-content";
+import { siteConfig } from "@/lib/site";
 
 const articles = portfolioContent.articles ?? [];
 
@@ -24,9 +25,26 @@ export async function generateMetadata({
   const { slug } = await params;
   const article = getArticle(slug);
   if (!article) return { title: "Article not found" };
+  const ogImage = article.ogImage || siteConfig.ogImage;
+  const url = `/articles/${slug}`;
   return {
     title: article.title,
     description: article.excerpt,
+    alternates: { canonical: url },
+    openGraph: {
+      title: article.title,
+      description: article.excerpt,
+      type: "article",
+      url,
+      siteName: "Bhargava Teja Borra Portfolio",
+      images: [{ url: ogImage, width: 1200, height: 630, alt: article.title }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: article.title,
+      description: article.excerpt,
+      images: [ogImage],
+    },
   };
 }
 

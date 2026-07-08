@@ -159,6 +159,7 @@ model Article {
   body        String?
   likes       Int?
   accent      String?
+  ogImage     String? // per-article social share image (falls back to the site OG image)
   tags        String   @default("[]") // JSON string[]
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())

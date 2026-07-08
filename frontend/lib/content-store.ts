@@ -149,6 +149,9 @@ export function toArticleDto(row: Article): ArticleDto {
     ...(row.body ? { body: row.body } : {}),
     ...(typeof row.likes === "number" ? { likes: row.likes } : {}),
     ...(row.accent ? { accent: row.accent } : {}),
+    ...((row as Article & { ogImage?: string | null }).ogImage
+      ? { ogImage: (row as Article & { ogImage?: string | null }).ogImage as string }
+      : {}),
   };
 }
 
@@ -299,9 +302,10 @@ export function validateArticleInput(body: Record<string, unknown>): ValidationR
       body: str(body, "body", false) || null,
       likes: typeof body.likes === "number" ? body.likes : null,
       accent: str(body, "accent", false) || null,
+      ogImage: str(body, "ogImage", false) || null,
       tags: JSON.stringify(strArray(body, "tags")),
       sortOrder: typeof body.sortOrder === "number" ? body.sortOrder : 0,
-    },
+    } as Prisma.ArticleCreateInput,
   };
 }
 

@@ -104,6 +104,8 @@ export interface ArticleSummary {
   likes?: number;
   /** Accent color for the card image panel / gradient. */
   accent?: string;
+  /** Per-article social share image (falls back to the site OG image). */
+  ogImage?: string;
 }
 
 export interface ControlCenterModule {
