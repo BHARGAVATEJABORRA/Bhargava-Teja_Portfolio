@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { CommandPalette } from "@/components/layout/command-palette";
 import { SiteHeader } from "@/components/layout/site-header";
@@ -20,9 +20,25 @@ import { portfolioContent } from "@/content/portfolio-content";
 export function HomeShell() {
   const features = portfolioContent.features;
   const [showContent, setShowContent] = useState(false);
+  // The Three.js footer scene is the heaviest thing to mount. Deferring it a
+  // couple of frames after the rest of the content paints keeps the greeting →
+  // hero reveal from freezing while all that WebGL initialises in one tick.
+  const [showFooter, setShowFooter] = useState(false);
   const handleEntranceDone = useCallback(() => {
     setShowContent(true);
   }, []);
+
+  useEffect(() => {
+    if (!showContent) return;
+    let raf2 = 0;
+    const raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => setShowFooter(true));
+    });
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
+  }, [showContent]);
 
   return (
     <>
@@ -47,7 +63,7 @@ export function HomeShell() {
           <>
             {/* Content floats over the day-cycling sky; sections are
                 background-less so the sky shows through behind them. */}
-            <div className="relative isolate">
+            <div className="relative isolate -mt-px">
               <ControlCenterSection />
               <AboutSection />
               {features.skills && <SkillsSection />}
@@ -56,7 +72,7 @@ export function HomeShell() {
               {features.articles && <BlogsSection />}
             </div>
 
-            <ContactFooterSection />
+            {showFooter ? <ContactFooterSection /> : null}
           </>
         ) : null}
       </main>
