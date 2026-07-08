@@ -36,6 +36,10 @@ export interface CollectionManagerProps<TDto extends { id: string }> {
   itemBadge?: (dto: TDto) => ReactNode;
   /** Optional list ordering applied after fetch (e.g. work → education → certifications). */
   sortItems?: (items: TDto[]) => TDto[];
+  /** Optional predicate to show only a subset (e.g. one experience kind per tab). */
+  filterItems?: (dto: TDto) => boolean;
+  /** Optional seed values applied to the create form (e.g. { kind: "education" }). */
+  defaultValues?: Record<string, string | boolean>;
 }
 
 type FormState = Record<string, string | boolean>;
@@ -134,6 +138,8 @@ export function CollectionManager<TDto extends { id: string }>({
   itemSubtitle,
   itemBadge,
   sortItems,
+  filterItems,
+  defaultValues,
 }: CollectionManagerProps<TDto>) {
   const [items, setItems] = useState<Dto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -173,20 +179,23 @@ export function CollectionManager<TDto extends { id: string }>({
       }
       if (!res.ok) throw new Error(`Request failed (${res.status})`);
       const data = (await res.json()) as { items: Dto[] };
-      setItems(sortItems ? (sortItems(data.items as unknown as TDto[]) as unknown as Dto[]) : data.items);
+      let list = data.items as unknown as TDto[];
+      if (filterItems) list = list.filter(filterItems);
+      if (sortItems) list = sortItems(list);
+      setItems(list as unknown as Dto[]);
     } catch (err) {
       showError((err as Error).message);
     } finally {
       setLoading(false);
     }
-  }, [endpoint, showError, sortItems]);
+  }, [endpoint, showError, sortItems, filterItems]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   const openCreate = () => {
-    setForm(emptyForm);
+    setForm({ ...emptyForm, ...defaultValues });
     setEditingId("new");
     setNotice(null);
     setError(null);
