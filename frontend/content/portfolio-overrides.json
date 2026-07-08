@@ -851,6 +851,14 @@
     "contactEmail": "bhargavateja.borra@gmail.com",
     "contactFormDestination": "bhargavateja.borra@gmail.com",
     "availableFor": "Open to senior IC and tech-lead opportunities in cloud, platform, and backend engineering",
-    "showContactForm": true
+    "showContactForm": true,
+    "availabilityStatus": "available",
+    "showAvailabilityBadge": true,
+    "showProjects": true,
+    "showExperience": true,
+    "showSkills": true,
+    "showArticles": true,
+    "nowText": "Currently at Capital One building AWS platform tooling.\n\nLearning: deeper Kubernetes internals and platform-engineering patterns.\n\nOpen to: senior IC and tech-lead conversations in cloud, platform, and backend.",
+    "nowUpdatedAt": "July 2026"
   }
 }
