@@ -1,59 +1,12 @@
 "use client";
 
-import type { CSSProperties, ComponentType } from "react";
-import { FaAws, FaJava, FaMicrosoft } from "react-icons/fa6";
-import { LuBrainCircuit, LuCode, LuDatabase, LuGlobe, LuNetwork } from "react-icons/lu";
-import {
-  SiCircleci,
-  SiDocker,
-  SiGithubactions,
-  SiGnubash,
-  SiJavascript,
-  SiJenkins,
-  SiKubernetes,
-  SiMongodb,
-  SiNextdotjs,
-  SiNodedotjs,
-  SiOpenai,
-  SiPython,
-  SiReact,
-  SiTailwindcss,
-  SiTerraform,
-  SiTypescript,
-} from "react-icons/si";
+import type { CSSProperties } from "react";
 
 import GlassSurface from "@/components/ui/glass-surface";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SectionShell } from "@/components/ui/section-shell";
 import { portfolioContent } from "@/content/portfolio-content";
-
-type SkillIconComponent = ComponentType<{ size?: number; className?: string; style?: CSSProperties; "aria-hidden"?: boolean }>;
-
-const skillIconMap: Record<string, SkillIconComponent> = {
-  SiAmazonaws: FaAws,
-  SiMicrosoftazure: FaMicrosoft,
-  SiDocker,
-  SiKubernetes,
-  SiTerraform,
-  SiGithubactions,
-  SiJenkins,
-  SiCircleci,
-  SiPython,
-  SiJava: FaJava,
-  SiJavascript,
-  SiTypescript,
-  LuDatabase,
-  SiGnubash,
-  SiNodedotjs,
-  SiMongodb,
-  LuGlobe,
-  LuNetwork,
-  SiReact,
-  SiNextdotjs,
-  SiTailwindcss,
-  SiOpenai,
-  LuBrainCircuit,
-};
+import { resolveSkillIcon } from "@/lib/skill-icons";
 
 export function SkillsSection() {
   return (
@@ -88,7 +41,7 @@ export function SkillsSection() {
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">{group.category}</p>
                 <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5">
                   {group.skills.map((skill) => {
-                    const IconComponent = skillIconMap[skill.iconKey] ?? LuCode;
+                    const IconComponent = resolveSkillIcon(skill.iconKey);
                     return (
                       <li key={`${group.category}-${skill.name}`}>
                         <div
