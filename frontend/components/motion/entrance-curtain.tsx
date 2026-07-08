@@ -98,7 +98,11 @@ export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] } }}
           onPointerDown={completeEntrance}
-          className="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--color-ink)] px-6 text-[var(--color-bg)]"
+          className="fixed inset-0 z-[90] flex items-center justify-center px-6"
+          style={{
+            background:
+              "radial-gradient(120% 120% at 50% 35%, #16234f 0%, #0d1533 55%, #070b1e 100%)",
+          }}
         >
           <div className="flex flex-col items-center gap-5 text-center">
             <motion.p
@@ -108,6 +112,7 @@ export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
               exit={shouldReduceMotion ? undefined : { opacity: 0, y: -14 }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
               className="text-4xl font-semibold tracking-tight sm:text-5xl"
+              style={{ color: "#F0D9A0", textShadow: "0 2px 30px rgba(231,180,80,0.35)" }}
             >
               {greetings[wordIndex]}
             </motion.p>

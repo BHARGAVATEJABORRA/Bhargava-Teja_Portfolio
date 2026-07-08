@@ -56,22 +56,19 @@ export const TIDES_KEYS: readonly TidesKey[] = [
     star: 1,
   },
   {
-    // Premium "midnight sapphire & gold" landing mood: deep sapphire/indigo sky
-    // over a royal-gold horizon with a champagne sun. The day still brightens to
-    // MORNING/MIDDAY as you scroll — only the greeting endpoint is re-tinted.
     t: 0.14,
     name: "SUNRISE",
     hour: 6.1,
-    skyTop: [16, 26, 68],
-    skyHor: [231, 180, 80],
-    sun: [255, 233, 176],
-    glow: [255, 198, 128],
-    wFar: [150, 130, 120],
-    wNear: [16, 26, 60],
-    foam: [244, 236, 255],
+    skyTop: [42, 52, 104],
+    skyHor: [252, 168, 116],
+    sun: [255, 240, 210],
+    glow: [255, 172, 112],
+    wFar: [182, 150, 146],
+    wNear: [32, 60, 84],
+    foam: [255, 244, 234],
     sunH: 0.06,
-    glit: 0.82,
-    star: 0.35,
+    glit: 0.78,
+    star: 0.12,
   },
   {
     t: 0.38,
