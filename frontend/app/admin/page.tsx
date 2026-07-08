@@ -11,8 +11,11 @@ import {
 } from "react-icons/lu";
 
 import { AdminShell } from "@/components/admin/admin-shell";
+import { ChangeHistory } from "@/components/admin/change-history";
+import { DashboardMetrics } from "@/components/admin/dashboard-metrics";
 import { getSiteConfigLastUpdated, isSiteConfigConfigured } from "@/lib/content-store";
 import { prisma } from "@/lib/db";
+import { getDashboardInsights } from "@/lib/insights-store";
 
 export const metadata: Metadata = {
   title: "Admin Dashboard",
@@ -114,7 +117,7 @@ function formatTimestamp(date: Date): string {
 }
 
 export default async function AdminDashboardPage() {
-  const data = await getDashboardData();
+  const [data, insights] = await Promise.all([getDashboardData(), getDashboardInsights()]);
 
   const panels = [
     {
@@ -215,8 +218,11 @@ export default async function AdminDashboardPage() {
         <span suppressHydrationWarning>{formatTimestamp(new Date()).toUpperCase()}</span>
       </div>
 
+      {/* Live first-party metrics */}
+      <DashboardMetrics insights={insights} />
+
       {/* Module panels */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {panels.map(({ href, icon: Icon, title, count, stat, iconClass, glow }) => (
           <Link
             key={href}
@@ -254,6 +260,11 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* Recent activity feed */}
+      <div className="mt-6">
+        <ChangeHistory limit={12} title="Recent activity" compact />
       </div>
     </AdminShell>
   );
