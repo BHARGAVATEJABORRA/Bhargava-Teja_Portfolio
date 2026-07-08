@@ -12,7 +12,7 @@
  * save, so re-saving a section never overwrites a stored secret.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import {
   LuBot,
   LuCheck,
@@ -22,6 +22,7 @@ import {
   LuLink,
   LuMail,
   LuMusic,
+  LuUpload,
   LuUser,
 } from "react-icons/lu";
 
@@ -33,11 +34,13 @@ type ConfigState = Record<string, ConfigValue>;
 interface FieldDef {
   key: SiteConfigKey;
   label: string;
-  type: "text" | "textarea" | "secret" | "toggle" | "select" | "csv" | "stats" | "customLink";
+  type: "text" | "textarea" | "secret" | "toggle" | "select" | "csv" | "stats" | "customLink" | "file";
   options?: { value: string; label: string }[];
   hint?: string;
   placeholder?: string;
   half?: boolean;
+  accept?: string;
+  uploadKind?: "resume" | "image" | "media";
 }
 
 interface SectionDef {
@@ -74,7 +77,14 @@ const SECTIONS: SectionDef[] = [
       { key: "email", label: "Email address", type: "text", half: true },
       { key: "githubUrl", label: "GitHub URL", type: "text", half: true },
       { key: "linkedinUrl", label: "LinkedIn URL", type: "text", half: true },
-      { key: "resumeUrl", label: "Resume / CV URL", type: "text", half: true },
+      {
+        key: "resumeUrl",
+        label: "Resume / CV (PDF)",
+        type: "file",
+        accept: "application/pdf",
+        uploadKind: "resume",
+        hint: "Upload a PDF to replace the downloadable resume, or paste a URL. Saving is automatic on upload.",
+      },
       { key: "twitterUrl", label: "Twitter / X URL (optional)", type: "text", half: true },
       { key: "customLink", label: "Custom link", type: "customLink" },
     ],
@@ -310,6 +320,88 @@ export function SettingsManager() {
   );
 }
 
+function FileField({
+  field,
+  value,
+  onChange,
+  wrapClass,
+  labelEl,
+  hintEl,
+}: {
+  field: FieldDef;
+  value: ConfigValue | undefined;
+  onChange: (value: ConfigValue) => void;
+  wrapClass: string;
+  labelEl: ReactNode;
+  hintEl: ReactNode;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const current = String(value ?? "");
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    setMsg(null);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("kind", field.uploadKind ?? "media");
+      body.append("label", field.label);
+      const res = await fetch("/api/admin/upload", { method: "POST", body });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? `Upload failed (${res.status}).`);
+      onChange(data.url);
+      setMsg({ kind: "ok", text: "Uploaded and published to the live site." });
+    } catch (err) {
+      setMsg({ kind: "err", text: (err as Error).message });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className={`space-y-2 ${wrapClass}`}>
+      {labelEl}
+      <div className="flex flex-wrap items-center gap-2">
+        <input
+          type="text"
+          value={current}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="/bhargava-teja-borra-resume.pdf"
+          className={`${inputClass} flex-1 font-mono`}
+        />
+        {current && (
+          <a
+            href={current}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex min-h-10 items-center rounded-full border border-white/10 bg-white/5 px-4 text-sm font-semibold text-slate-200 transition hover:text-white"
+          >
+            View
+          </a>
+        )}
+        <label className="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-full bg-amber-400 px-4 text-sm font-semibold text-slate-950 transition hover:bg-amber-300">
+          <LuUpload size={14} aria-hidden />
+          {uploading ? "Uploading…" : "Upload"}
+          <input
+            type="file"
+            accept={field.accept}
+            className="hidden"
+            disabled={uploading}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void upload(file);
+              e.target.value = "";
+            }}
+          />
+        </label>
+      </div>
+      {msg && <span className={`block text-xs ${msg.kind === "ok" ? "text-emerald-300" : "text-red-300"}`}>{msg.text}</span>}
+      {hintEl}
+    </div>
+  );
+}
+
 function SettingsField({
   field,
   value,
@@ -399,6 +491,10 @@ function SettingsField({
         {hintEl}
       </div>
     );
+  }
+
+  if (field.type === "file") {
+    return <FileField field={field} value={value} onChange={onChange} wrapClass={wrapClass} labelEl={labelEl} hintEl={hintEl} />;
   }
 
   if (field.type === "csv") {

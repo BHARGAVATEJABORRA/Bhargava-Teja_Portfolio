@@ -110,6 +110,7 @@ export function AboutSection() {
 
               <a
                 href={getResumeHref()}
+                download
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex min-h-11 w-fit items-center text-sm font-semibold text-[var(--color-accent)] underline underline-offset-4 focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"

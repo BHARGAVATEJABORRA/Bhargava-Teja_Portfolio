@@ -157,7 +157,7 @@
         "title": "Master of Science in Computer Science",
         "period": "Aug 2023 - May 2025",
         "highlights": [
-          "GPA: 3.83 · Graduate coursework in distributed systems, cloud computing, and software engineering."
+          "GPA: 3.83 \u00b7 Graduate coursework in distributed systems, cloud computing, and software engineering."
         ],
         "location": "Kansas City, MO"
       }
@@ -165,7 +165,7 @@
     "certifications": [
       {
         "organization": "Amazon Web Services",
-        "title": "AWS Certified Solutions Architect – Associate",
+        "title": "AWS Certified Solutions Architect \u2013 Associate",
         "period": "Active",
         "highlights": [],
         "badgeUrl": "https://images.credly.com/images/0e284c3f-5164-4b21-8660-0d84737941bc/image.png",
@@ -380,7 +380,7 @@
     {
       "slug": "cutting-aws-bill-35-percent",
       "title": "Cutting a Fortune 500 Bank's AWS Bill by 35% Without Shipping Less",
-      "excerpt": "Rightsizing, savings plans, and a ruthless audit of idle capacity — how a banking platform got 35% cheaper while uptime stayed at 99.9%.",
+      "excerpt": "Rightsizing, savings plans, and a ruthless audit of idle capacity \u2014 how a banking platform got 35% cheaper while uptime stayed at 99.9%.",
       "publishedAt": "March 2025",
       "readTime": "8 min read",
       "href": "#",
@@ -393,7 +393,7 @@
         "FinOps",
         "Cost Optimization"
       ],
-      "source": "Cloud Cost · FinOps",
+      "source": "Cloud Cost \u00b7 FinOps",
       "tagline": "The cheapest server is the one you turned off on Friday.",
       "body": "When monthly cloud spend creeps past six figures, the savings hide in the boring places. I walked through EC2 rightsizing, S3 lifecycle tiers, and Savings Plans coverage, then automated the cleanup so idle dev environments shut themselves down overnight. The result: ~$40K in annual savings and a cost dashboard the whole org could actually read.",
       "likes": 42,
@@ -415,8 +415,8 @@
         "Jenkins",
         "AWS CodePipeline"
       ],
-      "source": "DevOps · CI/CD",
-      "tagline": "Slow releases aren't safe releases — they're just rare ones.",
+      "source": "DevOps \u00b7 CI/CD",
+      "tagline": "Slow releases aren't safe releases \u2014 they're just rare ones.",
       "body": "Enterprise banking treats every deploy as a risk event, which is exactly why the pipeline had calcified into three-week change windows. I introduced automated test gates, progressive rollouts, and one-click rollback. Releases that once needed a committee now ship in two days, and deployment failures fell by 70% because the safety lived in the pipeline, not in people.",
       "likes": 37,
       "accent": "#6aa6ff"
@@ -437,9 +437,9 @@
         "AWS",
         "Compliance"
       ],
-      "source": "Reliability · DR",
+      "source": "Reliability \u00b7 DR",
       "tagline": "Your DR plan is a hypothesis until a region goes dark.",
-      "body": "A recovery-time objective only matters if you've actually rehearsed it. I designed failover across availability zones with hardened VPCs, scoped security groups, and least-privilege IAM, then ran game days until 15-minute recovery was routine rather than aspirational — all while satisfying SOC2 and PCI-DSS auditors.",
+      "body": "A recovery-time objective only matters if you've actually rehearsed it. I designed failover across availability zones with hardened VPCs, scoped security groups, and least-privilege IAM, then ran game days until 15-minute recovery was routine rather than aspirational \u2014 all while satisfying SOC2 and PCI-DSS auditors.",
       "likes": 51,
       "accent": "#c084fc"
     },
@@ -459,9 +459,9 @@
         "IaC",
         "Multi-Cloud"
       ],
-      "source": "IaC · Platform",
+      "source": "IaC \u00b7 Platform",
       "tagline": "Drift is just undocumented decisions piling up in production.",
-      "body": "Two clouds, five teams, and endless 'just one quick console change' — that's how drift starts. I built reusable Terraform modules with policy validation baked into GitHub Actions, so every environment came from the same source of truth. Provisioning time dropped 60% and the gap between staging and prod effectively disappeared.",
+      "body": "Two clouds, five teams, and endless 'just one quick console change' \u2014 that's how drift starts. I built reusable Terraform modules with policy validation baked into GitHub Actions, so every environment came from the same source of truth. Provisioning time dropped 60% and the gap between staging and prod effectively disappeared.",
       "likes": 29,
       "accent": "#34d399"
     },
@@ -481,8 +481,8 @@
         "OAuth2",
         "JWT"
       ],
-      "source": "Security · APIs",
-      "tagline": "Auth bugs don't scale gracefully — they fail loudly at 3 a.m.",
+      "source": "Security \u00b7 APIs",
+      "tagline": "Auth bugs don't scale gracefully \u2014 they fail loudly at 3 a.m.",
       "body": "At 500K calls a day, a sloppy auth layer becomes a pager magnet. I tightened Spring Security with short-lived JWTs, scoped OAuth2 claims, and Redis-backed token state, then load-tested the failure modes. Authentication failures dropped 85% and the on-call rotation finally got quiet.",
       "likes": 33,
       "accent": "#f97316"
@@ -503,7 +503,7 @@
         "Lambda",
         "API Gateway"
       ],
-      "source": "Serverless · AWS",
+      "source": "Serverless \u00b7 AWS",
       "tagline": "Stop paying for servers that spend the night doing nothing.",
       "body": "An always-on EC2 fleet for bursty, event-driven work is a standing invoice for idle time. I rebuilt the workflow around Lambda, API Gateway, and S3 so capacity followed demand instead of the clock. Handling 500K daily events got 30% cheaper, and scaling stopped being a capacity-planning meeting.",
       "likes": 24,
@@ -525,9 +525,9 @@
         "DynamoDB",
         "Redis"
       ],
-      "source": "Data · Performance",
+      "source": "Data \u00b7 Performance",
       "tagline": "The fastest query is the one you never send to the database.",
-      "body": "Hot read paths were hammering the primary database long after the data stopped changing. I profiled the slow queries, fixed the indexing, and put a Redis cache in front of the expensive lookups. API responses got 40% faster and database load fell 60% — headroom the team spent on features instead of firefighting.",
+      "body": "Hot read paths were hammering the primary database long after the data stopped changing. I profiled the slow queries, fixed the indexing, and put a Redis cache in front of the expensive lookups. API responses got 40% faster and database load fell 60% \u2014 headroom the team spent on features instead of firefighting.",
       "likes": 31,
       "accent": "#60a5fa"
     },
@@ -547,9 +547,9 @@
         "Observability",
         "Alerting"
       ],
-      "source": "Observability · SRE",
+      "source": "Observability \u00b7 SRE",
       "tagline": "A dashboard nobody watches is just expensive wallpaper.",
-      "body": "Most monitoring dies of noise — a hundred green tiles and the one red one nobody notices. I rebuilt the CloudWatch dashboards around the handful of signals that actually predict failure, wired SNS alerts to the right humans, and tuned thresholds against real incident history. Detection got 3x faster and 95% of outages were caught before customers ever felt them.",
+      "body": "Most monitoring dies of noise \u2014 a hundred green tiles and the one red one nobody notices. I rebuilt the CloudWatch dashboards around the handful of signals that actually predict failure, wired SNS alerts to the right humans, and tuned thresholds against real incident history. Detection got 3x faster and 95% of outages were caught before customers ever felt them.",
       "likes": 28,
       "accent": "#a78bfa"
     }
@@ -559,7 +559,7 @@
     "roleLine": "Software Engineer",
     "location": "Addison (Dallas), TX, USA",
     "heroTagline": "Architect and engineer scalable AWS infrastructure with measurable reliability, performance, and cost outcomes.",
-    "aboutBio": "I'm a software engineer with 4+ years building high-scale AWS cloud infrastructure for enterprise banking and Fortune 500 systems — currently at Capital One in Dallas. I design architectures that hold 99.9% uptime, automate everything repeatable with Terraform and CloudFormation, and build CI/CD pipelines that turned three-week release cycles into two-day ships. I care about practical engineering: clear ownership, measurable outcomes, and systems the next engineer can run without a manual.",
+    "aboutBio": "I'm a software engineer with 4+ years building high-scale AWS cloud infrastructure for enterprise banking and Fortune 500 systems \u2014 currently at Capital One in Dallas. I design architectures that hold 99.9% uptime, automate everything repeatable with Terraform and CloudFormation, and build CI/CD pipelines that turned three-week release cycles into two-day ships. I care about practical engineering: clear ownership, measurable outcomes, and systems the next engineer can run without a manual.",
     "aboutSpecialties": [
       "AWS Platform Engineering",
       "Infrastructure as Code",
@@ -584,7 +584,7 @@
     "email": "bhargavateja.borra@gmail.com",
     "githubUrl": "https://github.com/BHARGAVATEJABORRA",
     "linkedinUrl": "https://www.linkedin.com/in/bhargavatejaborra/",
-    "resumeUrl": "/bhargava-teja-borra-resume.txt",
+    "resumeUrl": "/bhargava-teja-borra-resume.pdf",
     "twitterUrl": "",
     "customLink": {
       "label": "",
@@ -599,7 +599,7 @@
     "ogImageUrl": "/og-image.svg",
     "analyticsId": "",
     "contactHeading": "Let's build something reliable",
-    "contactSubheading": "Recruiter and hiring-manager outreach welcome — typically answered within one business day.",
+    "contactSubheading": "Recruiter and hiring-manager outreach welcome \u2014 typically answered within one business day.",
     "contactEmail": "bhargavateja.borra@gmail.com",
     "contactFormDestination": "bhargavateja.borra@gmail.com",
     "availableFor": "Open to senior IC and tech-lead opportunities in cloud, platform, and backend engineering",

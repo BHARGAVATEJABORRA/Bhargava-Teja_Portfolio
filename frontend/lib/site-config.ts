@@ -88,7 +88,7 @@ export const DEFAULT_SITE_CONFIG: SiteConfigShape = {
   email: "bhargavateja.borra@gmail.com",
   githubUrl: "https://github.com/BHARGAVATEJABORRA",
   linkedinUrl: "https://www.linkedin.com/in/bhargavatejaborra/",
-  resumeUrl: "/bhargava-teja-borra-resume.txt",
+  resumeUrl: "/bhargava-teja-borra-resume.pdf",
   twitterUrl: "",
   customLink: { label: "", url: "" },
   // C. AI Companion

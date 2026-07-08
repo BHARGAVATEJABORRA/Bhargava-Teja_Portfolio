@@ -137,7 +137,7 @@ const basePortfolioContent = {
     avatarUrl: "",
     bio:
       "Software engineer with 4+ years building high-scale AWS cloud infrastructure for enterprise banking and Fortune 500 systems.\n\nI focus on reliability, automation, and measurable outcomes, including cutting cloud costs by 35% and boosting performance by 40%.",
-    resumeHref: "/bhargava-teja-borra-resume.txt",
+    resumeHref: "/bhargava-teja-borra-resume.pdf",
     phone: "123-456-7890",
     phoneVisibleOnPage: false,
     intro:
