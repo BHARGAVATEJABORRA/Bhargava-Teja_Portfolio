@@ -26,7 +26,8 @@ interface ExperienceTabMeta {
   icon: IconType;
 }
 
-const tabOrder: ExperienceTab[] = ["work", "education", "certifications"];
+// Order: Education first, Career in the middle, Certifications last.
+const tabOrder: ExperienceTab[] = ["education", "work", "certifications"];
 
 const tabMeta: Record<ExperienceTab, ExperienceTabMeta> = {
   work: { label: "Career", icon: FaBriefcase },
@@ -132,7 +133,7 @@ function CertCard({ item }: { item: ExperienceItem }) {
 }
 
 export function ExperienceSection() {
-  const [activeTab, setActiveTab] = useState<ExperienceTab>("work");
+  const [activeTab, setActiveTab] = useState<ExperienceTab>("education");
   const items = portfolioContent.experience[activeTab];
 
   return (
@@ -163,7 +164,7 @@ export function ExperienceSection() {
           <div className="xp-head">
             <p className="xp-eyebrow">Experience</p>
             <h2 id="experience-title" className="xp-heading">
-              Where I&apos;ve worked, studied &amp; certified
+              Where I&apos;ve studied, worked &amp; certified
             </h2>
 
             <div role="tablist" aria-label="Experience categories" className="xp-tabs">
