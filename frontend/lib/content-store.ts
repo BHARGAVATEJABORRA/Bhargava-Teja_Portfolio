@@ -77,6 +77,10 @@ export type SkillDto = { id: string; category: string; name: string; iconKey: st
 export type ArticleDto = ArticleSummary & { id: string };
 
 export function toProjectDto(row: Project): ProjectDto {
+  // imageUrl/imageAlt exist after `prisma generate` picks up the
+  // 20260708170000_add_project_image migration; cast keeps the mappers correct
+  // even before the local client type is regenerated.
+  const r = row as Project & { imageUrl?: string | null; imageAlt?: string | null };
   return {
     id: row.id,
     title: row.title,
@@ -90,6 +94,8 @@ export function toProjectDto(row: Project): ProjectDto {
     linkState: row.linkState === "configured" ? "configured" : "on-request",
     ...(row.liveUrl ? { liveUrl: row.liveUrl } : {}),
     ...(row.repoUrl ? { repoUrl: row.repoUrl } : {}),
+    ...(r.imageUrl ? { imageUrl: r.imageUrl } : {}),
+    ...(r.imageAlt ? { imageAlt: r.imageAlt } : {}),
     stack: parseStringArray(row.stack),
     techStack: parseStringArray(row.techStack),
     metrics: parseMetrics(row.metrics),
@@ -185,6 +191,9 @@ export function validateProjectInput(body: Record<string, unknown>): ValidationR
 
   return {
     ok: true,
+    // imageUrl/imageAlt become first-class columns after `prisma generate`
+    // picks up 20260708170000_add_project_image; cast to the input type so
+    // this compiles against a not-yet-regenerated client.
     data: {
       title: values.title,
       timeframe: values.timeframe,
@@ -197,11 +206,13 @@ export function validateProjectInput(body: Record<string, unknown>): ValidationR
       linkState,
       liveUrl: str(body, "liveUrl", false) || null,
       repoUrl: str(body, "repoUrl", false) || null,
+      imageUrl: str(body, "imageUrl", false) || null,
+      imageAlt: str(body, "imageAlt", false) || null,
       stack: JSON.stringify(strArray(body, "stack")),
       techStack: JSON.stringify(strArray(body, "techStack")),
       metrics: JSON.stringify(metrics),
       sortOrder: typeof body.sortOrder === "number" ? body.sortOrder : 0,
-    },
+    } as Prisma.ProjectCreateInput,
   };
 }
 

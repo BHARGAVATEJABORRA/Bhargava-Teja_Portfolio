@@ -29,6 +29,8 @@ model Project {
   linkState String   @default("on-request") // "configured" | "on-request"
   liveUrl   String?
   repoUrl   String?
+  imageUrl  String? // card cover image (upload via /api/admin/upload). Recommended 1200×800 (3:2), <1 MB.
+  imageAlt  String? // accessible alt text for the cover image
   stack     String   @default("[]") // JSON string[]
   techStack String   @default("[]") // JSON string[]
   metrics   String   @default("[]") // JSON { value, label }[]

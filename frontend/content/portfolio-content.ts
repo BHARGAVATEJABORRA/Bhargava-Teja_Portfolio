@@ -40,6 +40,10 @@ export interface ProjectSummary {
   linkState: "configured" | "on-request";
   liveUrl?: string;
   repoUrl?: string;
+  /** Card cover image URL (uploaded in admin). Recommended 1200×800 (3:2). */
+  imageUrl?: string;
+  /** Accessible alt text for the cover image. */
+  imageAlt?: string;
   metrics?: ProjectMetric[];
 }
 

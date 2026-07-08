@@ -108,6 +108,254 @@
           "label": "Deployment Scope"
         }
       ]
+    },
+    {
+      "title": "Creature Login UI",
+      "timeframe": "2025 \u2013 2026",
+      "role": "Creator",
+      "category": "Frontend / UI",
+      "problem": "Login screens are functional but forgettable, with nothing to make a first impression.",
+      "approach": "Built an interactive login page in React, TypeScript, and GSAP where animated creatures track the cursor, lean toward inputs, and change expression with password strength.",
+      "outcome": "A memorable, playful authentication experience that showcases fine-grained, state-driven animation.",
+      "href": "https://github.com/BHARGAVATEJABORRA/creature-login-ui",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/creature-login-ui",
+      "stack": [
+        "React",
+        "TypeScript",
+        "GSAP"
+      ],
+      "techStack": [
+        "React",
+        "TypeScript",
+        "GSAP"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Transaction Ingestion Service (.NET 10)",
+      "timeframe": "2026",
+      "role": "Author",
+      "category": "Backend",
+      "problem": "High-volume financial transactions need reliable, well-structured ingestion.",
+      "approach": "Implemented a .NET 10 transaction-ingestion exercise focused on clean domain modeling and robust parsing and validation.",
+      "outcome": "A tidy reference for ingesting and processing transaction data in modern .NET.",
+      "href": "https://github.com/BHARGAVATEJABORRA/TransactionIngestExercise",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/TransactionIngestExercise",
+      "stack": [
+        "C#",
+        ".NET 10"
+      ],
+      "techStack": [
+        "C#",
+        ".NET"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Deep Learning: Vision Tasks with CNNs, YOLOv8 & SegFormer",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "AI/ML",
+      "problem": "Compare modern architectures across core computer-vision tasks.",
+      "approach": "Implemented image classification, object detection, segmentation, and style transfer using CNNs, YOLOv8, SegFormer, and more.",
+      "outcome": "An end-to-end survey of deep-learning vision techniques with working notebooks.",
+      "href": "https://github.com/BHARGAVATEJABORRA/deep-learning-final-project-SP24",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/deep-learning-final-project-SP24",
+      "stack": [
+        "Python",
+        "PyTorch",
+        "YOLOv8",
+        "SegFormer"
+      ],
+      "techStack": [
+        "Python",
+        "PyTorch",
+        "CNN"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Housing Price Modeling (ISL)",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "AI/ML",
+      "problem": "Predict housing prices and understand which features drive them.",
+      "approach": "Applied statistical-learning methods from ISL to a housing dataset for regression and model comparison.",
+      "outcome": "Interpretable price models with feature-importance insights.",
+      "href": "https://github.com/BHARGAVATEJABORRA/ISL_Housing-Prices_AMT",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/ISL_Housing-Prices_AMT",
+      "stack": [
+        "Python",
+        "Jupyter",
+        "scikit-learn"
+      ],
+      "techStack": [
+        "Python",
+        "scikit-learn"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Vehicle CO\u2082 Emissions Analysis",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "Data Science",
+      "problem": "Explain and predict vehicle CO\u2082 emissions from vehicle specs and fuel metrics.",
+      "approach": "Econometrics study on Canadian data (2014\u20132021): data prep, EDA, and multiple-regression modeling.",
+      "outcome": "Regression models that quantify how vehicle characteristics affect emissions.",
+      "href": "https://github.com/BHARGAVATEJABORRA/Vehicle-Co2-Emissions",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/Vehicle-Co2-Emissions",
+      "stack": [
+        "Python",
+        "Pandas",
+        "statsmodels"
+      ],
+      "techStack": [
+        "Python",
+        "Regression"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Amazon Rekognition on AWS (Serverless Blueprint)",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "Cloud Infrastructure",
+      "problem": "Analyze images and video at scale without managing servers.",
+      "approach": "Serverless blueprint for Amazon Rekognition (labels, faces, text, moderation, PPE, Custom Labels) with S3/Lambda triggers, Step Functions for async jobs, and DynamoDB/OpenSearch indexing \u2014 all via SAM/Terraform IaC.",
+      "outcome": "A reusable, IaC-driven pattern for production image and video analysis.",
+      "href": "https://github.com/BHARGAVATEJABORRA/Integrating-Amazon-Recognition-in-AWS-Cloud",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/Integrating-Amazon-Recognition-in-AWS-Cloud",
+      "stack": [
+        "AWS",
+        "Rekognition",
+        "Lambda",
+        "Step Functions",
+        "DynamoDB",
+        "Terraform"
+      ],
+      "techStack": [
+        "AWS",
+        "Rekognition",
+        "Serverless"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Amazon Lex V2 Chatbot",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "Cloud Infrastructure",
+      "problem": "Deliver a production-ready conversational bot across multiple channels.",
+      "approach": "Built an Amazon Lex V2 chatbot with Lambda fulfillment, DynamoDB session storage, multi-channel delivery (web/Slack/Connect), IaC (SAM/Terraform), and observability.",
+      "outcome": "A deployable, observable chatbot blueprint with session persistence.",
+      "href": "https://github.com/BHARGAVATEJABORRA/Chat-Bot-Using-Amazon-LEX",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/Chat-Bot-Using-Amazon-LEX",
+      "stack": [
+        "AWS",
+        "Amazon Lex",
+        "Lambda",
+        "DynamoDB",
+        "Terraform"
+      ],
+      "techStack": [
+        "AWS",
+        "Lex",
+        "Serverless"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "MANET Routing Protocols Survey",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "Research",
+      "problem": "Understand the trade-offs among mobile ad-hoc network routing strategies.",
+      "approach": "Surveyed proactive, reactive, and hybrid MANET routing with design goals and protocol highlights (AODV, DSR, OLSR, ZRP, SHARP, ADVR).",
+      "outcome": "A structured comparison of MANET routing protocols and their trade-offs.",
+      "href": "https://github.com/BHARGAVATEJABORRA/Routing-Protocols-For-Manet",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/Routing-Protocols-For-Manet",
+      "stack": [
+        "Networking",
+        "MANET"
+      ],
+      "techStack": [
+        "Networking",
+        "Research"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Ramp Hidden-URL Flag Fetcher",
+      "timeframe": "2025",
+      "role": "Creator",
+      "category": "Web",
+      "problem": "Fetch and surface a hidden flag from a target URL.",
+      "approach": "Built a small web utility to fetch and display the hidden URL flag, prototyped in CodeSandbox.",
+      "outcome": "A quick, deployable demo of client-side fetching and rendering.",
+      "href": "https://github.com/BHARGAVATEJABORRA/ramp-hidden-url-flag-fetcher",
+      "linkState": "configured",
+      "liveUrl": "https://9kmhq9-3000.csb.app/",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/ramp-hidden-url-flag-fetcher",
+      "stack": [
+        "HTML",
+        "JavaScript"
+      ],
+      "techStack": [
+        "HTML",
+        "JS"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Question Paper Framer",
+      "timeframe": "2025",
+      "role": "Creator",
+      "category": "Web",
+      "problem": "Creating exam question papers by hand is slow and inconsistent.",
+      "approach": "A B.Tech project at KL University that streamlines question-paper creation with HTML/CSS, later refreshed with a cleaner layout and liquid-glass UI.",
+      "outcome": "A simpler, better-looking tool for framing question papers.",
+      "href": "https://github.com/BHARGAVATEJABORRA/question-paper-framer",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/question-paper-framer",
+      "stack": [
+        "HTML",
+        "CSS"
+      ],
+      "techStack": [
+        "HTML",
+        "CSS"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Simple Calculator",
+      "timeframe": "2020",
+      "role": "Creator",
+      "category": "Web",
+      "problem": "A foundational exercise in DOM manipulation and event handling.",
+      "approach": "Built a basic calculator in vanilla JavaScript with arithmetic operations and a clean layout.",
+      "outcome": "A clean, working calculator demonstrating core JavaScript fundamentals.",
+      "href": "https://github.com/BHARGAVATEJABORRA/simple-calculator",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/simple-calculator",
+      "stack": [
+        "JavaScript",
+        "HTML",
+        "CSS"
+      ],
+      "techStack": [
+        "JavaScript"
+      ],
+      "metrics": []
     }
   ],
   "experience": {

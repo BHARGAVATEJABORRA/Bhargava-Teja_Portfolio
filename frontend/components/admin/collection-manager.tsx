@@ -10,9 +10,9 @@
 
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuCheck, LuCircleAlert, LuPencil, LuPlus, LuTrash2, LuX } from "react-icons/lu";
+import { LuCheck, LuCircleAlert, LuImage, LuPencil, LuPlus, LuTrash2, LuUpload, LuX } from "react-icons/lu";
 
-export type FieldKind = "text" | "textarea" | "select" | "checkbox" | "number" | "csv" | "lines" | "metrics";
+export type FieldKind = "text" | "textarea" | "select" | "checkbox" | "number" | "csv" | "lines" | "metrics" | "image";
 
 export interface FieldSpec {
   key: string;
@@ -328,6 +328,18 @@ export function CollectionManager<TDto extends { id: string }>({
                   </label>
                 );
               }
+              if (field.kind === "image") {
+                return (
+                  <ImageUploadField
+                    key={field.key}
+                    field={field}
+                    value={String(value ?? "")}
+                    wrapClass={wrapClass}
+                    onChange={(url) => editField(field.key, url)}
+                    onError={showError}
+                  />
+                );
+              }
               return (
                 <label key={field.key} className={`block space-y-1 ${wrapClass}`}>
                   <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-ink)]">
@@ -424,4 +436,91 @@ export function CollectionManager<TDto extends { id: string }>({
 
 function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+/** URL text + upload button + thumbnail preview, posting to /api/admin/upload. */
+function ImageUploadField({
+  field,
+  value,
+  wrapClass,
+  onChange,
+  onError,
+}: {
+  field: FieldSpec;
+  value: string;
+  wrapClass: string;
+  onChange: (url: string) => void;
+  onError: (msg: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+
+  const upload = async (file: File) => {
+    setUploading(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      body.append("kind", "image");
+      body.append("label", field.label);
+      const res = await fetch("/api/admin/upload", { method: "POST", body });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !data.url) throw new Error(data.error ?? `Upload failed (${res.status}).`);
+      onChange(data.url);
+    } catch (err) {
+      onError((err as Error).message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div className={`block space-y-2 ${wrapClass}`}>
+      <span className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--color-muted-ink)]">{field.label}</span>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex h-16 w-24 flex-none items-center justify-center overflow-hidden rounded-lg border tint-border-bd-72 tint-card-bg-56">
+          {value ? (
+            // eslint-disable-next-line @next/next/no-img-element -- admin preview of uploaded asset
+            <img src={value} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <LuImage size={20} className="text-[var(--color-muted-ink)]" aria-hidden />
+          )}
+        </div>
+        <div className="flex flex-1 flex-col gap-2">
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={field.placeholder ?? "/uploads/…"}
+            className={inputClass}
+          />
+          <div className="flex items-center gap-2">
+            <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-full bg-[var(--color-accent)] px-4 text-sm font-semibold text-black transition hover:opacity-85">
+              <LuUpload size={14} aria-hidden />
+              {uploading ? "Uploading…" : "Upload image"}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/avif"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) void upload(file);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {value && (
+              <button
+                type="button"
+                onClick={() => onChange("")}
+                className="inline-flex min-h-9 items-center rounded-full border tint-border-bd-72 tint-card-bg-56 px-3 text-sm font-semibold text-[var(--color-muted-ink)] transition hover:opacity-80"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      {field.hint && <span className="block text-xs text-[var(--color-muted-ink)]">{field.hint}</span>}
+    </div>
+  );
 }

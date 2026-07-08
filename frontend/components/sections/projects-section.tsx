@@ -18,6 +18,8 @@ interface GithubProject {
   accent: string;
   href: string;
   likes: number;
+  imageUrl?: string;
+  imageAlt?: string;
 }
 
 // Card accents cycle through the section's established palette so DB-managed
@@ -44,6 +46,8 @@ const githubProjects: GithubProject[] = portfolioContent.projects.map((project, 
   accent: CARD_ACCENTS[index % CARD_ACCENTS.length],
   href: project.linkState === "configured" ? project.liveUrl ?? project.repoUrl ?? project.href : project.href,
   likes: seedLikes(project.title),
+  imageUrl: project.imageUrl,
+  imageAlt: project.imageAlt,
 }));
 
 // Sticky stack tuning — mirrors kartavya-singh.com:
@@ -126,8 +130,18 @@ function ProjectCard({
           </a>
         </div>
 
-        <div className="article-image" aria-hidden>
-          <div className="article-image-glow" />
+        <div className="article-image" aria-hidden={project.imageUrl ? undefined : true}>
+          {project.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded asset, no loader config
+            <img
+              src={project.imageUrl}
+              alt={project.imageAlt ?? `${project.title} preview`}
+              loading="lazy"
+              className="article-image-photo"
+            />
+          ) : (
+            <div className="article-image-glow" />
+          )}
           <span className="article-image-label">{project.category}</span>
           <span className="article-image-likes">Likes: {likeCount}</span>
         </div>

@@ -27,6 +27,13 @@ const fields: FieldSpec[] = [
   { key: "href", label: "Card link (href)", kind: "text", half: true, placeholder: "#contact" },
   { key: "liveUrl", label: "Live URL", kind: "text", half: true, placeholder: "https://…" },
   { key: "repoUrl", label: "Repo URL", kind: "text", half: true, placeholder: "https://github.com/…" },
+  {
+    key: "imageUrl",
+    label: "Card image",
+    kind: "image",
+    hint: "Recommended 1200×800 px (3:2 landscape), PNG/JPG/WebP under 1 MB. Leave empty to keep the accent-glow placeholder.",
+  },
+  { key: "imageAlt", label: "Image alt text", kind: "text", half: true, placeholder: "Short description of the image" },
 ];
 
 export function ProjectsManager() {
