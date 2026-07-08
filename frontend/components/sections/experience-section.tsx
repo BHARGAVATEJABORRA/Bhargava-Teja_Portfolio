@@ -6,11 +6,16 @@ import {
   FaBriefcase,
   FaCertificate,
   FaGraduationCap,
-  FaMapMarkerAlt,
-  FaRegStar,
 } from "react-icons/fa";
+import {
+  FaArrowUpRightFromSquare,
+  FaAws,
+  FaMicrosoft,
+  FaShieldHalved,
+} from "react-icons/fa6";
 
 import { SectionShell } from "@/components/ui/section-shell";
+import GlassSurface from "@/components/ui/glass-surface";
 import { type ExperienceItem, portfolioContent } from "@/content/portfolio-content";
 import { trackEvent } from "@/lib/analytics";
 
@@ -18,112 +23,117 @@ type ExperienceTab = "work" | "education" | "certifications";
 
 interface ExperienceTabMeta {
   label: string;
-  heading: string;
-  eyebrow: string;
-  description: string;
   icon: IconType;
 }
 
 const tabOrder: ExperienceTab[] = ["work", "education", "certifications"];
 
 const tabMeta: Record<ExperienceTab, ExperienceTabMeta> = {
-  work: {
-    label: "Career",
-    heading: "Production Engineering Experience",
-    eyebrow: "Experience",
-    description:
-      "Cloud, platform, and backend ownership across enterprise systems, with measurable reliability, cost, and delivery outcomes.",
-    icon: FaBriefcase,
-  },
-  education: {
-    label: "Education",
-    heading: "Academic Foundation",
-    eyebrow: "Education",
-    description:
-      "Graduate computer science training focused on the systems and software engineering fundamentals behind my platform work.",
-    icon: FaGraduationCap,
-  },
-  certifications: {
-    label: "Certifications",
-    heading: "Validated Cloud Skills",
-    eyebrow: "Credentials",
-    description:
-      "Cloud and AI credentials that support the AWS, Azure, and infrastructure work represented across the portfolio.",
-    icon: FaCertificate,
-  },
+  work: { label: "Career", icon: FaBriefcase },
+  education: { label: "Education", icon: FaGraduationCap },
+  certifications: { label: "Certifications", icon: FaCertificate },
 };
 
-function buildItemKey(item: ExperienceItem) {
-  return `${item.organization}-${item.title}-${item.period}`;
+const brandIconMap: Record<string, IconType> = {
+  SiAmazonwebservices: FaAws,
+  SiMicrosoftazure: FaMicrosoft,
+  SiOracle: FaCertificate,
+};
+
+/** Career entry: company, role, dates only. */
+function WorkCard({ item }: { item: ExperienceItem }) {
+  return (
+    <article className="xp-row">
+      <div className="xp-row__bullet" aria-hidden />
+      <div className="xp-row__body">
+        <h3 className="xp-row__title">{item.title}</h3>
+        <p className="xp-row__org">{item.organization}</p>
+      </div>
+      <span className="xp-row__period">{item.period}</span>
+    </article>
+  );
 }
 
-function getPrimaryMetric(item: ExperienceItem) {
-  const metric = item.highlights.find((highlight) => /\d/.test(highlight));
-
-  if (!metric) {
-    return item.period;
-  }
-
-  const match = metric.match(/(?:reduced|improved|lowered|accelerat\w*|delivered)?[^.]*?(\d+%|\d+\+?)/i);
-
-  return match?.[1] ?? item.period;
+/** Education entry: degree title + school only. */
+function EducationCard({ item }: { item: ExperienceItem }) {
+  return (
+    <article className="xp-row">
+      <div className="xp-row__bullet" aria-hidden />
+      <div className="xp-row__body">
+        <h3 className="xp-row__title">{item.title}</h3>
+        <p className="xp-row__org">{item.organization}</p>
+      </div>
+      <span className="xp-row__period">{item.period}</span>
+    </article>
+  );
 }
 
-function ExperienceCard({
-  item,
-  index,
-  featured = false,
-}: {
-  item: ExperienceItem;
-  index: number;
-  featured?: boolean;
-}) {
-  const visibleHighlights = item.highlights.slice(0, featured ? 3 : 2);
+/**
+ * Certification flip card: badge + title on the front; hovering (or keyboard
+ * focus) flips it to reveal only a "Verify credential" button. Moving the
+ * cursor away flips it back — no taps, no back button.
+ */
+function CertCard({ item }: { item: ExperienceItem }) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const FallbackIcon = item.brandIconKey ? brandIconMap[item.brandIconKey] : undefined;
+  const accent = item.brandColor ?? "#6aa6ff";
+  const showImage = item.badgeUrl && !imgFailed;
 
   return (
-    <article
-      className={`experience-card ${featured ? "experience-card--featured" : ""}`}
-      style={{ ["--experience-card-index" as string]: index }}
-    >
-      <div className="experience-card__meta">
-        <span>{item.period}</span>
-        {item.location ? (
-          <span className="inline-flex items-center gap-1.5">
-            <FaMapMarkerAlt aria-hidden className="h-3 w-3" />
-            {item.location}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="experience-card__header">
-        <div>
-          <h3>{item.title}</h3>
-          <p>{item.organization}</p>
+    <div className="cert-card" style={{ ["--cert-accent" as string]: accent }}>
+      <div className="cert-card__inner">
+        {/* Front — badge + title. Hover flips the card. */}
+        <div className="cert-card__face cert-card__face--front">
+          <div className="cert-tile__badge">
+            {showImage ? (
+              // eslint-disable-next-line @next/next/no-img-element -- remote Credly badge, no loader config
+              <img
+                src={item.badgeUrl}
+                alt={`${item.title} badge`}
+                loading="lazy"
+                onError={() => setImgFailed(true)}
+              />
+            ) : FallbackIcon ? (
+              <FallbackIcon aria-hidden />
+            ) : (
+              <FaCertificate aria-hidden />
+            )}
+          </div>
+          <h3 className="cert-tile__title">{item.title}</h3>
         </div>
 
-        <div className="experience-card__metric" aria-label="Primary outcome">
-          {getPrimaryMetric(item)}
+        {/* Back — just the verify action */}
+        <div className="cert-card__face cert-card__face--back">
+          {item.verifyUrl ? (
+            <a
+              href={item.verifyUrl}
+              target="_blank"
+              rel="noreferrer noopener"
+              className="cert-card__verify"
+              aria-label={`Verify ${item.title}`}
+              onClick={() =>
+                trackEvent("cert_verify_click", {
+                  certification: item.title,
+                  source: "experience_section",
+                })
+              }
+            >
+              <FaShieldHalved aria-hidden />
+              <span>Verify credential</span>
+              <FaArrowUpRightFromSquare aria-hidden className="cert-card__verify-ext" />
+            </a>
+          ) : (
+            <p className="cert-card__novf">Verification link unavailable</p>
+          )}
         </div>
       </div>
-
-      <ul className="experience-card__highlights">
-        {visibleHighlights.map((highlight) => (
-          <li key={highlight}>
-            <span aria-hidden />
-            <p>{highlight}</p>
-          </li>
-        ))}
-      </ul>
-    </article>
+    </div>
   );
 }
 
 export function ExperienceSection() {
   const [activeTab, setActiveTab] = useState<ExperienceTab>("work");
   const items = portfolioContent.experience[activeTab];
-  const featuredItem = items[0];
-  const supportingItems = items.slice(1);
-  const ActiveIcon = tabMeta[activeTab].icon;
 
   return (
     <SectionShell
@@ -132,86 +142,83 @@ export function ExperienceSection() {
       animateOnView={false}
       className="items-start py-16 sm:py-20"
     >
-      <div className="experience-reference-stage relative overflow-hidden rounded-[28px] border border-white/10 px-4 py-6 shadow-[0_28px_90px_rgba(1,5,10,0.34)] sm:px-6 sm:py-8 lg:px-8">
-        <div className="relative z-10">
-          <div
-            role="tablist"
-            aria-label="Experience categories"
-            className="experience-tabs mx-auto"
-          >
-            {tabOrder.map((tab) => {
-              const Icon = tabMeta[tab].icon;
-              const isActive = activeTab === tab;
+      <GlassSurface
+        className="rounded-[28px] px-5 py-8 sm:px-8 sm:py-10"
+        borderRadius={28}
+        width="100%"
+        height="auto"
+        distortionScale={-90}
+        redOffset={0}
+        greenOffset={0}
+        blueOffset={0}
+        brightness={60}
+        opacity={0.93}
+        blur={14}
+        displace={2}
+        backgroundOpacity={0.08}
+        saturation={1.1}
+        mixBlendMode="screen"
+      >
+        <div>
+          <div className="xp-head">
+            <p className="xp-eyebrow">Experience</p>
+            <h2 id="experience-title" className="xp-heading">
+              Where I&apos;ve worked, studied &amp; certified
+            </h2>
 
-              return (
-                <button
-                  key={tab}
-                  id={`experience-tab-${tab}`}
-                  type="button"
-                  role="tab"
-                  aria-selected={isActive}
-                  aria-controls="experience-panel"
-                  onClick={() => {
-                    setActiveTab(tab);
-                    trackEvent("experience_tab_change", { tab, source: "experience_section" });
-                  }}
-                  className="experience-tab"
-                  data-active={isActive ? "true" : "false"}
-                >
-                  <Icon aria-hidden className="h-4 w-4" />
-                  <span>{tabMeta[tab].label}</span>
-                </button>
-              );
-            })}
+            <div role="tablist" aria-label="Experience categories" className="xp-tabs">
+              {tabOrder.map((tab) => {
+                const Icon = tabMeta[tab].icon;
+                const isActive = activeTab === tab;
+                return (
+                  <button
+                    key={tab}
+                    id={`experience-tab-${tab}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={isActive}
+                    aria-controls="experience-panel"
+                    onClick={() => {
+                      setActiveTab(tab);
+                      trackEvent("experience_tab_change", { tab, source: "experience_section" });
+                    }}
+                    className="xp-tab"
+                    data-active={isActive ? "true" : "false"}
+                  >
+                    <Icon aria-hidden className="h-4 w-4" />
+                    <span>{tabMeta[tab].label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-[0.84fr_1.16fr] lg:items-start">
-            <div className="experience-intro">
-              <div className="experience-intro__icon" aria-hidden>
-                <ActiveIcon className="h-5 w-5" />
+          <div
+            id="experience-panel"
+            role="tabpanel"
+            aria-labelledby={`experience-tab-${activeTab}`}
+            className="mt-8"
+          >
+            {activeTab === "certifications" ? (
+              <div className="cert-grid">
+                {items.map((item) => (
+                  <CertCard key={`${item.organization}-${item.title}`} item={item} />
+                ))}
               </div>
-              <p className="experience-intro__eyebrow">{tabMeta[activeTab].eyebrow}</p>
-              <h2 id="experience-title">{tabMeta[activeTab].heading}</h2>
-              <p>{tabMeta[activeTab].description}</p>
-
-              <div className="experience-intro__stats">
-                <div>
-                  <span>{items.length}</span>
-                  <p>{items.length === 1 ? "Entry" : "Entries"}</p>
-                </div>
-                <div>
-                  <span>{featuredItem ? getPrimaryMetric(featuredItem) : "Ready"}</span>
-                  <p>Lead Signal</p>
-                </div>
+            ) : (
+              <div className="xp-list">
+                {items.map((item) =>
+                  activeTab === "work" ? (
+                    <WorkCard key={`${item.organization}-${item.title}`} item={item} />
+                  ) : (
+                    <EducationCard key={`${item.organization}-${item.title}`} item={item} />
+                  ),
+                )}
               </div>
-            </div>
-
-            <div
-              id="experience-panel"
-              role="tabpanel"
-              aria-labelledby={`experience-tab-${activeTab}`}
-              className="experience-panel"
-            >
-              {featuredItem ? <ExperienceCard item={featuredItem} index={0} featured /> : null}
-
-              {supportingItems.length > 0 ? (
-                <div className="experience-supporting-grid">
-                  {supportingItems.map((item, index) => (
-                    <ExperienceCard key={buildItemKey(item)} item={item} index={index + 1} />
-                  ))}
-                </div>
-              ) : null}
-
-              {items.length === 0 ? (
-                <div className="experience-empty">
-                  <FaRegStar aria-hidden className="h-4 w-4" />
-                  No entries configured yet.
-                </div>
-              ) : null}
-            </div>
+            )}
           </div>
         </div>
-      </div>
+      </GlassSurface>
     </SectionShell>
   );
 }

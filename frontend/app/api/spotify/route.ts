@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getSpotifyEnvConfig } from "@/lib/spotify-env";
+import type { SpotifyData } from "@/lib/spotify-types";
 
 const PLAYER_URL = "https://api.spotify.com/v1/me/player";
 const TOP_TRACKS_URL = "https://api.spotify.com/v1/me/top/tracks?limit=1&time_range=short_term";
@@ -32,43 +33,42 @@ type AccessTokenResult = {
 
 type TrackLookupResult = {
   payload: SpotifyData | null;
-  premiumBlocked: boolean;
+  forbidden: boolean;
 };
 
-export type SpotifyData = {
-  songUrl: string;
-  title: string;
-  albumImageUrl: string;
-  artist: string;
-  isPlaying: boolean;
-  sourceLabel: string;
+export type { SpotifyData };
+
+// Visitor-facing fallbacks all read as a calm "nothing playing" state; the
+// actual failure reason travels in `detail` so /api/spotify stays debuggable.
+const OFFLINE: Omit<SpotifyData, "detail"> = {
+  isPlaying: false,
+  title: "Not listening right now",
+  artist: "The track I'm playing shows up here live.",
+  albumImageUrl: "",
+  songUrl: "#",
+  sourceLabel: "Spotify",
 };
 
 const UNCONFIGURED: SpotifyData = {
-  isPlaying: false,
-  title: "Spotify integration coming soon",
-  artist: "Add credentials and a refresh token to enable this widget",
-  albumImageUrl: "",
-  songUrl: "#",
-  sourceLabel: "Spotify",
+  ...OFFLINE,
+  detail: "Add SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET and SPOTIFY_REFRESH_TOKEN to enable this widget",
 };
 
 const UNAVAILABLE: SpotifyData = {
-  isPlaying: false,
-  title: "Spotify unavailable",
-  artist: "Spotify did not return an access token or track data right now",
-  albumImageUrl: "",
-  songUrl: "#",
-  sourceLabel: "Spotify",
+  ...OFFLINE,
+  detail: "Spotify did not return an access token or track data right now",
 };
 
-const PREMIUM_REQUIRED: SpotifyData = {
-  isPlaying: false,
-  title: "Spotify Premium required",
-  artist: "Spotify accepted the token but blocked track endpoints for this app/account",
-  albumImageUrl: "",
-  songUrl: "#",
-  sourceLabel: "Spotify",
+const TOKEN_REJECTED: SpotifyData = {
+  ...OFFLINE,
+  detail:
+    "Spotify rejected the refresh token (likely expired or revoked). Re-mint it: open http://127.0.0.1:3000/api/auth/signin, authorize, then retry /api/spotify",
+};
+
+const FORBIDDEN: SpotifyData = {
+  ...OFFLINE,
+  detail:
+    "Spotify returned 403 on the player/track endpoints (usually missing scopes). Re-run http://127.0.0.1:3000/api/auth/signin to re-grant scopes",
 };
 
 async function getAccessToken(): Promise<AccessTokenResult | null> {
@@ -128,10 +128,6 @@ function trackToPayload(track: SpotifyTrack | null | undefined, isPlaying: boole
   };
 }
 
-function isPremiumBlockedMessage(value: string): boolean {
-  return value.toLowerCase().includes("premium subscription required");
-}
-
 async function getRecentlyPlayed(accessToken: string): Promise<TrackLookupResult> {
   const response = await fetch(`${PLAYER_URL}/recently-played?limit=1`, {
     headers: { Authorization: `Bearer ${accessToken}` },
@@ -140,11 +136,11 @@ async function getRecentlyPlayed(accessToken: string): Promise<TrackLookupResult
   const text = await response.text();
 
   if (!response.ok) {
-    return { payload: null, premiumBlocked: isPremiumBlockedMessage(text) };
+    return { payload: null, forbidden: response.status === 403 };
   }
 
   const data = JSON.parse(text || "{}") as SpotifyRecentlyPlayedResponse;
-  return { payload: trackToPayload(data.items?.[0]?.track, false, "Last Played"), premiumBlocked: false };
+  return { payload: trackToPayload(data.items?.[0]?.track, false, "Last Played"), forbidden: false };
 }
 
 async function getTopTrack(accessToken: string): Promise<TrackLookupResult> {
@@ -155,11 +151,11 @@ async function getTopTrack(accessToken: string): Promise<TrackLookupResult> {
   const text = await response.text();
 
   if (!response.ok) {
-    return { payload: null, premiumBlocked: isPremiumBlockedMessage(text) };
+    return { payload: null, forbidden: response.status === 403 };
   }
 
   const data = JSON.parse(text || "{}") as SpotifyTopTracksResponse;
-  return { payload: trackToPayload(data.items?.[0], false, "Top Track"), premiumBlocked: false };
+  return { payload: trackToPayload(data.items?.[0], false, "Top Track"), forbidden: false };
 }
 
 export async function GET() {
@@ -173,7 +169,9 @@ export async function GET() {
 
   const accessToken = await getAccessToken();
   if (!accessToken) {
-    return NextResponse.json(UNAVAILABLE, {
+    // We already know credentials are configured, so a null token means the
+    // refresh exchange itself failed — almost always an expired/revoked token.
+    return NextResponse.json(TOKEN_REJECTED, {
       headers: { "Cache-Control": "no-store" },
     });
   }
@@ -184,7 +182,7 @@ export async function GET() {
       cache: "no-store",
     });
     const nowPlayingText = await nowPlayingResponse.text();
-    let premiumBlocked = !nowPlayingResponse.ok && isPremiumBlockedMessage(nowPlayingText);
+    let forbidden = nowPlayingResponse.status === 403;
 
     if (nowPlayingResponse.ok && nowPlayingResponse.status !== 204) {
       const nowData = JSON.parse(nowPlayingText || "{}") as SpotifyPlaybackResponse;
@@ -198,7 +196,7 @@ export async function GET() {
     }
 
     const recent = await getRecentlyPlayed(accessToken.token);
-    premiumBlocked = premiumBlocked || recent.premiumBlocked;
+    forbidden = forbidden || recent.forbidden;
     if (recent.payload) {
       return NextResponse.json(recent.payload, {
         headers: { "Cache-Control": "s-maxage=8, stale-while-revalidate=2" },
@@ -207,16 +205,16 @@ export async function GET() {
 
     const topTrack = accessToken.scopes.has("user-top-read")
       ? await getTopTrack(accessToken.token)
-      : { payload: null, premiumBlocked: false };
-    premiumBlocked = premiumBlocked || topTrack.premiumBlocked;
+      : { payload: null, forbidden: false };
+    forbidden = forbidden || topTrack.forbidden;
     if (topTrack.payload) {
       return NextResponse.json(topTrack.payload, {
         headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=300" },
       });
     }
 
-    if (premiumBlocked) {
-      return NextResponse.json(PREMIUM_REQUIRED, {
+    if (forbidden) {
+      return NextResponse.json(FORBIDDEN, {
         headers: { "Cache-Control": "no-store" },
       });
     }
@@ -224,8 +222,8 @@ export async function GET() {
     return NextResponse.json(
       {
         ...UNAVAILABLE,
-        artist: accessToken.scopes.has("user-top-read")
-          ? "Spotify did not return playback, recent, or top-track data"
+        detail: accessToken.scopes.has("user-top-read")
+          ? "Token is valid but Spotify returned no current, recent, or top track — play something, then retry"
           : "Visit /api/auth/signin again to grant the updated top-track scope",
       },
       { headers: { "Cache-Control": "no-store" } },

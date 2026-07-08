@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { LuClock } from "react-icons/lu";
-
 import { portfolioContent } from "@/content/portfolio-content";
 
 import { ControlCenterPanel } from "./control-center-panel";
@@ -31,15 +29,16 @@ export function LocalTimeClock() {
 
   return (
     <ControlCenterPanel radius={28} className="flex h-full flex-col p-4 sm:p-5">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
-        <LuClock size={15} aria-hidden />
-        <span>Local Time</span>
+      <div className="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--color-accent)]">
+        Local Time
       </div>
 
-      <p className="mt-3 text-2xl font-bold tabular-nums text-[var(--color-ink)] sm:text-[1.65rem]">{timeValue}</p>
-      <p className="mt-1 text-xs text-[var(--color-muted-ink)]">{timezoneLabel}</p>
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center text-center">
+        <p className="text-2xl font-bold tabular-nums text-[var(--color-ink)] sm:text-[1.8rem]">{timeValue}</p>
+        <p className="mt-1 text-xs text-[var(--color-muted-ink)]">{timezoneLabel}</p>
+      </div>
 
-      <div className="mt-auto h-1 overflow-hidden rounded-full tint-border-bg-45" aria-hidden>
+      <div className="h-1 overflow-hidden rounded-full tint-border-bg-45" aria-hidden>
         <div
           className="h-full bg-[var(--color-accent)] transition-[width] duration-700 ease-linear"
           style={{ width: `${(now.getSeconds() / 60) * 100}%` }}

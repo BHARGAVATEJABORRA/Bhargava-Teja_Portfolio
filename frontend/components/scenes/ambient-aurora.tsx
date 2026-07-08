@@ -1,109 +1,58 @@
-"use client";
+'use client';
 
-import { useEffect, useRef } from "react";
-import { useReducedMotion } from "framer-motion";
+import type { CSSProperties } from 'react';
 
-import { drawAurora } from "@/components/scenes/aurora-painter";
-import { clamp01, smoothStep } from "@/components/scenes/footer-sky-painter";
-import { subscribeToScroll } from "@/lib/scroll-progress";
+import { Aurora } from '@/components/reactbits/aurora';
 
-// Aurora brightness as a pure function of global scroll progress. The aurora
-// is a night-only phenomenon: zero through the hero, the page body and the
-// entire sunset phase, fading in only once the footer sky has settled into
-// night (the sky collapse completes ~progress 0.92, see footer-sky-painter's
-// SKY_STOP_WINDOWS). It swells over the CTA contact section, then relaxes back to a
-// whisper as the dark dock scene enters view.
-function intensityFor(progress: number) {
-  const nightAmbient = 0.05 * smoothStep((progress - 0.9) / 0.04); // 0 → 0.05 over 0.90–0.94
-  const ctaRaw = smoothStep((progress - 0.9) / 0.035);             // rises 0.90 → 0.935
-  const dockFade = 1 - smoothStep((progress - 0.935) / 0.045);     // fades 0.935 → 0.98
-  return nightAmbient + 0.2 * ctaRaw * dockFade;
-}
+// Footer aurora — adaline.ai's EXACT footer aurora shader (see components/
+// reactbits/aurora.tsx: a 1:1 port of their production bundle — a Three.js
+// noise-displaced plane viewed edge-on), mounted like their footer DOM:
+//
+//   <div class="absolute h-[…] w-full"
+//        style="mask-image: linear-gradient(to bottom, transparent 0%, black 40%)">
+//     <div class="w-full absolute inset-0"><canvas mix-blend-screen blur-[6px]/></div>
+//   </div>
+//
+// LOOK CONTRACT (2026-07-08, from Tony's side-by-side vs adaline.ai — "all
+// over the frame with less light shade, feels like real Aurora"):
+//   • TALL canvas (~1570px like adaline's) — real northern lights fill the
+//     sky as a faint field. Do NOT shrink the wrapper to move the aurora
+//     down: squeezing the render steepens every gradient and turns the soft
+//     wash into a bright hard-edged slab (that's what the 1280→690px "bring
+//     it down" series did). Vertical placement is tuned with the MASK, not
+//     the height.
+//   • DIM it with opacity/saturation on the layer, never by shader edits —
+//     adaline reads darker because the wash is faint enough for stars to
+//     show through.
+//   • Camera aspect is canvas-derived (adaline behaviour) — safe at tall
+//     heights; only short/wide canvases push the bright zone to one side.
+//
+// Containment:
+//   • zIndex 1 → below the contact card (z-20).
+//   • Hills band (z-[2], opaque base) covers the canvas bottom overflow.
+//   • Top 40% mask fade dissolves the upper canvas so the part poking into
+//     the sky-band overlap (sunset zone) stays invisible.
+const auroraMask: CSSProperties = {
+  maskImage: 'linear-gradient(to bottom, transparent 0%, black 40%)',
+  WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 40%)',
+};
 
-/**
- * The single ambient aurora layer for the whole site (§3.3). One fixed canvas
- * at the app root, one continuous rAF loop that is identical on every section
- * — no IntersectionObserver gating, so it can never freeze or hard-cut. Only
- * its *intensity* is scroll-linked (smoothly, via global scroll progress).
- */
-export function AmbientAurora() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const reduceMotion = useReducedMotion();
-  const progressRef = useRef(0);
+// Faintness: screen-blend output scales with opacity; saturate pulls the
+// cyan toward adaline's deeper green. Tune THESE for "less/more light",
+// never the wrapper height.
+const auroraTone: CSSProperties = {
+  opacity: 0.7,
+  filter: 'saturate(0.85)',
+};
 
-  // Global scroll progress read straight from the Lenis-driven scroll
-  // position — same scrollY / max-scroll value the framer useScroll source
-  // produced, with Lenis as the only clock in the chain.
-  useEffect(() => {
-    const update = () => {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      progressRef.current = maxScroll > 0 ? clamp01(window.scrollY / maxScroll) : 0;
-    };
-
-    update();
-    return subscribeToScroll(update);
-  }, []);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d", { alpha: true });
-
-    if (!canvas || !context) {
-      return;
-    }
-
-    let animationFrame = 0;
-    let width = 0;
-    let height = 0;
-    const startedAt = performance.now();
-    const elapsed = () => (reduceMotion ? 0 : (performance.now() - startedAt) / 1000);
-
-    const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const nextWidth = Math.max(1, window.innerWidth);
-      const nextHeight = Math.max(1, window.innerHeight);
-      const nextCanvasWidth = Math.round(nextWidth * dpr);
-      const nextCanvasHeight = Math.round(nextHeight * dpr);
-
-      width = nextWidth;
-      height = nextHeight;
-
-      if (canvas.width !== nextCanvasWidth || canvas.height !== nextCanvasHeight) {
-        canvas.width = nextCanvasWidth;
-        canvas.height = nextCanvasHeight;
-      }
-
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-
-    const draw = () => drawAurora(context, width, height, elapsed(), intensityFor(progressRef.current));
-
-    resize();
-    draw();
-
-    window.addEventListener("resize", resize);
-
-    if (!reduceMotion) {
-      const frame = () => {
-        draw();
-        animationFrame = requestAnimationFrame(frame);
-      };
-      animationFrame = requestAnimationFrame(frame);
-    }
-
-    return () => {
-      cancelAnimationFrame(animationFrame);
-      window.removeEventListener("resize", resize);
-    };
-  }, [reduceMotion]);
-
+export function FooterAurora() {
   return (
     <div
-      aria-hidden
-      data-ambient-aurora
-      className="ambient-aurora pointer-events-none fixed inset-0 z-[1] [mask-image:linear-gradient(to_bottom,transparent_0%,black_30%)]"
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-x-0 bottom-[174px] h-[min(1570px,120vw)]"
+      style={{ zIndex: 1, ...auroraMask }}
     >
-      <canvas ref={canvasRef} className="adaline-footer-aurora-canvas" />
+      <Aurora className="w-full absolute inset-0" style={auroraTone} />
     </div>
   );
 }

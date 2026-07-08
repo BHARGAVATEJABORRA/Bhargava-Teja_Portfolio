@@ -60,12 +60,14 @@ function hasPublishedArticles(): boolean {
 
 const resolvedSiteUrl = resolveSiteUrl();
 
+// Title/description/OG image are admin-editable via /admin/settings (Site
+// Metadata section) and flow through the portfolio-overrides overlay.
 export const siteConfig = {
-  title: "Bhargava Teja Borra | Software Engineer (Cloud & Platform)",
-  description:
-    "Recruiter-first software engineering portfolio with resume-backed cloud architecture, reliability, and delivery outcomes.",
+  title: portfolioContent.meta.titleTemplate,
+  description: portfolioContent.meta.description,
   url: resolvedSiteUrl,
-  ogImage: "/og-image.svg",
+  ogImage: portfolioContent.meta.ogImage,
+  analyticsId: portfolioContent.meta.analyticsId,
 };
 
 export const contentAvailability = {

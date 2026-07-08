@@ -17,6 +17,7 @@ export type AnalyticsEventName =
   | "resume_download"
   | "dock_link_click"
   | "experience_tab_change"
+  | "cert_verify_click"
   | "command_used"
   | "contact_submit_success"
   | "contact_submit_error";

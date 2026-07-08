@@ -1,0 +1,77 @@
+- generic [active] [ref=e1]:
+  - link "Skip to main content" [ref=e2] [cursor=pointer]:
+    - /url: "#main-content"
+  - generic [ref=e3]:
+    - banner:
+      - generic [ref=e4]:
+        - link "Bhargava Teja Borra" [ref=e5] [cursor=pointer]:
+          - /url: /#hero
+          - generic [ref=e6]: Bhargava Teja Borra
+        - generic [ref=e7]:
+          - navigation "Section navigation" [ref=e9]:
+            - list [ref=e10]:
+              - listitem [ref=e11]:
+                - link "About" [ref=e12] [cursor=pointer]:
+                  - /url: /#about
+                  - generic [ref=e13]:
+                    - generic [ref=e14]: About
+                    - generic [ref=e15]: About
+              - listitem [ref=e16]:
+                - link "Skills" [ref=e17] [cursor=pointer]:
+                  - /url: /#skills
+                  - generic [ref=e18]:
+                    - generic [ref=e19]: Skills
+                    - generic [ref=e20]: Skills
+              - listitem [ref=e21]:
+                - link "Experience" [ref=e22] [cursor=pointer]:
+                  - /url: /#experience
+                  - generic [ref=e23]:
+                    - generic [ref=e24]: Experience
+                    - generic [ref=e25]: Experience
+              - listitem [ref=e26]:
+                - link "Projects" [ref=e27] [cursor=pointer]:
+                  - /url: /#projects
+                  - generic [ref=e28]:
+                    - generic [ref=e29]: Projects
+                    - generic [ref=e30]: Projects
+              - listitem [ref=e31]:
+                - link "Articles" [ref=e32] [cursor=pointer]:
+                  - /url: /#blogs
+                  - generic [ref=e33]:
+                    - generic [ref=e34]: Articles
+                    - generic [ref=e35]: Articles
+              - listitem [ref=e36]:
+                - link "Contact" [ref=e37] [cursor=pointer]:
+                  - /url: /#contact
+                  - generic [ref=e38]:
+                    - generic [ref=e39]: Contact
+                    - generic [ref=e40]: Contact
+          - link "Open login page" [ref=e41] [cursor=pointer]:
+            - /url: /login
+            - img [ref=e42]
+    - generic:
+      - generic:
+        - img
+        - img
+        - img
+        - img
+    - main [ref=e45]:
+      - region "Bhargava Teja Borra" [ref=e46]:
+        - generic [ref=e48]:
+          - generic [ref=e49]:
+            - generic [ref=e50]: Addison (Dallas), TX, USA · Software Engineer
+            - generic [ref=e51]: Addison (Dallas), TX, USA · Software Engineer
+          - heading "Bhargava Teja Borra" [level=1] [ref=e52]
+          - paragraph [ref=e53]:
+            - generic [ref=e54]: "|"
+          - generic [ref=e56]:
+            - button "Open AI companion" [ref=e57]:
+              - img [ref=e58]
+            - textbox "Ask Bhargava's AI companion..." [ref=e61]
+            - button "Use voice input" [ref=e62]:
+              - img [ref=e63]
+            - button "Send question" [disabled] [ref=e66]:
+              - img [ref=e67]
+          - button "Enter Portfolio" [ref=e70]:
+            - text: Enter Portfolio
+            - img [ref=e71]

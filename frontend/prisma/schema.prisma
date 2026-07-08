@@ -1,0 +1,119 @@
+// Portfolio content database (single-admin CMS).
+//
+// SQLite keeps this zero-ops for local dev and single-instance Node hosting.
+// Array-shaped fields (stack, highlights, tags, …) are stored as JSON strings;
+// lib/content-store.ts owns the (de)serialization and keeps the app-facing
+// shapes identical to the interfaces in content/portfolio-content.ts.
+
+generator client {
+  provider = "prisma-client-js"
+  // darwin-arm64 = local dev on Apple Silicon; linux target keeps CI/containers working.
+  binaryTargets = ["native", "darwin-arm64", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  title     String
+  timeframe String
+  role      String
+  category  String
+  problem   String
+  approach  String
+  outcome   String
+  href      String   @default("#contact")
+  linkState String   @default("on-request") // "configured" | "on-request"
+  liveUrl   String?
+  repoUrl   String?
+  stack     String   @default("[]") // JSON string[]
+  techStack String   @default("[]") // JSON string[]
+  metrics   String   @default("[]") // JSON { value, label }[]
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Site-wide configuration as key-value pairs (JSON-encoded values).
+// Keys/defaults/typing live in lib/site-config.ts; secrets (API keys) are
+// stored here but never published to content/portfolio-overrides.json.
+model SiteConfig {
+  key       String   @id
+  value     String // JSON-encoded: string | boolean | array | object
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Experience {
+  id           String   @id @default(cuid())
+  kind         String // "work" | "education" | "certifications"
+  organization String
+  title        String
+  period       String
+  location     String?
+  href         String?
+  badgeUrl     String?
+  verifyUrl    String?
+  brandIconKey String?
+  brandColor   String?
+  highlights   String   @default("[]") // JSON string[]
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Append-only audit trail of every admin mutation (create/update/delete/upload/
+// publish/settings). Written via raw SQL in lib/change-log.ts so it works without
+// regenerating the Prisma client (same convention as SiteConfig). Never published
+// to the public overlay.
+model ChangeLog {
+  id        String   @id
+  entity    String // "project" | "experience" | "skill" | "article" | "settings" | "resume" | "media"
+  entityId  String? // row id when applicable
+  action    String // "create" | "update" | "delete" | "upload" | "publish"
+  summary   String // human-readable one-liner shown in the admin activity log
+  field     String? // optional: which field/section changed
+  snapshot  String? // optional JSON of the new (or removed) value
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity])
+}
+
+model Skill {
+  id         String   @id @default(cuid())
+  category   String
+  name       String
+  iconKey    String
+  brandColor String
+  keywords   String   @default("[]") // JSON string[]
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  publishedAt String
+  readTime    String
+  href        String   @default("#")
+  isExternal  Boolean  @default(false)
+  isReal      Boolean  @default(false)
+  premise     String
+  takeaway    String
+  source      String?
+  tagline     String?
+  body        String?
+  likes       Int?
+  accent      String?
+  tags        String   @default("[]") // JSON string[]
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

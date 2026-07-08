@@ -5,6 +5,9 @@ import { useCallback, useEffect, useRef } from "react";
 import type { MotionValue } from "framer-motion";
 import { motion, useReducedMotion, useTransform } from "framer-motion";
 
+import { FooterAurora } from "@/components/scenes/ambient-aurora";
+import { FooterMeteors } from "@/components/scenes/footer-meteors";
+import { FooterStars } from "@/components/scenes/footer-stars";
 import { FooterDockThree } from "@/components/scenes/footer-dock-three";
 import {
   clamp01,
@@ -69,12 +72,92 @@ function progressToFrame(progress: number) {
   return clampFrame(HERO_SEQUENCE_START + frameOffset);
 }
 
-const SHOOTING_STARS = [
-  { left: "13%", top: "4%", width: "10px", rotate: "58deg", duration: "8.8s", delay: "0.7s", x: "18vw", y: "26vh", opacity: 0.36 },
-  { left: "68%", top: "1%", width: "9px", rotate: "57deg", duration: "11.4s", delay: "3.9s", x: "16vw", y: "23vh", opacity: 0.32 },
-  { left: "42%", top: "12%", width: "8px", rotate: "58deg", duration: "13.6s", delay: "7.1s", x: "14vw", y: "20vh", opacity: 0.28 },
-  { left: "31%", top: "8%", width: "9px", rotate: "57deg", duration: "15.2s", delay: "5.4s", x: "16vw", y: "22vh", opacity: 0.22 },
-  { left: "77%", top: "3%", width: "8px", rotate: "59deg", duration: "10.8s", delay: "11.2s", x: "14vw", y: "20vh", opacity: 0.2 },
+// Meteors — full rewrite. The adaline reference has ZERO meteor elements
+// (the night sky is completely calm), so meteors here are an extremely rare
+// Painterly drifting clouds for the warm sunset/dusk band — each cloud is a
+// cluster of 4–6 overlapping blurred ellipses (never a single flat pill),
+// drifting horizontally on an infinite loop at its own speed for parallax.
+// Negative delays start every cloud mid-flight so the band is populated the
+// moment it scrolls into view.
+interface CloudPuff {
+  left: string;
+  top: string;
+  width: string;
+  height: string;
+  blur: string;
+  alpha: number;
+}
+
+interface DriftCloud {
+  top: string;
+  width: string;
+  height: string;
+  duration: string;
+  delay: string;
+  opacity: number;
+  puffs: CloudPuff[];
+}
+
+const DRIFT_CLOUDS: readonly DriftCloud[] = [
+  {
+    top: "6%",
+    width: "34rem",
+    height: "9rem",
+    duration: "95s",
+    delay: "-20s",
+    opacity: 0.42,
+    puffs: [
+      { left: "6%", top: "38%", width: "44%", height: "52%", blur: "14px", alpha: 0.5 },
+      { left: "26%", top: "10%", width: "40%", height: "62%", blur: "12px", alpha: 0.62 },
+      { left: "48%", top: "30%", width: "42%", height: "56%", blur: "16px", alpha: 0.55 },
+      { left: "18%", top: "52%", width: "52%", height: "44%", blur: "18px", alpha: 0.42 },
+      { left: "62%", top: "44%", width: "34%", height: "40%", blur: "14px", alpha: 0.38 },
+    ],
+  },
+  {
+    top: "17%",
+    width: "26rem",
+    height: "7rem",
+    duration: "120s",
+    delay: "-70s",
+    opacity: 0.3,
+    puffs: [
+      { left: "10%", top: "30%", width: "42%", height: "54%", blur: "16px", alpha: 0.5 },
+      { left: "34%", top: "12%", width: "38%", height: "60%", blur: "12px", alpha: 0.58 },
+      { left: "54%", top: "36%", width: "38%", height: "48%", blur: "18px", alpha: 0.44 },
+      { left: "22%", top: "54%", width: "46%", height: "40%", blur: "20px", alpha: 0.36 },
+    ],
+  },
+  {
+    top: "28%",
+    width: "40rem",
+    height: "10rem",
+    duration: "75s",
+    delay: "-45s",
+    opacity: 0.36,
+    puffs: [
+      { left: "4%", top: "42%", width: "38%", height: "48%", blur: "16px", alpha: 0.46 },
+      { left: "24%", top: "16%", width: "44%", height: "58%", blur: "13px", alpha: 0.6 },
+      { left: "50%", top: "28%", width: "40%", height: "54%", blur: "15px", alpha: 0.52 },
+      { left: "66%", top: "48%", width: "30%", height: "42%", blur: "18px", alpha: 0.4 },
+      { left: "14%", top: "56%", width: "50%", height: "40%", blur: "20px", alpha: 0.38 },
+      { left: "40%", top: "50%", width: "36%", height: "44%", blur: "17px", alpha: 0.42 },
+    ],
+  },
+  {
+    top: "40%",
+    width: "22rem",
+    height: "6rem",
+    duration: "110s",
+    delay: "-95s",
+    opacity: 0.26,
+    puffs: [
+      { left: "12%", top: "34%", width: "40%", height: "52%", blur: "14px", alpha: 0.48 },
+      { left: "36%", top: "16%", width: "36%", height: "58%", blur: "12px", alpha: 0.54 },
+      { left: "52%", top: "40%", width: "36%", height: "46%", blur: "18px", alpha: 0.4 },
+      { left: "24%", top: "54%", width: "42%", height: "38%", blur: "20px", alpha: 0.34 },
+    ],
+  },
 ] as const;
 
 function drawImageCover(
@@ -390,8 +473,6 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
   const skyCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const cloudsCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const starsRef = useRef<HTMLDivElement | null>(null);
-  const meteorsRef = useRef<HTMLDivElement | null>(null);
-  const ctaMeteorsRef = useRef<HTMLDivElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
 
   // Lenis is the single clock for the whole sequence: it eases the native
@@ -467,10 +548,8 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
 
       const starsKey = String(starsAlpha(progress));
       if (starsKey !== lastStarsKey) {
-        for (const layer of [starsRef.current, meteorsRef.current, ctaMeteorsRef.current]) {
-          if (layer) {
-            layer.style.opacity = starsKey;
-          }
+        if (starsRef.current) {
+          starsRef.current.style.opacity = starsKey;
         }
         lastStarsKey = starsKey;
       }
@@ -487,7 +566,13 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
   }, []);
 
   return (
-    <div className="adaline-footer-scene relative flex flex-col overflow-clip bg-[#050e11] text-[#f4fbf7]" style={footerSceneTheme}>
+    <div className="adaline-footer-scene relative flex flex-col overflow-clip text-[#f4fbf7]" style={footerSceneTheme}>
+      {/* NO opaque bridge and NO opaque scene background at the seam: the
+          fixed sky canvas below fades in over the still-visible tides ocean
+          (its sunset endpoints equal the tides SUNSET palette), so the
+          articles → footer handoff is a same-color crossfade with no hard
+          horizontal edge. The dark base returns on the CTA + dock bands only. */}
+
       {/* #home-footer-bg-gradient — the fixed sunset→night sky behind
           everything, hand-painted per scroll exactly like adaline. */}
       <canvas
@@ -499,16 +584,54 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
 
       {/* Tall scroll zone: only the cloud band + stars move through it. */}
       <div ref={bandRef} data-scroll-scene="sky-band" className="relative -mb-[80vh] h-[200vw] min-h-[300vh]">
-        <div aria-hidden className="adaline-footer-top-fade pointer-events-none absolute inset-x-0 top-0 h-[55vh]" />
         {/* #home-footer-clouds-gradient — the adaline cloud plate, painted on
             canvas with the current sky light (tint gradient masked by the
-            plate's alpha), never a static-tint CSS mask. */}
-        <canvas
-          ref={cloudsCanvasRef}
-          aria-hidden
-          data-scroll-scene="clouds"
-          className="pointer-events-none absolute inset-0 h-full w-full object-cover object-top"
-        />
+            plate's alpha), never a static-tint CSS mask. The wrapper drifts
+            slowly sideways so the entry reads as passing clouds, not a cut. */}
+        <div aria-hidden className="adaline-footer-clouds-drift pointer-events-none absolute inset-0">
+          <canvas
+            ref={cloudsCanvasRef}
+            data-scroll-scene="clouds"
+            className="h-full w-full object-cover object-top"
+          />
+        </div>
+        {/* Painterly drifting clouds — puff-cluster divs riding the warm
+            sunset/dusk zone at the top of the band only (never over the CTA,
+            hills or water). The wrapper clips + edge-masks them so each
+            cloud fades in/out at the viewport edges seamlessly. */}
+        <div aria-hidden data-scroll-scene="drift-clouds" className="adaline-drift-clouds pointer-events-none absolute inset-x-0 top-0 h-[110vh]">
+          {DRIFT_CLOUDS.map((cloud, cloudIndex) => (
+            <div
+              key={`drift-cloud-${cloudIndex}`}
+              className="adaline-drift-cloud"
+              style={
+                {
+                  top: cloud.top,
+                  width: cloud.width,
+                  height: cloud.height,
+                  opacity: cloud.opacity,
+                  "--cloud-duration": cloud.duration,
+                  "--cloud-delay": cloud.delay,
+                } as CSSProperties
+              }
+            >
+              {cloud.puffs.map((puff, puffIndex) => (
+                <span
+                  key={`drift-cloud-${cloudIndex}-puff-${puffIndex}`}
+                  className="adaline-drift-cloud-puff"
+                  style={{
+                    left: puff.left,
+                    top: puff.top,
+                    width: puff.width,
+                    height: puff.height,
+                    filter: `blur(${puff.blur})`,
+                    background: `radial-gradient(50% 50% at 50% 50%, rgba(255, 240, 228, ${puff.alpha}) 0%, rgba(255, 240, 228, ${puff.alpha * 0.5}) 55%, rgba(255, 240, 228, 0) 100%)`,
+                  }}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
         {/* #home-footer-stars — repeating starfield that rises with the scroll. */}
         <div
           ref={starsRef}
@@ -517,74 +640,29 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           style={{ opacity: 0 }}
           className="adaline-footer-stars pointer-events-none absolute inset-0 -bottom-[30rem]"
         />
-        <div
-          ref={meteorsRef}
-          aria-hidden
-          data-scroll-scene="shooting-stars"
-          style={{ opacity: 0 }}
-          className="adaline-footer-shooting-stars pointer-events-none absolute inset-0"
-        >
-          {SHOOTING_STARS.map((star, index) => (
-            <span
-              key={`meteor-${index}`}
-              className="adaline-meteor"
-              style={
-                {
-                  "--meteor-left": star.left,
-                  "--meteor-top": star.top,
-                  "--meteor-width": star.width,
-                  "--meteor-rotate": star.rotate,
-                  "--meteor-duration": star.duration,
-                  "--meteor-delay": star.delay,
-                  "--meteor-travel-x": star.x,
-                  "--meteor-travel-y": star.y,
-                  "--meteor-opacity": star.opacity,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </div>
       </div>
 
-      {/* CTA band: foreground contact card. The aurora itself is the site-wide
-          ambient layer (AmbientAurora at the app root, §3.3) — it swells to full
-          intensity here via global scroll progress instead of being a local,
-          IntersectionObserver-gated canvas that froze everywhere else. */}
-      <div className="relative flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-[#050e11] to-100%">
-        <div
-          ref={ctaMeteorsRef}
-          aria-hidden
-          data-scroll-scene="cta-shooting-stars"
-          style={{ opacity: 0 }}
-          className="adaline-footer-shooting-stars pointer-events-none absolute inset-x-0 top-0 h-[78%]"
-        >
-          {SHOOTING_STARS.map((star, index) => (
-            <span
-              key={`cta-meteor-${index}`}
-              className="adaline-meteor"
-              style={
-                {
-                  "--meteor-left": star.left,
-                  "--meteor-top": star.top,
-                  "--meteor-width": star.width,
-                  "--meteor-rotate": star.rotate,
-                  "--meteor-duration": star.duration,
-                  "--meteor-delay": star.delay,
-                  "--meteor-travel-x": star.x,
-                  "--meteor-travel-y": star.y,
-                  "--meteor-opacity": star.opacity,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </div>
-        <div aria-hidden className="adaline-footer-aurora-veils pointer-events-none absolute top-[4%] h-[62%] w-full" />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-40 bottom-0 w-full overflow-clip bg-black mix-blend-plus-lighter [mask-image:linear-gradient(to_bottom,transparent_0%,black_5%)]"
-        />
+      {/* CTA band: foreground contact card. The aurora is anchored INSIDE
+          this band (adaline architecture: absolute top-0 h-[90%] masked
+          layer), so it scrolls with the scene and the hills band below
+          paints over its lower edge — the glow rises from BEHIND the
+          ridgeline. Its rAF loop is IntersectionObserver-gated (§3.3). */}
+      <div data-scroll-scene="cta-band" className="relative flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-[#050e11] to-100%">
+        <FooterStars />
+        <FooterAurora />
+        {/* Meteors — adaline's REAL system (footer-meteors.tsx): their
+            "bg-black mix-blend-plus-lighter" div is the meteor layer itself;
+            JS spawns streak <img>s into it every 5–10s and flies them
+            down-left at their exact velocity/fade. Replaces the old CSS
+            keyframe meteors (2026-07-07, Tony asked for adaline's exact
+            timing + placement). */}
+        <FooterMeteors />
 
-        <div className="relative z-20 w-full px-6 pt-[28vh] pb-[18vh] sm:px-8 lg:px-12">
+        {/* pt 28vh → 34vh (2026-07-07): the collapsed "Contact me" pill sits
+            low in the band; its panel opens DOWNWARD (over the hills/lake),
+            so it stays fully on-screen even at the deepest footer scroll —
+            opening upward got clipped by the viewport top. */}
+        <div className="relative z-20 w-full px-6 pt-[34vh] pb-[12vh] sm:px-8 lg:px-12">
           <div className="mx-auto max-w-[120rem]">
             <div id={contactId} className="mx-auto w-full max-w-[34rem] scroll-mt-28">
               {contact}
@@ -599,22 +677,26 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           on xl. The one intentional deviation is the dock anchor (see below):
           our footer's content proportions differ from Adaline's, so their exact
           left/bottom-0 anchor detached the pier — we center + lift it instead. */}
-      <div className="relative bg-[#050e11] xl:h-[40vw]">
+      <div className="relative z-[2] bg-[#050e11] xl:h-[40vw]">
         <div aria-hidden className="pointer-events-none absolute -top-[14vw] w-full">
           <img src="/adaline-scenes/footer/footer-hills.webp" alt="" aria-hidden className="w-full object-cover" />
         </div>
 
-        {/* Dock + reflection: a 200vw image group centered on the scene and
-            lifted (top-[-6vw]) so the pier deck sits *in* the lake at the hills'
-            waterline rather than detaching below it. Both hills and dock scale
-            in vw, so this single vw offset composes identically at every width.
-            The fade mask blends the foreground planks into the #050e11 base. */}
+        {/* Dock + reflection: a 150vw image group centered on the scene and
+            seated LOW (top-[9vw]) so the pier deck rests at the hills'
+            waterline near the bottom of the band — the lake between the hills
+            and the deck stays open instead of the dock covering it. Both
+            hills and dock scale in vw, so the offset composes identically at
+            every width. The fade mask blends the foreground planks into the
+            #050e11 base. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[-6vw] w-[200vw] -translate-x-1/2"
+          className="pointer-events-none absolute left-1/2 top-[9vw] w-[150vw] -translate-x-1/2"
           style={{
-            WebkitMaskImage: "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
-            maskImage: "linear-gradient(to bottom, black 0%, black 60%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, black 0%, black 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.18) 80%, transparent 96%)",
+            maskImage:
+              "linear-gradient(to bottom, black 0%, black 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.18) 80%, transparent 96%)",
           }}
         >
           {shouldReduceMotion ? (
@@ -623,18 +705,18 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
                 src="/adaline-scenes/footer/footer-dock-reflection.webp"
                 alt=""
                 aria-hidden
-                className="absolute left-0 top-0 aspect-[3] w-[200vw] object-cover opacity-60"
+                className="absolute left-0 top-0 aspect-[3] w-full object-cover opacity-60"
               />
               <img
                 src="/adaline-scenes/footer/footer-dock.webp"
                 alt=""
                 aria-hidden
-                className="relative aspect-[3] w-[200vw] object-cover"
+                className="relative aspect-[3] w-full object-cover"
               />
             </>
           ) : (
             // Three.js + GSAP ScrollTrigger night scene: same dock/reflection
-            // textures, plus the scroll-driven glow path and lamp ignition.
+            // textures, plus scroll-driven lamp ignition (two discrete pools).
             <FooterDockThree />
           )}
         </div>

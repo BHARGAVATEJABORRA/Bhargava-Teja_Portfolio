@@ -7,16 +7,18 @@
   --color-ink: #0d1a2a;
   --color-muted-ink: #44566d;
   --color-border: #b8c8da;
-  --color-accent: #0f8f83;
-  --color-accent-strong: #0a7b71;
-  --color-glow: rgba(15, 143, 131, 0.22);
-  --bg-radial-a: rgba(15, 143, 131, 0.17);
+  /* Warm sunset-amber accent — complements the cool blue-slate base and the
+     sunset/night scene backdrops far better than the old teal-green. */
+  --color-accent: #b45309;
+  --color-accent-strong: #92400e;
+  --color-glow: rgba(180, 83, 9, 0.2);
+  --bg-radial-a: rgba(180, 83, 9, 0.13);
   --bg-radial-b: rgba(24, 76, 153, 0.12);
   --bg-radial-c: rgba(236, 249, 255, 0.68);
   --footer-atmo-top: rgba(7, 23, 42, 0.04);
   --footer-atmo-mid: rgba(7, 23, 42, 0.1);
   --footer-atmo-base: rgba(7, 23, 42, 0.2);
-  --footer-atmo-glow: rgba(15, 143, 131, 0.12);
+  --footer-atmo-glow: rgba(180, 83, 9, 0.1);
   --glass-bg: rgba(255, 255, 255, 0.3);
   --glass-bg-strong: rgba(255, 255, 255, 0.56);
   --glass-border: rgba(182, 207, 233, 0.78);
@@ -76,16 +78,16 @@
   --color-ink: #e6f0fa;
   --color-muted-ink: #9bb0c6;
   --color-border: #26425e;
-  --color-accent: #22d3c2;
-  --color-accent-strong: #10b5a7;
-  --color-glow: rgba(34, 211, 194, 0.26);
-  --bg-radial-a: rgba(34, 211, 194, 0.13);
+  --color-accent: #fbbf24;
+  --color-accent-strong: #f59e0b;
+  --color-glow: rgba(251, 191, 36, 0.26);
+  --bg-radial-a: rgba(251, 191, 36, 0.11);
   --bg-radial-b: rgba(46, 109, 207, 0.16);
   --bg-radial-c: rgba(12, 28, 52, 0.72);
   --footer-atmo-top: rgba(2, 9, 17, 0.35);
   --footer-atmo-mid: rgba(2, 9, 17, 0.76);
   --footer-atmo-base: rgba(1, 5, 10, 0.96);
-  --footer-atmo-glow: rgba(34, 211, 194, 0.14);
+  --footer-atmo-glow: rgba(251, 191, 36, 0.12);
   --glass-bg: rgba(8, 20, 33, 0.42);
   --glass-bg-strong: rgba(14, 30, 48, 0.64);
   --glass-border: rgba(128, 173, 214, 0.28);
@@ -100,7 +102,7 @@
     130deg,
     rgba(220, 240, 255, 0.18),
     rgba(220, 240, 255, 0.05) 28%,
-    rgba(34, 211, 194, 0.04) 48%,
+    rgba(251, 191, 36, 0.04) 48%,
     rgba(127, 176, 255, 0.12) 100%
   );
   --glass-caustic: linear-gradient(
@@ -108,7 +110,7 @@
     rgba(226, 245, 255, 0.16),
     rgba(226, 245, 255, 0.06) 28%,
     rgba(226, 245, 255, 0.02) 48%,
-    rgba(34, 211, 194, 0.1) 100%
+    rgba(251, 191, 36, 0.09) 100%
   );
   --glass-inner-shadow:
     inset 0 1px 0 rgba(220, 240, 255, 0.22),
@@ -325,6 +327,77 @@ a {
 
   .projects-gallery > * {
     scroll-snap-align: center;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Projects section — sticky header ("My Projects") pins for whole
+   section so the title stays visible as cards stack beneath it.       */
+/* ------------------------------------------------------------------ */
+.projects-header-sticky {
+  position: sticky;
+  /* Sits just below the fixed nav pill (nav is z-[80], top: 16px + ~64px). */
+  top: 88px;
+  /* Above card stack (cards use z-index 10+i) but below fixed nav (z-80).
+     Transparent so cards pass cleanly beneath — just the title floats. */
+  z-index: 40;
+  padding: 4px 0 14px;
+  pointer-events: none;
+  background: transparent;
+  transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+/* Applied via JS when the last project card is dominating the viewport —
+   hides the title so it doesn't linger over the released card. */
+.projects-header-sticky--fade {
+  opacity: 0;
+  transform: translateY(-14px);
+}
+
+/* ------------------------------------------------------------------ */
+/* Projects sticky stack — pure CSS sticky stacking (kartavya-singh.com) */
+/* ------------------------------------------------------------------ */
+.project-stack {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 0 0 72px;
+  /* Per-card top offset is the sticky pin point — must rise above any
+     page-level scroll-mt so first card never overlaps the header band. */
+}
+
+.project-sticky-slot {
+  /* Each slot is the sticky element. margin-top opens the natural scroll
+     distance between cards before they stack — 95px here means each card
+     scrolls in roughly that far before pinning behind the previous one. */
+  margin-top: 95px;
+  transition: transform 0.18s ease-out;
+  will-change: transform;
+}
+
+.project-sticky-slot:first-child {
+  margin-top: 0;
+}
+
+/* Override .article-card defaults so the card fills the column at the
+   max width like Kartavya's, and remove the auto-margin (sticky relies
+   on natural flow position). */
+.project-card-flat {
+  width: 100%;
+  max-width: 1140px;
+  margin: 0 auto;
+}
+
+/* Trailing spacer — small buffer so the last card + sticky title release
+   together as the section ends, instead of the title hanging on. */
+.project-stack-end {
+  height: 8vh;
+}
+
+@media (max-width: 820px) {
+  .project-sticky-slot {
+    margin-top: 60px;
   }
 }
 
@@ -782,17 +855,45 @@ a {
   --liquid-glow-c-y: 78%;
 }
 
+/* Liquid glass — port of https://codepen.io/jh3y/pen/EajLxJV
+   The visual work is done by the SVG backdrop-filter on .liquid-panel__backdrop.
+   The container itself stays fully transparent with only subtle inset highlights
+   so the chromatic refraction reads cleanly against whatever's behind it. */
+/* Single-layer liquid glass — same proven-clean filter as <GlassSurface>
+   (which Experience uses), inlined so the panel renders without any extra
+   wrapper. The backdrop refraction is done by the SVG filter on
+   `.liquid-panel__backdrop`; subtle inset shadows here define the edge. */
 .liquid-panel {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   border-radius: var(--liquid-radius, 32px);
-  border: 1px solid rgba(198, 220, 255, 0.16);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0.01));
+  border: none;
+  background: hsl(0 0% 100% / var(--liquid-frost, 0));
   box-shadow:
-    0 26px 68px rgba(1, 7, 14, 0.34),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(44, 72, 108, 0.28);
+    0 0 2px 1px rgba(0, 0, 0, 0.18) inset,
+    0 0 12px 4px rgba(0, 0, 0, 0.1) inset,
+    0 4px 16px rgba(17, 17, 26, 0.05),
+    0 8px 24px rgba(17, 17, 26, 0.05),
+    0 16px 56px rgba(17, 17, 26, 0.05),
+    0 4px 16px rgba(17, 17, 26, 0.05) inset,
+    0 8px 24px rgba(17, 17, 26, 0.05) inset,
+    0 16px 56px rgba(17, 17, 26, 0.05) inset;
+}
+
+.liquid-panel__backdrop {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 0;
+  background: transparent;
+}
+
+.liquid-panel__content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
 }
 
 .liquid-panel__backdrop,
@@ -807,38 +908,20 @@ a {
 
 .liquid-panel__backdrop {
   z-index: 0;
-  transform: translateZ(0);
-  background:
-    linear-gradient(130deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.06) 18%, rgba(255, 255, 255, 0.02) 42%, rgba(7, 19, 32, 0.18) 100%),
-    rgba(8, 18, 31, 0.12);
+  background: transparent;
 }
 
-.liquid-panel__shine {
-  z-index: 1;
-  background:
-    linear-gradient(118deg, rgba(255, 255, 255, 0.26), rgba(255, 255, 255, 0.12) 16%, rgba(255, 255, 255, 0.03) 34%, transparent 52%),
-    radial-gradient(118% 150% at 14% 0%, rgba(255, 255, 255, 0.46), rgba(255, 255, 255, 0.2) 18%, rgba(255, 255, 255, 0.04) 34%, transparent 56%),
-    radial-gradient(120% 140% at 84% 100%, rgba(31, 208, 191, 0.08), transparent 48%),
-    radial-gradient(120% 110% at 100% 0%, rgba(129, 150, 255, 0.12), transparent 50%);
-  mix-blend-mode: screen;
-  opacity: 0.95;
-}
-
+/* Legacy decorative layers — kept in the DOM tree for compatibility but
+   hidden so the displacement effect reads cleanly. */
+.liquid-panel__shine,
 .liquid-panel__glow {
-  z-index: 1;
-  background:
-    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.2), transparent 20%),
-    radial-gradient(circle at 74% 88%, rgba(31, 208, 191, 0.08), transparent 24%);
-  opacity: 0.7;
+  display: none;
 }
 
 .liquid-panel__rim {
   z-index: 2;
-  border: 1px solid rgba(226, 239, 255, 0.2);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 0 0 1px rgba(111, 146, 199, 0.1),
-    0 0 0 1px rgba(33, 59, 92, 0.34);
+  border: none;
+  box-shadow: none;
 }
 
 .liquid-panel__content {
@@ -869,34 +952,17 @@ a {
 }
 
 .dark .liquid-panel {
-  border-color: rgba(182, 210, 245, 0.14);
-  background: linear-gradient(180deg, rgba(8, 18, 31, 0.22), rgba(8, 18, 31, 0.1));
+  border: none;
+  background: hsl(0 0% 0% / var(--liquid-frost, 0));
   box-shadow:
-    0 32px 80px rgba(0, 0, 0, 0.44),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(46, 72, 105, 0.36);
-}
-
-.dark .liquid-panel__backdrop {
-  background:
-    linear-gradient(130deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06) 18%, rgba(255, 255, 255, 0.02) 42%, rgba(7, 19, 32, 0.22) 100%),
-    rgba(8, 18, 31, 0.16);
-}
-
-.dark .liquid-panel__shine {
-  background:
-    linear-gradient(118deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.13) 16%, rgba(255, 255, 255, 0.03) 34%, transparent 52%),
-    radial-gradient(118% 150% at 14% 0%, rgba(255, 255, 255, 0.52), rgba(255, 255, 255, 0.18) 18%, rgba(255, 255, 255, 0.04) 34%, transparent 54%),
-    radial-gradient(120% 140% at 84% 100%, rgba(31, 208, 191, 0.1), transparent 48%),
-    radial-gradient(120% 110% at 100% 0%, rgba(129, 150, 255, 0.14), transparent 50%);
-}
-
-.dark .liquid-panel__rim {
-  border-color: rgba(221, 235, 255, 0.18);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    inset 0 0 0 1px rgba(111, 146, 199, 0.08),
-    0 0 0 1px rgba(25, 48, 79, 0.42);
+    0 0 2px 1px rgba(255, 255, 255, 0.35) inset,
+    0 0 14px 4px rgba(255, 255, 255, 0.15) inset,
+    0 4px 16px rgba(17, 17, 26, 0.05),
+    0 8px 24px rgba(17, 17, 26, 0.05),
+    0 16px 56px rgba(17, 17, 26, 0.05),
+    0 4px 16px rgba(17, 17, 26, 0.05) inset,
+    0 8px 24px rgba(17, 17, 26, 0.05) inset,
+    0 16px 56px rgba(17, 17, 26, 0.05) inset;
 }
 
 .footer-liquid-panel {
@@ -952,12 +1018,14 @@ a {
   max-height: calc(100svh - 15rem);
 }
 
-.footer-contact-card .liquid-panel__content {
+.footer-contact-card .liquid-panel__content,
+.footer-contact-card.glass-surface > .glass-surface__content {
   overflow: auto;
   scrollbar-width: none;
 }
 
-.footer-contact-card .liquid-panel__content::-webkit-scrollbar {
+.footer-contact-card .liquid-panel__content::-webkit-scrollbar,
+.footer-contact-card.glass-surface > .glass-surface__content::-webkit-scrollbar {
   display: none;
 }
 
@@ -990,6 +1058,25 @@ a {
     border-color 220ms ease;
 }
 
+/* Reset <GlassSurface>'s default centered content layout so nested
+   sections (Control Center widgets, About, Skills) can lay out their own
+   flex/grid/padding flush inside the glass, without inheriting the surface
+   component's 0.5rem padding + center-flex defaults. */
+.control-center-panel.glass-surface > .glass-surface__content,
+.flush-glass.glass-surface > .glass-surface__content {
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: 0;
+  height: 100%;
+}
+
+.control-center-panel__inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
 .control-center-panel::before,
 .control-center-panel::after {
   position: absolute;
@@ -999,35 +1086,11 @@ a {
   content: "";
 }
 
-.control-center-panel::before {
-  z-index: 1;
-  inset: -18%;
-  background:
-    radial-gradient(
-      circle at var(--control-glow-x) var(--control-glow-y),
-      color-mix(in oklab, var(--color-accent), white 20%) 0%,
-      color-mix(in oklab, var(--color-accent), transparent 74%) 18%,
-      rgba(129, 150, 255, 0.12) 34%,
-      transparent 58%
-    );
-  filter: blur(28px);
-  opacity: calc(var(--control-glow-intensity) * 0.24);
-  transition: opacity 220ms ease;
-}
-
+/* Green hover glow disabled per user request — the cursor-following accent
+   was fighting with the new CodePen-style glass and obscuring the backdrop. */
+.control-center-panel::before,
 .control-center-panel::after {
-  z-index: 2;
-  padding: 1.25px;
-  background:
-    radial-gradient(
-      var(--control-glow-radius) circle at var(--control-glow-x) var(--control-glow-y),
-      color-mix(in oklab, var(--color-accent), white 18%) 0%,
-      color-mix(in oklab, var(--color-accent), transparent 54%) 16%,
-      rgba(129, 150, 255, 0.18) 34%,
-      transparent 62%
-    );
-  opacity: calc(0.18 + (var(--control-glow-intensity) * 0.9));
-  transition: opacity 180ms ease;
+  display: none;
 }
 
 @supports ((-webkit-mask-composite: xor) or (mask-composite: exclude)) {
@@ -1043,407 +1106,346 @@ a {
   }
 }
 
-.experience-reference-stage {
+/* ------------------------------------------------------------------ */
+/* Experience — clean blueprint stage (trimmed: company/role/dates,    */
+/* degree/school, cert badge + title only).                           */
+/* ------------------------------------------------------------------ */
+/* NOTE: The previous `.liquid-stage { border !important; ... }` rules
+   were intended for Experience but were leaking into About — producing
+   the visible second "square" panel around the About glass. Experience
+   doesn't actually use `.liquid-stage`, so the rules were removed. */
+
+.xp-stage {
+  border: 1px solid rgba(198, 220, 255, 0.16);
   background:
-    radial-gradient(circle at 14% 18%, rgba(240, 183, 57, 0.14), transparent 22%),
-    radial-gradient(circle at 50% 18%, rgba(138, 92, 246, 0.12), transparent 24%),
-    radial-gradient(circle at 86% 20%, rgba(34, 211, 194, 0.12), transparent 22%),
-    linear-gradient(180deg, rgba(15, 19, 24, 0.96) 0%, rgba(8, 11, 16, 0.98) 100%);
+    linear-gradient(165deg, rgba(20, 35, 60, 0.55), rgba(8, 16, 28, 0.42) 58%, rgba(7, 14, 24, 0.5)),
+    rgba(8, 18, 31, 0.18);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
+  backdrop-filter: blur(26px) saturate(150%);
+  box-shadow:
+    0 32px 90px rgba(1, 5, 10, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 0 1px rgba(111, 146, 199, 0.08),
+    inset 0 -1px 0 rgba(46, 72, 105, 0.34);
 }
 
-.experience-reference-stage::before,
-.experience-reference-stage::after {
+/* Glass shine — top-left light catch + colored corner glows. */
+.xp-stage::before {
   position: absolute;
   inset: 0;
-  pointer-events: none;
+  z-index: 0;
   content: "";
-}
-
-.experience-reference-stage::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='146' viewBox='0 0 168 146'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.13)' stroke-width='2'%3E%3Cpath d='M42 2h42l21 36-21 36H42L21 38z'/%3E%3Cpath d='M126 2h42l21 36-21 36h-42l-21-36z'/%3E%3Cpath d='M84 74h42l21 36-21 36H84L63 110z'/%3E%3Cpath d='M0 74h42l21 36-21 36H0l-21-36z'/%3E%3C/g%3E%3C/svg%3E");
-  background-size: 168px 146px;
-  background-position: center top;
-  opacity: 0.52;
-}
-
-.experience-reference-stage::after {
+  pointer-events: none;
   background:
-    linear-gradient(90deg, rgba(240, 183, 57, 0.18) 0%, rgba(240, 183, 57, 0) 24%),
-    linear-gradient(90deg, rgba(138, 92, 246, 0) 26%, rgba(138, 92, 246, 0.18) 52%, rgba(138, 92, 246, 0) 76%),
-    linear-gradient(90deg, rgba(34, 211, 194, 0) 64%, rgba(34, 211, 194, 0.18) 100%);
+    radial-gradient(120% 130% at 12% 0%, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.04) 24%, transparent 48%),
+    radial-gradient(130% 120% at 100% 0%, rgba(129, 150, 255, 0.14), transparent 46%),
+    radial-gradient(130% 130% at 86% 100%, rgba(31, 208, 191, 0.1), transparent 52%);
   mix-blend-mode: screen;
-  opacity: 0.72;
+  opacity: 0.92;
 }
 
-.experience-tabs {
-  position: sticky;
-  top: 5.25rem;
-  z-index: 20;
-  display: grid;
-  width: min(100%, 44rem);
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.35rem;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(17, 21, 28, 0.72);
-  padding: 0.35rem;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    0 16px 42px rgba(0, 0, 0, 0.28);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
-  backdrop-filter: blur(18px) saturate(140%);
+/* Soft diagonal sheen sweeping across the glass. */
+.xp-stage::after {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.02) 12%, transparent 28%);
+  opacity: 0.8;
 }
 
-.experience-tab {
-  display: inline-flex;
-  min-height: 2.75rem;
+/* Centered header: eyebrow, heading, and the category tab bar. */
+.xp-head {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.45rem;
-  border-radius: 999px;
-  padding: 0 0.8rem;
-  color: rgba(244, 248, 255, 0.78);
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+  text-align: center;
 }
 
-.experience-tab:hover,
-.experience-tab:focus-visible {
-  color: white;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.experience-tab[data-active="true"] {
-  color: #12161d;
-  background: #f0b739;
-  box-shadow: 0 10px 24px rgba(240, 183, 57, 0.24);
-}
-
-.experience-intro {
-  position: sticky;
-  top: 10rem;
-  min-width: 0;
-}
-
-.experience-intro__icon {
-  display: inline-flex;
-  height: 2.85rem;
-  width: 2.85rem;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1rem;
-  border: 1px solid rgba(240, 183, 57, 0.22);
-  background: rgba(240, 183, 57, 0.12);
-  color: #f0b739;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.experience-intro__eyebrow {
-  margin-top: 1.25rem;
+.xp-eyebrow {
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: rgba(240, 183, 57, 0.9);
+  color: rgba(106, 166, 255, 0.92);
 }
 
-.experience-intro h2 {
-  margin-top: 0.65rem;
-  max-width: 11ch;
+.xp-heading {
+  margin-top: 0.6rem;
+  max-width: 22ch;
   color: white;
-  font-size: clamp(2rem, 4.6vw, 4rem);
+  font-size: clamp(1.7rem, 3.4vw, 2.7rem);
   font-weight: 700;
-  line-height: 0.98;
-  letter-spacing: 0;
+  line-height: 1.06;
 }
 
-.experience-intro > p:not(.experience-intro__eyebrow) {
-  margin-top: 1rem;
-  max-width: 31rem;
-  color: rgba(241, 247, 255, 0.7);
-  font-size: 0.98rem;
-  line-height: 1.75;
-}
-
-.experience-intro__stats {
-  margin-top: 1.35rem;
-  display: grid;
-  max-width: 25rem;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.8rem;
-}
-
-.experience-intro__stats > div {
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.045);
-  padding: 0.85rem 0.95rem;
-}
-
-.experience-intro__stats span {
-  display: block;
-  color: white;
-  font-size: clamp(1.2rem, 2.2vw, 1.65rem);
-  font-weight: 800;
-  line-height: 1;
-}
-
-.experience-intro__stats p {
-  margin-top: 0.35rem;
-  color: rgba(240, 248, 255, 0.54);
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-}
-
-.experience-panel {
-  display: grid;
-  min-width: 0;
-  gap: 1rem;
-}
-
-.experience-supporting-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-}
-
-.experience-card {
-  --experience-card-accent: #f0b739;
-  position: relative;
-  min-width: 0;
-  overflow: hidden;
-  border-radius: 1.2rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background:
-    radial-gradient(circle at 92% 0%, rgba(240, 183, 57, 0.13), transparent 32%),
-    linear-gradient(145deg, rgba(20, 26, 34, 0.9), rgba(8, 12, 18, 0.86));
-  padding: clamp(1rem, 2vw, 1.35rem);
-  box-shadow:
-    0 18px 52px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
-}
-
-.experience-card--featured {
-  border-color: rgba(240, 183, 57, 0.22);
-  padding: clamp(1.15rem, 2.4vw, 1.7rem);
-}
-
-.experience-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.55rem 0.8rem;
-  color: rgba(244, 248, 255, 0.56);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.experience-card__header {
-  margin-top: 0.85rem;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.experience-card__header h3 {
-  color: white;
-  font-size: clamp(1.18rem, 2vw, 1.7rem);
-  font-weight: 750;
-  line-height: 1.12;
-  letter-spacing: 0;
-}
-
-.experience-card--featured .experience-card__header h3 {
-  font-size: clamp(1.45rem, 2.7vw, 2.25rem);
-}
-
-.experience-card__header p {
-  margin-top: 0.38rem;
-  color: rgba(244, 248, 255, 0.74);
-  font-size: 0.92rem;
-  font-weight: 650;
-}
-
-.experience-card__metric {
+.xp-tabs {
+  margin-top: 1.6rem;
   display: inline-flex;
-  min-width: 4.2rem;
-  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
   border-radius: 999px;
-  background: #f0b739;
-  padding: 0.45rem 0.7rem;
-  color: #11161d;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(10, 16, 26, 0.6);
+  padding: 0.35rem;
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.xp-tab {
+  display: inline-flex;
+  min-height: 2.6rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0 1.1rem;
+  color: rgba(244, 248, 255, 0.74);
   font-size: 0.82rem;
-  font-weight: 850;
-  line-height: 1;
-  box-shadow: 0 10px 24px rgba(240, 183, 57, 0.18);
+  font-weight: 700;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-.experience-card__highlights {
-  margin-top: 1rem;
+.xp-tab:hover,
+.xp-tab:focus-visible {
+  color: white;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.xp-tab[data-active="true"] {
+  color: #08111a;
+  background: #6aa6ff;
+  box-shadow: 0 10px 24px rgba(106, 166, 255, 0.3);
+}
+
+/* Career + education: tidy single-column timeline rows. */
+.xp-list {
   display: grid;
-  gap: 0.72rem;
+  gap: 0.85rem;
+  max-width: 56rem;
 }
 
-.experience-card__highlights li {
+.xp-row {
   display: flex;
-  gap: 0.65rem;
-  color: rgba(240, 247, 255, 0.74);
-  font-size: 0.9rem;
-  line-height: 1.58;
+  align-items: center;
+  gap: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(135deg, rgba(13, 31, 60, 0.55), rgba(7, 20, 34, 0.55));
+  padding: 1.1rem 1.3rem;
+  transition: border-color 0.2s ease, transform 0.2s ease;
 }
 
-.experience-card--featured .experience-card__highlights li {
-  font-size: 0.96rem;
+.xp-row:hover {
+  border-color: rgba(106, 166, 255, 0.4);
+  transform: translateX(3px);
 }
 
-.experience-card__highlights li > span {
-  margin-top: 0.58rem;
-  height: 0.4rem;
-  width: 0.4rem;
+.xp-row__bullet {
+  height: 0.7rem;
+  width: 0.7rem;
   flex: 0 0 auto;
   border-radius: 999px;
-  background: #f0b739;
-  box-shadow: 0 0 0 4px rgba(240, 183, 57, 0.1);
+  background: #6aa6ff;
+  box-shadow: 0 0 0 5px rgba(106, 166, 255, 0.12);
 }
 
-.experience-empty {
+.xp-row__body {
+  min-width: 0;
+  flex: 1;
+}
+
+.xp-row__title {
+  color: white;
+  font-size: clamp(1.02rem, 1.8vw, 1.25rem);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.xp-row__org {
+  margin-top: 0.25rem;
+  color: rgba(106, 166, 255, 0.85);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.xp-row__period {
+  flex: 0 0 auto;
+  color: rgba(244, 248, 255, 0.6);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+/* Certifications: badge logo + title tiles. */
+.cert-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+/* Hover flip card: badge on the front, verify button on the back.
+   Flips on hover (and keyboard focus-within), flips back on mouse-out. */
+.cert-card {
+  --cert-accent: #6aa6ff;
+  position: relative;
+  min-height: 236px;
+  perspective: 1200px;
+}
+
+.cert-card__inner {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cert-card:hover .cert-card__inner,
+.cert-card:focus-within .cert-card__inner {
+  transform: rotateY(-180deg);
+}
+
+.cert-card__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  border-radius: 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--cert-accent) 18%, transparent), transparent 60%),
+    linear-gradient(160deg, rgba(13, 25, 44, 0.72), rgba(7, 16, 27, 0.72));
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  padding: 1.4rem 1rem 1.2rem;
+  text-align: center;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.cert-card__face--front {
+  color: inherit;
+}
+
+/* Subtle lift + accent edge while hovered (reactbits-style hover flip). */
+.cert-card:hover .cert-card__face,
+.cert-card:focus-within .cert-card__face {
+  border-color: color-mix(in srgb, var(--cert-accent) 55%, transparent);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 18px 40px rgba(0, 0, 0, 0.4);
+}
+
+.cert-card__face--back {
+  gap: 0.7rem;
+  transform: rotateY(-180deg);
+  border-color: color-mix(in srgb, var(--cert-accent) 38%, transparent);
+}
+
+.cert-card__verify {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  border-radius: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  padding: 1rem;
-  color: rgba(244, 248, 255, 0.72);
+  gap: 0.45rem;
+  margin-top: 0.3rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--cert-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--cert-accent) 18%, transparent);
+  padding: 0.5rem 1.05rem;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+  transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cert-card__verify:hover {
+  background: color-mix(in srgb, var(--cert-accent) 32%, transparent);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--cert-accent) 30%, transparent);
+}
+
+.cert-card__verify svg {
+  height: 0.85rem;
+  width: 0.85rem;
+}
+
+.cert-card__verify .cert-card__verify-ext {
+  height: 0.68rem;
+  width: 0.68rem;
+  opacity: 0.85;
+}
+
+.cert-card__novf {
+  color: rgba(244, 248, 255, 0.55);
+  font-size: 0.78rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cert-card__inner {
+    transition: none;
+  }
+}
+
+.cert-tile__badge {
+  display: flex;
+  height: 92px;
+  width: 92px;
+  align-items: center;
+  justify-content: center;
+}
+
+.cert-tile__badge img {
+  height: 100%;
+  width: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.4));
+}
+
+.cert-tile__badge svg {
+  height: 54px;
+  width: 54px;
+  color: var(--cert-accent);
+}
+
+.cert-tile__title {
+  color: rgba(244, 248, 255, 0.92);
+  font-size: 0.86rem;
+  font-weight: 650;
+  line-height: 1.3;
 }
 
 @media (max-width: 768px) {
-  .experience-reference-stage::before {
-    background-size: 132px 114px;
-    opacity: 0.34;
+  .xp-row {
+    flex-wrap: wrap;
+    padding: 0.95rem 1.05rem;
   }
 
-  .experience-reference-stage::after {
-    opacity: 0.55;
-  }
-
-  .experience-tabs {
-    top: 7rem;
+  .xp-row__period {
     width: 100%;
-    overflow-x: auto;
-    grid-template-columns: repeat(3, minmax(7rem, 1fr));
-    scrollbar-width: none;
+    padding-left: 1.7rem;
   }
 
-  .experience-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .experience-tab {
-    min-height: 2.45rem;
-    padding: 0 0.65rem;
-    font-size: 0.75rem;
-  }
-
-  .experience-intro {
-    position: relative;
-    top: auto;
-  }
-
-  .experience-intro h2 {
-    max-width: 15ch;
-  }
-
-  .experience-supporting-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .experience-card__header {
-    flex-direction: column;
-    gap: 0.7rem;
-  }
-
-  .experience-card {
-    padding: 0.95rem;
-  }
-
-  .experience-card--featured {
-    padding: 1rem;
-  }
-
-  .experience-card__meta {
-    font-size: 0.68rem;
-  }
-
-  .experience-card__header h3,
-  .experience-card--featured .experience-card__header h3 {
-    font-size: 1.16rem;
-    line-height: 1.18;
-  }
-
-  .experience-card__header p {
-    font-size: 0.84rem;
-  }
-
-  .experience-card__highlights {
-    gap: 0.6rem;
-  }
-
-  .experience-card__highlights li,
-  .experience-card--featured .experience-card__highlights li {
-    font-size: 0.82rem;
-    line-height: 1.48;
+  .cert-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   }
 }
 
-.control-center-panel[data-glow-active="true"] {
-  box-shadow:
-    0 34px 86px rgba(1, 7, 14, 0.4),
-    0 0 0 1px color-mix(in oklab, var(--color-accent), transparent 68%),
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -1px 0 rgba(44, 72, 108, 0.3);
-}
-
-.control-center-panel .liquid-panel__glow {
-  background:
-    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.18), transparent 18%),
-    radial-gradient(circle at 84% 86%, rgba(31, 208, 191, 0.12), transparent 28%);
-  opacity: 0.82;
-}
-
-.control-center-panel .liquid-panel__rim {
-  border-color: color-mix(in oklab, var(--color-accent), white 76%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.16),
-    inset 0 0 0 1px color-mix(in oklab, var(--color-accent), transparent 82%),
-    0 0 0 1px rgba(24, 49, 79, 0.42);
-}
-
+/* `data-glow-active` and the glow/rim accent layers used to add a teal
+   ring on hover — disabled so the chromatic glass reads cleanly. */
+.control-center-panel[data-glow-active="true"],
 .dark .control-center-panel[data-glow-active="true"] {
-  box-shadow:
-    0 38px 90px rgba(0, 0, 0, 0.54),
-    0 0 0 1px color-mix(in oklab, var(--color-accent), transparent 64%),
-    inset 0 1px 0 rgba(255, 255, 255, 0.09),
-    inset 0 -1px 0 rgba(46, 72, 105, 0.36);
+  box-shadow: inherit;
 }
 
+.control-center-panel .liquid-panel__glow,
+.control-center-panel .liquid-panel__rim,
 .dark .control-center-panel .liquid-panel__rim {
-  border-color: color-mix(in oklab, var(--color-accent), white 56%);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.12),
-    inset 0 0 0 1px color-mix(in oklab, var(--color-accent), transparent 84%),
-    0 0 0 1px rgba(18, 39, 66, 0.5);
+  display: none;
 }
 
 .dark .liquid-field {
@@ -1466,7 +1468,10 @@ a {
   isolation: isolate;
   overflow: hidden;
   background: transparent;
-  box-shadow: 0 18px 38px rgba(9, 20, 38, 0.12);
+  box-shadow:
+    0 0 2px 1px rgba(0, 0, 0, 0.2) inset,
+    0 0 12px 4px rgba(0, 0, 0, 0.1) inset,
+    0 12px 28px rgba(9, 20, 38, 0.18);
 }
 
 .liquid-control > * {
@@ -1496,12 +1501,8 @@ a {
 .liquid-control {
   border-radius: 9999px;
   transform: translateZ(0);
-  background:
-    radial-gradient(circle at 14% 8%, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.1) 28%, transparent 46%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.08) 36%, rgba(255, 255, 255, 0.04) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.48);
-  -webkit-backdrop-filter: blur(12px) saturate(170%) brightness(1.04);
-  backdrop-filter: blur(12px) saturate(170%) brightness(1.04);
+  background: transparent;
+  border: none;
 }
 
 .index-bar-warp {
@@ -1538,10 +1539,14 @@ a {
   opacity: 1;
 }
 
-.index-bar-surface[data-liquid-glass="on"][data-scrolled="true"] .index-bar-warp,
-.liquid-control[data-liquid-glass="on"] {
+.index-bar-surface[data-liquid-glass="on"][data-scrolled="true"] .index-bar-warp {
   -webkit-backdrop-filter: url("#index-liquid-glass") blur(8px) saturate(170%) brightness(1.04);
   backdrop-filter: url("#index-liquid-glass") blur(8px) saturate(170%) brightness(1.04);
+}
+
+.liquid-control[data-liquid-glass="on"] {
+  -webkit-backdrop-filter: url("#index-liquid-glass") saturate(1.1);
+  backdrop-filter: url("#index-liquid-glass") saturate(1.1);
 }
 
 .index-bar-surface::before,
@@ -1555,8 +1560,7 @@ a {
   border-radius: inherit;
 }
 
-.index-bar-surface::before,
-.liquid-control::before {
+.index-bar-surface::before {
   z-index: 1;
   inset: 1px;
   background:
@@ -1566,8 +1570,7 @@ a {
   opacity: 0.95;
 }
 
-.index-bar-surface::after,
-.liquid-control::after {
+.index-bar-surface::after {
   z-index: 1;
   inset: 0;
   border: 1px solid rgba(255, 255, 255, 0.34);
@@ -1579,13 +1582,39 @@ a {
     inset 0 -1px 0 rgba(126, 147, 173, 0.1);
 }
 
-.dark .index-bar-surface,
-.dark .liquid-control {
+/* Strip the heavy gradient/border decoration from .liquid-control so the
+   chromatic backdrop-filter does the talking. CodePen-style. */
+.liquid-control::before {
+  display: none;
+}
+
+.liquid-control::after {
+  z-index: 1;
+  inset: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: transparent;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.dark .index-bar-surface {
   box-shadow: 0 18px 42px rgba(0, 0, 0, 0.3);
 }
 
-.dark .index-bar-warp,
 .dark .liquid-control {
+  background: transparent;
+  border: none;
+  box-shadow:
+    0 0 2px 1px rgba(255, 255, 255, 0.42) inset,
+    0 0 14px 4px rgba(255, 255, 255, 0.16) inset,
+    0 14px 32px rgba(0, 0, 0, 0.36);
+}
+
+.dark .liquid-control::after {
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.dark .index-bar-warp {
   background:
     radial-gradient(circle at 16% 10%, rgba(224, 243, 255, 0.2), rgba(224, 243, 255, 0.02) 30%, transparent 50%),
     linear-gradient(180deg, rgba(14, 28, 44, 0.12), rgba(9, 19, 31, 0.06) 44%, rgba(6, 14, 23, 0.08) 100%);
@@ -1911,25 +1940,107 @@ a {
   will-change: opacity;
 }
 
-.adaline-footer-aurora-canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  opacity: 0.96;
-  /* adaline composites its aurora canvas with exactly screen + blur(8px). */
+/* Footer aurora — pure CSS, replicating the reference composite (screen
+   blend + blur on an absolutely positioned layer INSIDE the CTA band).
+   Three overlapping radial gradients centered along the ridgeline at 20% /
+   50% / 80% width, emerald #10b981 fading to transparent upward: light is
+   strongest right at the hilltops (the hills band overlaps this layer's
+   bottom edge, so it reads as rising from BEHIND the ridgeline) and gone in
+   the upper sky. The ONLY animation is the slow opacity breath below —
+   nothing translates, so the glow is pixel-still during scroll. */
+.adaline-footer-aurora {
+  /* `lighten` instead of `screen`: screen multiplies normalized values, so
+     against the near-black sky (#050e11 ≈ 0.06) even a 0.22-alpha glow
+     renders at ~1% brightness — present but invisible. Lighten takes the
+     brighter channel directly, so the emerald reads on the dark sky.
+     Alphas raised accordingly (0.44 sides / 0.52 center) and the halos
+     widened (80% × 55%) so the glow bleeds along the ridgeline like the
+     adaline reference. */
+  background:
+    radial-gradient(80% 55% at 20% 100%, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0) 72%),
+    radial-gradient(80% 55% at 50% 100%, rgba(16, 185, 129, 0.26), rgba(16, 185, 129, 0) 74%),
+    radial-gradient(80% 55% at 80% 100%, rgba(16, 185, 129, 0.22), rgba(16, 185, 129, 0) 72%);
+  mix-blend-mode: lighten;
   filter: blur(8px);
-  mix-blend-mode: screen;
-  transform: translateZ(0);
-  will-change: transform;
+  animation: adaline-aurora-breath 9s ease-in-out infinite;
+  will-change: opacity;
 }
 
-.adaline-footer-aurora-veils {
-  background:
-    radial-gradient(42% 50% at 50% 10%, rgba(117, 255, 188, 0.07), transparent 66%),
-    linear-gradient(180deg, rgba(117, 255, 188, 0.03), transparent 62%);
+@keyframes adaline-aurora-breath {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes aurora-breath {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Footer aurora — visible northern-lights curtains in the CTA sky. Pure CSS,
+   screen-blended over the dark sky, masked top+bottom so it stays in the sky
+   (fades before the ridgeline, never covers the hills). */
+.footer-aurora__wash,
+.footer-aurora__curtains {
+  position: absolute;
+  inset: 0;
   mix-blend-mode: screen;
-  opacity: 0.38;
-  filter: blur(28px);
+  will-change: transform, opacity;
+}
+
+/* Broad green glow rising from the horizon. */
+.footer-aurora__wash {
+  background: radial-gradient(
+    120% 78% at 50% 100%,
+    rgba(16, 205, 140, 0.5) 0%,
+    rgba(16, 205, 140, 0.22) 34%,
+    rgba(16, 205, 140, 0.06) 55%,
+    transparent 72%
+  );
+  filter: blur(42px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 42%, black 88%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 42%, black 88%, transparent 100%);
+  animation: aurora-breath 9s ease-in-out infinite;
+}
+
+/* Near-vertical light curtains — four blurred emerald/teal bands. */
+.footer-aurora__curtains {
+  background:
+    linear-gradient(96deg, transparent 6%, rgba(64, 245, 200, 0.34) 17%, transparent 30%),
+    linear-gradient(87deg, transparent 28%, rgba(24, 220, 150, 0.4) 45%, transparent 60%),
+    linear-gradient(101deg, transparent 54%, rgba(92, 255, 214, 0.32) 69%, transparent 84%),
+    linear-gradient(83deg, transparent 72%, rgba(20, 205, 150, 0.3) 87%, transparent 98%);
+  filter: blur(26px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, black 20%, black 80%, transparent 100%);
+  animation: aurora-sway 14s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-sway {
+  0% {
+    transform: translateX(-3%) skewX(-5deg);
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    transform: translateX(3%) skewX(5deg);
+    opacity: 0.92;
+  }
 }
 
 .adaline-footer-shooting-stars {
@@ -1938,74 +2049,106 @@ a {
   transform: translateZ(0);
 }
 
+/* Meteor — full rewrite. A horizontal 2px × 100px streak: bright head on
+   the local RIGHT end, tail fading to transparent on the left. The whole
+   element is rotated 135deg as one unit and the flight is translateX AFTER
+   the rotation, so travel runs exactly along the streak's own axis (rotating
+   after translating would move in screen space first and skid the trail
+   off-axis). rotate(135deg) points the local +X axis down-left, so a
+   positive translateX flies the streak top-right → bottom-left with the
+   bright head leading and the tail directly behind. Constant speed
+   (linear); each flight lasts ~1.5s of a 30s cycle (5%), then the element
+   rests dark — with delays 0s/11s/22s the three meteors can never overlap
+   and the sky is calm ~95% of the time. */
 .adaline-meteor {
   position: absolute;
   top: var(--meteor-top);
   left: var(--meteor-left);
-  width: var(--meteor-width);
-  aspect-ratio: 23 / 360;
-  /* Trail and head live in one element so they can never detach. The strip's
-     bottom end leads the motion (it travels down-right along its own axis), so
-     the gradient is brightest there and fades FULLY to transparent at the tail
-     — no opaque sprite box, no borders. */
-  background-image: linear-gradient(
-    to top,
-    rgba(235, 255, 251, 0.95) 0%,
-    rgba(204, 244, 255, 0.5) 22%,
-    rgba(204, 244, 255, 0.16) 52%,
-    transparent 100%
-  );
+  width: 100px;
+  height: 2px;
+  background-image: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.9));
   border-radius: 999px;
   opacity: 0;
-  filter: blur(0.2px) drop-shadow(0 0 12px rgba(199, 255, 238, 0.45));
-  transform: translate3d(0, 0, 0) rotate(var(--meteor-rotate));
-  transform-origin: 50% 100%;
-  animation: adaline-meteor var(--meteor-duration) linear infinite;
+  transform: rotate(135deg) translateX(0);
+  transform-origin: right center;
+  animation: adaline-meteor 30s linear infinite;
   animation-delay: var(--meteor-delay);
   will-change: transform, opacity;
 }
 
-/* Head glow — same element (pseudo), pinned to the leading end of the trail. */
-.adaline-meteor::after {
-  content: "";
-  position: absolute;
-  bottom: -3px;
-  left: 50%;
-  width: 200%;
-  aspect-ratio: 1;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.95) 0%, rgba(199, 255, 238, 0.4) 48%, transparent 72%);
-}
-
 @keyframes adaline-meteor {
-  0%,
-  58% {
+  0% {
     opacity: 0;
-    transform: translate3d(0, 0, 0) rotate(var(--meteor-rotate));
+    transform: rotate(135deg) translateX(0);
   }
 
-  62% {
-    opacity: var(--meteor-opacity);
+  1.5% {
+    opacity: 1;
   }
 
-  74% {
-    opacity: 0;
-    transform: translate3d(var(--meteor-travel-x), var(--meteor-travel-y), 0) rotate(var(--meteor-rotate));
+  14% {
+    opacity: 1;
   }
 
+  16%,
   100% {
     opacity: 0;
-    transform: translate3d(var(--meteor-travel-x), var(--meteor-travel-y), 0) rotate(var(--meteor-rotate));
+    transform: rotate(135deg) translateX(160vw);
   }
 }
 
-.adaline-footer-top-fade {
-  background: linear-gradient(180deg, color-mix(in oklab, var(--color-bg), #edf7fa 18%) 0%, rgba(159, 188, 194, 0.5) 48%, transparent 100%);
+/* Painterly drifting clouds — the wrapper clips the flight path and applies
+   a horizontal edge mask so every cloud fades in/out seamlessly at the
+   viewport edges instead of popping. */
+.adaline-drift-clouds {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, black 10%, black 90%, transparent 100%);
 }
 
-.dark .adaline-footer-top-fade {
-  background: linear-gradient(180deg, rgba(5, 10, 17, 0.84) 0%, rgba(8, 22, 30, 0.48) 48%, transparent 100%);
+/* One cloud = one drifting container of 4–6 overlapping blurred puffs, never
+   a single flat pill. Per-cloud durations give lateral parallax; negative
+   delays start each cloud mid-flight so the band is never empty. */
+.adaline-drift-cloud {
+  position: absolute;
+  left: 0;
+  animation: adaline-cloud-drift var(--cloud-duration) linear infinite;
+  animation-delay: var(--cloud-delay);
+  will-change: transform;
+}
+
+.adaline-drift-cloud-puff {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+}
+
+@keyframes adaline-cloud-drift {
+  from {
+    transform: translate3d(-120%, 0, 0);
+  }
+
+  to {
+    transform: translate3d(120vw, 0, 0);
+  }
+}
+
+/* Passing-clouds drift: the cloud plate glides sideways very slowly (with a
+   whisper of scale so no edge ever un-covers), which turns the footer entry
+   into clouds drifting across the seam instead of a hard static plate. */
+.adaline-footer-clouds-drift {
+  animation: adaline-clouds-drift 90s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes adaline-clouds-drift {
+  from {
+    transform: translate3d(-1.6%, 0, 0) scale(1.045);
+  }
+
+  to {
+    transform: translate3d(1.6%, 0, 0) scale(1.045);
+  }
 }
 
 /* Floating AI companion dock — bottom-right launcher that spins on hover */
@@ -2020,6 +2163,8 @@ a {
   gap: 0.65rem;
 }
 
+/* AI dock launcher — transparent liquid-glass pill so live motion shows
+   through. Backdrop-filter does the work; insets define the edge. */
 .ai-dock-launcher {
   position: relative;
   display: inline-flex;
@@ -2028,62 +2173,45 @@ a {
   width: 3.1rem;
   height: 3.1rem;
   border-radius: 999px;
-  border: 1px solid rgba(116, 255, 210, 0.5);
-  background: radial-gradient(circle at 30% 25%, rgba(116, 255, 210, 0.95), rgba(8, 18, 28, 0.95));
-  color: #061017;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  border: none;
+  background: transparent;
+  color: rgba(244, 251, 255, 0.94);
+  -webkit-backdrop-filter: url("#index-liquid-glass") saturate(1.1);
+  backdrop-filter: url("#index-liquid-glass") saturate(1.1);
+  box-shadow:
+    0 0 2px 1px rgba(255, 255, 255, 0.4) inset,
+    0 0 14px 4px rgba(255, 255, 255, 0.16) inset,
+    0 12px 28px rgba(0, 0, 0, 0.36);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease;
 }
 
 .ai-dock-launcher:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5);
+  box-shadow:
+    0 0 2px 1px rgba(255, 255, 255, 0.52) inset,
+    0 0 14px 4px rgba(255, 255, 255, 0.22) inset,
+    0 16px 36px rgba(0, 0, 0, 0.45);
 }
 
 .ai-dock-launcher-icon {
   display: inline-flex;
-  transition: transform 0.3s ease;
+  /* Same single 360° hover spin as the hero links toggle. */
+  transition: transform 0.58s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Spin the icon while hovering the launcher (unless it is the close state) */
-.ai-dock-launcher:hover .ai-dock-launcher-icon {
-  animation: ai-dock-spin 1.6s linear infinite;
+.ai-dock-launcher:hover .ai-dock-launcher-icon,
+.ai-dock-launcher:focus-visible .ai-dock-launcher-icon {
+  transform: rotate(360deg) scale(1.04);
 }
 
-.ai-dock-launcher[data-open="true"]:hover .ai-dock-launcher-icon {
-  animation: none;
+.ai-dock-launcher[data-open="true"]:hover .ai-dock-launcher-icon,
+.ai-dock-launcher[data-open="true"]:focus-visible .ai-dock-launcher-icon {
   transform: rotate(90deg);
 }
 
 .ai-dock-launcher-ring {
-  position: absolute;
-  inset: -4px;
-  border-radius: 999px;
-  border: 1.5px solid rgba(116, 255, 210, 0.55);
-  opacity: 0;
-}
-
-.ai-dock-launcher:hover .ai-dock-launcher-ring {
-  animation: ai-dock-ring 1.6s ease-out infinite;
-}
-
-@keyframes ai-dock-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes ai-dock-ring {
-  0% {
-    opacity: 0.6;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(1.35);
-  }
+  display: none;
 }
 
 .ai-dock-window {
@@ -2122,6 +2250,21 @@ a {
   .adaline-meteor {
     animation: none;
     opacity: 0;
+  }
+
+  .adaline-footer-aurora {
+    animation: none;
+    opacity: 0.85;
+  }
+
+  .adaline-footer-clouds-drift {
+    animation: none;
+    transform: scale(1.045);
+  }
+
+  .adaline-drift-cloud {
+    animation: none;
+    transform: translate3d(10vw, 0, 0);
   }
 
   .ai-dock-launcher:hover .ai-dock-launcher-icon,
@@ -2590,5 +2733,65 @@ a {
   .glare-hover::before,
   .glare-hover--play-once::before {
     transition: none;
+  }
+}
+
+/* Contact reveal — collapsed "Contact me" pill + blur-down panel (react-bits
+   style: BlurText/AnimatedContent reveal + ShinyText sweep on the pill).
+   The panel opens DOWNWARD from the pill (2026-07-07: upward got clipped by
+   the viewport top at the deepest footer scroll). */
+.contact-reveal-panel {
+  opacity: 0;
+  transform: translate(-50%, -22px) scale(0.94);
+  filter: blur(10px);
+  pointer-events: none;
+  transform-origin: 50% 0%;
+  transition:
+    opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.45s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform, filter;
+}
+
+.contact-reveal-panel--open {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+  filter: blur(0);
+  pointer-events: auto;
+}
+
+.contact-reveal-shine {
+  color: rgba(255, 255, 255, 0.62);
+  background-image: linear-gradient(
+    120deg,
+    rgba(255, 255, 255, 0) 40%,
+    rgba(255, 255, 255, 0.95) 50%,
+    rgba(255, 255, 255, 0) 60%
+  );
+  background-size: 200% 100%;
+  background-position: 150% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: contact-reveal-shine 3.6s linear infinite;
+}
+
+@keyframes contact-reveal-shine {
+  0% {
+    background-position: 150% 0;
+  }
+  100% {
+    background-position: -50% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contact-reveal-panel {
+    transition: none;
+    filter: none;
+  }
+
+  .contact-reveal-shine {
+    animation: none;
+    color: rgba(255, 255, 255, 0.9);
   }
 }

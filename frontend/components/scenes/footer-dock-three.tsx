@@ -12,28 +12,23 @@ if (typeof window !== "undefined") {
 // ---------------------------------------------------------------------------
 // Scroll-bound Three.js rebuild of the adaline.ai footer dock ("night theme").
 // The dock + water-reflection textures are the original adaline assets, drawn
-// on shader planes so the scene stays pixel-faithful at rest. On top of that,
-// scroll progress (GSAP ScrollTrigger, scrubbed) drives a warm glow that
-// travels the pier -> walkway path, ignites the two lamps as it passes them,
-// and lifts the whole scene's exposure as night settles. The reflection plane
-// mirrors the glow about the waterline and ripples it with a time-based wobble.
+// on shader planes so the scene stays pixel-faithful at rest. Matching the
+// adaline reference exactly: the only light is two discrete warm pools, one
+// under each lamp, each dying out within a plank or two — the deck between
+// the lamps stays dark, and the texture keeps its natural exposure. Scroll
+// progress (GSAP ScrollTrigger, scrubbed) only ignites the lamps as night
+// settles. The reflection plane mirrors the pools about the waterline and
+// ripples them with a time-based wobble.
 // ---------------------------------------------------------------------------
-
-// Path the glow travels, in dock-texture UV space (y up). Measured from the
-// texture itself: pier centerline from the near (bottom) end up to the
-// walkway, then along the walkway through lamp 1 to lamp 2.
-const GLOW_PATH: ReadonlyArray<readonly [number, number]> = [
-  [0.205, 0.04], // pier, nearest the viewer
-  [0.3, 0.45], // mid pier
-  [0.348, 0.76], // pier meets walkway
-  [0.595, 0.78], // walkway run, ends at lamp 2
-];
 
 // Lamp bulbs, measured as the two bright clusters in footer-dock.webp.
 const LAMP_1: readonly [number, number] = [0.355, 0.866];
-// Lamp 2's x sits slightly before the glow path's end (0.595) so its ignition
-// window fits inside the head's travel range instead of capping at ~23%.
 const LAMP_2: readonly [number, number] = [0.575, 0.866];
+
+// Warm pools on the walkway planks directly beneath each bulb. The walkway
+// surface sits just below the lamp heads in the texture.
+const POOL_1: readonly [number, number] = [0.355, 0.795];
+const POOL_2: readonly [number, number] = [0.575, 0.795];
 
 // Reflection texture mirrors the dock about this waterline: y' = 2*WATER_Y - y.
 const WATER_Y = 0.76;
@@ -53,64 +48,46 @@ const VERTEX_SHADER = /* glsl */ `
 const FRAGMENT_SHADER = /* glsl */ `
   uniform sampler2D uMap;
   uniform float uTime;
-  uniform float uExposure;
-  uniform float uGlowStrength;
-  uniform vec2 uPath[4];
-  uniform float uLit[3];
-  uniform vec2 uHead;
-  uniform float uHeadGlow;
   uniform vec2 uLamp1;
   uniform vec2 uLamp2;
+  uniform vec2 uPool1;
+  uniform vec2 uPool2;
   uniform float uLamp1On;
   uniform float uLamp2On;
   uniform float uOpacity;
-  uniform float uCanvasAspect; // canvas width / canvas height
   varying vec2 vUv;
 
-  // Aspect-corrected distance from p to segment a->b, both in UV space.
-  float segDist(vec2 p, vec2 a, vec2 b) {
-    vec2 scale = vec2(${TEX_ASPECT.toFixed(1)}, 1.0);
-    vec2 pa = (p - a) * scale;
-    vec2 ba = (b - a) * scale;
-    float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-5), 0.0, 1.0);
-    return length(pa - ba * h);
+  // Aspect-corrected distance so falloffs read as circles on screen instead
+  // of 3:1 ellipses.
+  float radialDist(vec2 p, vec2 c) {
+    vec2 d = (p - c) * vec2(${TEX_ASPECT.toFixed(1)}, 1.0);
+    return length(d);
   }
 
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
-    // Traveling path glow: each segment is lit only up to uLit[i] of its run.
-    float glow = 0.0;
-    for (int i = 0; i < 3; i++) {
-      if (uLit[i] <= 0.0) continue;
-      vec2 a = uPath[i];
-      vec2 b = mix(uPath[i], uPath[i + 1], uLit[i]);
-      float d = segDist(vUv, a, b);
-      glow += exp(-d * 30.0) * 0.28;
-    }
+    // Lamp halos: gentle flicker once each lamp has ignited.
+    float flicker1 = 0.92 + 0.08 * sin(uTime * 6.3 + 1.7);
+    float flicker2 = 0.92 + 0.08 * sin(uTime * 5.1);
+    float bulb1 = exp(-radialDist(vUv, uLamp1) * 22.0) * uLamp1On * flicker1;
+    float bulb2 = exp(-radialDist(vUv, uLamp2) * 22.0) * uLamp2On * flicker2;
 
-    // Bright head riding the front of the glow: isotropic in screen space so
-    // it reads as a round hotspot rather than a horizontal smear.
-    vec2 headDelta = (vUv - uHead) * vec2(uCanvasAspect, 1.0);
-    float dHead = length(headDelta);
-    float head = exp(-dHead * 18.0) * uHeadGlow;
+    // Discrete light pool on the planks under each lamp — a tight falloff
+    // that dies out within ~1–2 plank widths, so the mid-deck between the
+    // lamps stays dark exactly like the adaline reference.
+    float pool1 = exp(-radialDist(vUv, uPool1) * 30.0) * uLamp1On * flicker1;
+    float pool2 = exp(-radialDist(vUv, uPool2) * 30.0) * uLamp2On * flicker2;
 
-    // Lamp halos: gentle flicker once the glow head has passed each lamp.
-    float flicker1 = 0.9 + 0.1 * sin(uTime * 6.3 + 1.7);
-    float flicker2 = 0.9 + 0.1 * sin(uTime * 5.1);
-    float lamp1 = exp(-segDist(vUv, uLamp1, uLamp1) * 14.0) * uLamp1On * flicker1;
-    float lamp2 = exp(-segDist(vUv, uLamp2, uLamp2) * 14.0) * uLamp2On * flicker2;
-
-    vec3 warm = vec3(1.0, 0.64, 0.34);
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
 
-    // Path glow hugs the dock planks (soft alpha edge); the lamp halos are
-    // allowed to bleed past the dock so warm light pools onto the water.
+    // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
+    // slightly past the dock so warm light pools onto the water below.
     float onDock = smoothstep(0.0, 0.15, tex.a);
-    float glowBleed = max(lamp1, lamp2) * 0.6;
-    vec3 col = tex.rgb * uExposure;
-    col += (glow + head) * warm * uGlowStrength * onDock;
-    col += (lamp1 + lamp2) * lampWarm * 0.42 * max(onDock, glowBleed);
+    float bulbBleed = (bulb1 + bulb2) * 0.6;
+    vec3 col = tex.rgb;
+    col += (bulb1 + bulb2) * lampWarm * 0.42 * max(onDock, bulbBleed);
+    col += (pool1 + pool2) * lampWarm * 0.5 * onDock;
 
     gl_FragColor = vec4(col, tex.a * uOpacity);
   }
@@ -127,34 +104,6 @@ const REFLECTION_FRAGMENT_SHADER = FRAGMENT_SHADER.replace(
     vec4 tex = texture2D(uMap, rippleUv);
   `,
 );
-
-interface PathRuntime {
-  cumulative: number[];
-  total: number;
-}
-
-function buildPathRuntime(): PathRuntime {
-  const cumulative = [0];
-  let total = 0;
-  for (let i = 1; i < GLOW_PATH.length; i += 1) {
-    const dx = (GLOW_PATH[i][0] - GLOW_PATH[i - 1][0]) * TEX_ASPECT;
-    const dy = GLOW_PATH[i][1] - GLOW_PATH[i - 1][1];
-    total += Math.hypot(dx, dy);
-    cumulative.push(total);
-  }
-  return { cumulative, total };
-}
-
-// Polyline params (0..1 of total length) at which the head passes each lamp,
-// so ignition can key off the same progress value the glow uses.
-function lampParam(runtime: PathRuntime, lampX: number) {
-  // Both lamps sit on the final walkway segment; param from x along it.
-  const a = GLOW_PATH[2];
-  const b = GLOW_PATH[3];
-  const t = Math.min(1, Math.max(0, (lampX - a[0]) / (b[0] - a[0])));
-  const len = runtime.cumulative[2] + t * (runtime.total - runtime.cumulative[2]);
-  return len / runtime.total;
-}
 
 function smoothstep(edge0: number, edge1: number, x: number) {
   const t = Math.min(1, Math.max(0, (x - edge0) / (edge1 - edge0)));
@@ -176,21 +125,15 @@ interface SceneRefs {
 }
 
 function makeUniforms(texture: THREE.Texture, mirrored: boolean) {
-  const path = (mirrored ? GLOW_PATH.map(mirrorY) : GLOW_PATH.map((p) => [...p])) as Array<[number, number]>;
+  // The reflection plane samples the mirrored texture, so its lamp/pool
+  // centers are mirrored about the waterline too.
   return {
     uMap: { value: texture },
     uTime: { value: 0 },
-    uCanvasAspect: { value: 1.0 },
-    uExposure: { value: mirrored ? 0.88 : 0.82 },
-    // The mirrored glow path lands at UV y > 1 (outside the texture), so the
-    // reflection keeps only lamp halos + ripple — no traveling path glow.
-    uGlowStrength: { value: mirrored ? 0 : 1 },
-    uPath: { value: path.map(([x, y]) => new THREE.Vector2(x, y)) },
-    uLit: { value: [0, 0, 0] },
-    uHead: { value: new THREE.Vector2(path[0][0], path[0][1]) },
-    uHeadGlow: { value: 0 },
     uLamp1: { value: new THREE.Vector2(...(mirrored ? mirrorY(LAMP_1) : LAMP_1)) },
     uLamp2: { value: new THREE.Vector2(...(mirrored ? mirrorY(LAMP_2) : LAMP_2)) },
+    uPool1: { value: new THREE.Vector2(...(mirrored ? mirrorY(POOL_1) : POOL_1)) },
+    uPool2: { value: new THREE.Vector2(...(mirrored ? mirrorY(POOL_2) : POOL_2)) },
     uLamp1On: { value: 0 },
     uLamp2On: { value: 0 },
     uOpacity: { value: mirrored ? 0.55 : 1 },
@@ -235,6 +178,8 @@ export function FooterDockThree() {
       texture.generateMipmaps = false;
       texture.minFilter = THREE.LinearFilter;
       texture.magFilter = THREE.LinearFilter;
+      // Crisp plank seams when the plane is viewed at less than full size.
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
       return texture;
     };
 
@@ -265,55 +210,19 @@ export function FooterDockThree() {
     scene.add(reflectionMesh, dockMesh);
 
     const refs: SceneRefs = { renderer, camera, scene, dockMaterial, reflectionMaterial, dockMesh, reflectionMesh };
-    const runtime = buildPathRuntime();
-    const lamp1At = lampParam(runtime, LAMP_1[0]);
-    const lamp2At = lampParam(runtime, LAMP_2[0]);
 
     let progress = 0;
     let renderQueued = true;
     let triggerActive = false;
 
     const applyProgress = () => {
-      // Night settles in: the dock starts at natural brightness and exposure
-      // lifts gently while the glow makes its run.
-      const exposure = 0.82 + 0.2 * smoothstep(0, 0.6, progress);
-      // Glow head travels the polyline over the first ~95% of the band scroll,
-      // leaving room for lamp 2's ignition window to complete.
-      const headParam = smoothstep(0.04, 0.95, progress);
-      const headLen = headParam * runtime.total;
-
-      const lit: number[] = [0, 0, 0];
-      for (let i = 0; i < 3; i += 1) {
-        const c0 = runtime.cumulative[i];
-        const c1 = runtime.cumulative[i + 1];
-        lit[i] = Math.min(1, Math.max(0, (headLen - c0) / (c1 - c0)));
-      }
-
-      let head: [number, number] = [...GLOW_PATH[0]] as [number, number];
-      for (let i = 0; i < 3; i += 1) {
-        if (lit[i] > 0) {
-          head = [
-            GLOW_PATH[i][0] + (GLOW_PATH[i + 1][0] - GLOW_PATH[i][0]) * lit[i],
-            GLOW_PATH[i][1] + (GLOW_PATH[i + 1][1] - GLOW_PATH[i][1]) * lit[i],
-          ];
-        }
-      }
-
-      // Head fades in at launch and hands off to the lamps at the end of the run.
-      const headGlow = smoothstep(0, 0.08, headParam) * (1 - smoothstep(0.94, 1, headParam)) * 0.55;
-      const lamp1On = smoothstep(lamp1At - 0.015, lamp1At + 0.06, headParam);
-      const lamp2On = smoothstep(lamp2At - 0.015, lamp2At + 0.05, headParam);
+      // Night settles in: the lamps ignite in sequence as the band scrolls.
+      // The texture keeps its natural exposure throughout — adaline has no
+      // global brightness lift, only the two discrete pools.
+      const lamp1On = smoothstep(0.18, 0.4, progress);
+      const lamp2On = smoothstep(0.3, 0.52, progress);
 
       for (const material of [refs.dockMaterial, refs.reflectionMaterial]) {
-        const mirrored = material === refs.reflectionMaterial;
-        material.uniforms.uExposure.value = mirrored ? exposure * 0.92 : exposure;
-        if (!mirrored) {
-          // The mirrored path glow falls outside UV [0,1]; the reflection only
-          // tracks lamp state and exposure.
-          material.uniforms.uLit.value = lit;
-          material.uniforms.uHead.value.set(head[0], head[1]);
-          material.uniforms.uHeadGlow.value = headGlow;
-        }
         material.uniforms.uLamp1On.value = lamp1On;
         material.uniforms.uLamp2On.value = lamp2On;
       }
@@ -328,13 +237,15 @@ export function FooterDockThree() {
 
     const resize = () => {
       const viewportWidth = window.innerWidth;
-      // Mirrors the DOM layout this replaces: a 200vw image, aspect 3, centered.
-      const planeWidth = viewportWidth * 2;
+      // The plane always fills the wrapper: the wrapper (adaline-scenes.tsx)
+      // owns the scene's width in vw, so resizing there never desyncs this.
+      const planeWidth = wrapper.clientWidth || viewportWidth * 1.5;
       const planeHeight = planeWidth / TEX_ASPECT;
-      const width = wrapper.clientWidth || viewportWidth;
+      const width = planeWidth;
       const height = wrapper.clientHeight || planeHeight;
 
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      // Full device pixel ratio (capped at 2) so the plank seams stay crisp.
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setSize(width, height, false);
 
       camera.left = -width / 2;
@@ -342,10 +253,6 @@ export function FooterDockThree() {
       camera.top = height / 2;
       camera.bottom = -height / 2;
       camera.updateProjectionMatrix();
-
-      const aspect = width / height;
-      refs.dockMaterial.uniforms.uCanvasAspect.value = aspect;
-      refs.reflectionMaterial.uniforms.uCanvasAspect.value = aspect;
 
       for (const mesh of [refs.dockMesh, refs.reflectionMesh]) {
         mesh.scale.set(planeWidth, planeHeight, 1);
@@ -434,15 +341,15 @@ export function FooterDockThree() {
           src="/adaline-scenes/footer/footer-dock-reflection.webp"
           alt=""
           aria-hidden
-          className="absolute left-0 top-0 aspect-[3] w-[200vw] object-cover opacity-60"
+          className="absolute left-0 top-0 aspect-[3] w-full object-cover opacity-60"
         />
-        <img src="/adaline-scenes/footer/footer-dock.webp" alt="" aria-hidden className="relative aspect-[3] w-[200vw] object-cover" />
+        <img src="/adaline-scenes/footer/footer-dock.webp" alt="" aria-hidden className="relative aspect-[3] w-full object-cover" />
       </>
     );
   }
 
   return (
-    <div ref={wrapperRef} data-scroll-scene="dock-three" className="relative aspect-[3] w-[200vw]">
+    <div ref={wrapperRef} data-scroll-scene="dock-three" className="relative aspect-[3] w-full">
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
     </div>
   );

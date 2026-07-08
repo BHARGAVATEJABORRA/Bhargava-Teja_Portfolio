@@ -3,7 +3,7 @@
 import { LuArrowUpRight } from "react-icons/lu";
 
 import { AdalineFooterScene } from "@/components/scenes/adaline-scenes";
-import { ContactForm } from "@/components/sections/contact-form";
+import { ContactReveal } from "@/components/sections/contact-reveal";
 import { portfolioContent } from "@/content/portfolio-content";
 import { getResolvedSocialLink, getResumeHref, isExternalUrl } from "@/lib/profile-links";
 import { coreSectionLinks } from "@/lib/site";
@@ -37,14 +37,14 @@ export function ContactFooterSection() {
   ];
 
   return (
-    <section aria-labelledby="contact-title" className="relative isolate -mt-px overflow-hidden bg-[#050e11]">
+    <section aria-labelledby="contact-title" className="relative isolate -mt-px overflow-hidden">
       <h2 id="contact-title" className="sr-only">
         Contact
       </h2>
 
       <AdalineFooterScene
         contactId="contact"
-        contact={<ContactForm compact className="footer-liquid-panel footer-contact-card w-full" />}
+        contact={<ContactReveal />}
         footer={
           <>
             <div className="max-w-sm">

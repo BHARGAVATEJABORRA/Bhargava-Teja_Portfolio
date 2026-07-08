@@ -28,6 +28,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# MCP config (contains API key)
+.mcp.json
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts

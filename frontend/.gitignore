@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# webauthn passkey store (contains registered credential)
+/.data/
+
 # vercel
 .vercel
 
@@ -45,3 +48,9 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /tests/scroll/__output__/
+
+# prisma sqlite content db
+/prisma/dev.db
+/prisma/dev.db-journal
+/.next-preview/
+/.next-build/

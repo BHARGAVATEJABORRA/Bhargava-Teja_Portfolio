@@ -50,6 +50,14 @@ export interface ExperienceItem {
   highlights: string[];
   location?: string;
   href?: string;
+  /** Credly badge image URL (certifications). */
+  badgeUrl?: string;
+  /** Public verification URL for the credential (certifications). */
+  verifyUrl?: string;
+  /** react-icons key used as a logo / badge fallback. */
+  brandIconKey?: string;
+  /** Brand color for the logo chip background tint. */
+  brandColor?: string;
 }
 
 export interface ExperienceCollection {
@@ -100,7 +108,25 @@ export interface ControlCenterModule {
   value: string;
 }
 
-export const portfolioContent = {
+// Admin CMS overlay: the admin dashboard (Prisma/SQLite) publishes edited
+// collections to portfolio-overrides.json; when present they replace the
+// static defaults below. See lib/content-store.ts.
+import overridesJson from "./portfolio-overrides.json";
+
+import type { PublicSiteConfig } from "@/lib/site-config";
+
+export interface PortfolioOverrides {
+  projects?: ProjectSummary[];
+  experience?: ExperienceCollection;
+  skills?: SkillCategory[];
+  articles?: ArticleSummary[];
+  /** Site-wide settings from /admin/settings (identity, hero, about, social, contact, metadata). */
+  siteConfig?: Partial<PublicSiteConfig>;
+}
+
+const overrides = overridesJson as PortfolioOverrides;
+
+const basePortfolioContent = {
   identity: {
     name: "Bhargava Teja Borra",
     publicAlias: "Bhargava Teja Borra",
@@ -110,7 +136,7 @@ export const portfolioContent = {
     currentlyAt: "Capital One",
     avatarUrl: "",
     bio:
-      "Architect and engineer scalable AWS infrastructure and microservice platforms with 3+ years of production delivery across enterprise systems.\n\nI focus on reliability, automation, and measurable outcomes, including reducing compute costs by 35% and improving API and deployment performance by 40%.",
+      "Software engineer with 4+ years building high-scale AWS cloud infrastructure for enterprise banking and Fortune 500 systems.\n\nI focus on reliability, automation, and measurable outcomes, including cutting cloud costs by 35% and boosting performance by 40%.",
     resumeHref: "/bhargava-teja-borra-resume.txt",
     phone: "123-456-7890",
     phoneVisibleOnPage: false,
@@ -196,8 +222,20 @@ export const portfolioContent = {
   ] as ProofMetric[],
   about: {
     paragraphs: [
-      "I build cloud-first systems that balance reliability, velocity, and operating cost. My work spans AWS platform engineering, infrastructure as code, and developer workflows that help teams ship with confidence.",
-      "I prefer practical engineering over abstraction-heavy complexity: clear ownership, measurable outcomes, and systems that are straightforward for the next engineer to operate and evolve.",
+      "I'm a software engineer with 4+ years building high-scale AWS cloud infrastructure for enterprise banking and Fortune 500 systems — currently at Capital One in Dallas. I design architectures that hold 99.9% uptime, automate everything repeatable with Terraform and CloudFormation, and build CI/CD pipelines that turned three-week release cycles into two-day ships. I care about practical engineering: clear ownership, measurable outcomes, and systems the next engineer can run without a manual.",
+    ],
+    /** The 3 stat tiles in the About card (admin-editable via /admin/settings). */
+    stats: [
+      { value: "4+", label: "Years building cloud systems" },
+      { value: "99.9%", label: "Uptime on banking workloads" },
+      { value: "35%", label: "Cloud costs cut" },
+    ],
+    /** Specialty chips in the About card (admin-editable via /admin/settings). */
+    specialties: [
+      "AWS Platform Engineering",
+      "Infrastructure as Code",
+      "CI/CD & Automation",
+      "Observability & Reliability",
     ],
     principles: [
       "Automate repeatable operations to accelerate delivery and reduce risk",
@@ -263,8 +301,8 @@ export const portfolioContent = {
   projects: [
     {
       title: "Capital One Cloud Migration and Reliability Platform",
-      timeframe: "Jan 2023 - Present",
-      role: "Senior Software Engineer",
+      timeframe: "Jul 2025 - Present",
+      role: "Software Engineer",
       category: "Cloud Infrastructure",
       problem: "Legacy services were expensive to operate and slow to deploy, with reliability risk under transaction-heavy load.",
       approach: "Migrated services to AWS serverless microservices, codified infrastructure with Terraform, and standardized CI/CD with GitHub Actions.",
@@ -280,7 +318,7 @@ export const portfolioContent = {
     },
     {
       title: "Accenture Data and Cloud Automation Platform",
-      timeframe: "Nov 2020 - Dec 2022",
+      timeframe: "May 2020 - Jun 2023",
       role: "Software Engineer",
       category: "Data Engineering",
       problem: "Manual data-processing pipelines were slow, error-prone, and difficult to scale across enterprise environments.",
@@ -317,28 +355,40 @@ export const portfolioContent = {
     work: [
       {
         organization: "Capital One",
-        title: "Senior Software Engineer",
-        period: "Jan 2023 - Present",
-        location: "Addison, TX",
+        title: "Software Engineer",
+        period: "Jul 2025 - Present",
+        location: "Dallas, TX",
         highlights: [
-          "Led migration of core services to AWS serverless microservices and API-driven architecture for better scale and reliability.",
-          "Engineered multi-region AWS deployment patterns with Terraform and standardized environment provisioning.",
-          "Implemented CI/CD with GitHub Actions, improving deployment speed and quality checks across release pipelines.",
-          "Reduced compute costs by 35% through rightsizing, workload optimization, and automation controls.",
-          "Improved API and delivery performance by 40% with observability-led refactors and pipeline improvements.",
+          "Architect and maintain AWS cloud infrastructure (EC2, Lambda, S3, RDS) for enterprise banking systems, sustaining 99.9% uptime.",
+          "Automate deployments with Terraform and CloudFormation, cutting provisioning time by 60% across 5 engineering teams.",
+          "Implemented CI/CD with Jenkins and AWS CodePipeline, cutting release cycles from 3 weeks to 2 days and deployment failures by 70%.",
+          "Designed disaster recovery with 15-minute RTO meeting SOC2 and PCI-DSS compliance requirements.",
+          "Lowered monthly cloud spend by 25% (~$40K annual savings) through cost analysis and rightsizing.",
         ],
       },
       {
         organization: "Accenture",
         title: "Software Engineer",
-        period: "Nov 2020 - Dec 2022",
+        period: "Jul 2021 - Jun 2023",
         location: "Hyderabad, India",
         highlights: [
-          "Built ETL pipelines using Python and AWS Step Functions to orchestrate reliable data-processing workflows.",
-          "Containerized backend services with Docker and Kubernetes to improve portability and runtime consistency.",
-          "Applied Terraform-based IaC to reduce environment drift and accelerate provisioning across teams.",
-          "Improved data-processing and platform efficiency by 40% through monitoring, tuning, and automation.",
-          "Delivered modernization initiatives that lowered operational costs by 35% and reduced manual intervention.",
+          "Designed and deployed microservices on AWS (EC2/EKS) serving 2M+ users at 99.9% uptime for Fortune 500 financial clients.",
+          "Built secure REST APIs with Spring Security (OAuth2/JWT) processing 500K+ daily calls, reducing auth failures by 85%.",
+          "Automated provisioning with Terraform, halving environment setup time; CI/CD with Jenkins and GitHub Actions cut deployments from 4 hours to 15 minutes.",
+          "Tuned PostgreSQL and DynamoDB with Redis caching, speeding API responses by 40% and cutting DB load by 60%.",
+          "Built CloudWatch dashboards detecting incidents 3x faster; resolved 200+ incidents and led 15+ Well-Architected workshops.",
+        ],
+      },
+      {
+        organization: "Accenture",
+        title: "Associate Software Engineer",
+        period: "May 2020 - Jun 2021",
+        location: "Hyderabad, India",
+        highlights: [
+          "Built serverless data-processing workflows with AWS Lambda, API Gateway, and S3 handling 500K+ daily events, cutting infrastructure costs by 30%.",
+          "Developed ML-enabled applications with pattern recognition and predictive analytics processing 500K+ transactions daily.",
+          "Created CodePipeline and Jenkins workflows reducing release errors by 85% via automated testing.",
+          "Improved SQL query performance by 50%; CloudWatch and SNS alerting cut MTTD by 70% and prevented 95% of outages.",
         ],
       },
     ],
@@ -346,7 +396,7 @@ export const portfolioContent = {
       {
         organization: "University of Missouri - Kansas City",
         title: "Master of Science in Computer Science",
-        period: "2019 - 2021",
+        period: "Aug 2023 - May 2025",
         location: "Kansas City, MO",
         highlights: ["GPA: 3.83 · Graduate coursework in distributed systems, cloud computing, and software engineering."],
       },
@@ -354,39 +404,64 @@ export const portfolioContent = {
     certifications: [
       {
         organization: "Amazon Web Services",
-        title: "AWS Solutions Architect - Associate",
+        title: "AWS Certified Solutions Architect – Associate",
         period: "Active",
-        highlights: ["Validated cloud architecture and AWS solution design competencies."],
+        highlights: [],
+        badgeUrl: "https://images.credly.com/images/0e284c3f-5164-4b21-8660-0d84737941bc/image.png",
+        verifyUrl: "https://www.credly.com/badges/aa60da34-5e5b-4665-aced-7a31b080e087/public_url",
+        brandIconKey: "SiAmazonwebservices",
+        brandColor: "#FF9900",
       },
       {
         organization: "Microsoft",
         title: "Azure Developer Associate (AZ-204)",
         period: "Active",
-        highlights: ["Certification focused on Azure application development and deployment."],
+        highlights: [],
+        badgeUrl: "https://images.credly.com/images/63316b60-f62d-4e51-aacc-c23cb850089c/azure-developer-associate-600x600.png",
+        verifyUrl: "https://www.credly.com/badges/7cc8142a-e515-4ffc-85f7-27caf120af7b/public_url",
+        brandIconKey: "SiMicrosoftazure",
+        brandColor: "#0078D4",
       },
       {
         organization: "Microsoft",
         title: "Azure Fundamentals (AZ-900)",
         period: "Active",
-        highlights: ["Foundational cloud concepts and Azure service knowledge."],
+        highlights: [],
+        badgeUrl: "https://images.credly.com/images/be8fcaeb-c769-4858-b567-ffaaa73ce8cf/image.png",
+        verifyUrl: "https://www.credly.com/badges/b2a5c6ea-7033-4b47-8e4c-2a200a7f219f/public_url",
+        brandIconKey: "SiMicrosoftazure",
+        brandColor: "#0078D4",
       },
       {
         organization: "Microsoft",
         title: "Azure AI Fundamentals (AI-900)",
         period: "Active",
-        highlights: ["Foundational AI and machine learning services on Azure."],
+        highlights: [],
+        badgeUrl: "https://images.credly.com/images/4136ced8-75d5-4afb-8677-40b6236e2672/azure-ai-fundamentals-600x600.png",
+        verifyUrl: "https://www.credly.com/badges/4746a260-add2-4d19-80fe-35864680c254/public_url",
+        brandIconKey: "SiMicrosoftazure",
+        brandColor: "#0078D4",
       },
       {
         organization: "Oracle",
         title: "Oracle Cloud Infrastructure Foundations",
         period: "Active",
-        highlights: ["Foundational credential for OCI platform concepts and services."],
+        highlights: [],
+        badgeUrl: "https://images.credly.com/images/27db49f3-8bae-4314-8a84-884935b569db/50_Oracle_Cloud_Infrastructure.png",
+        verifyUrl:
+          "https://catalog-education.oracle.com/ords/certview/sharebadge?id=94EF5220200418E05B601197C63E6BCB2CCD5061D98566CE5EB9384498A1B00F",
+        brandIconKey: "SiOracle",
+        brandColor: "#F80000",
       },
       {
         organization: "AWS + AICTE",
         title: "AWS Cloud Virtual Internship",
         period: "2020",
-        highlights: ["Applied AWS implementation learning in an internship track."],
+        highlights: [],
+        verifyUrl:
+          "https://aictecert.eduskillsfoundation.org/pages/home/verify.php?cert=acce9a106b5e284184e5990b3ea64433",
+        brandIconKey: "SiAmazonwebservices",
+        brandColor: "#FF9900",
       },
     ],
   } as ExperienceCollection,
@@ -548,7 +623,7 @@ export const portfolioContent = {
       href: "#",
       isReal: false,
       likes: 24,
-      accent: "#22d3c2",
+      accent: "#38bdf8",
       tags: ["Serverless", "Lambda", "API Gateway"],
       premise: "When event-driven serverless beats an always-on fleet.",
       takeaway: "Match capacity to demand and idle time stops showing up on the bill.",
@@ -590,6 +665,116 @@ export const portfolioContent = {
       takeaway: "Alert on the few signals that predict failure and the rest is wallpaper.",
     },
   ] as ArticleSummary[],
+  contact: {
+    heading: "Let's build something reliable",
+    subheading: "Recruiter and hiring-manager outreach welcome — typically answered within one business day.",
+    email: "bhargavateja.borra@gmail.com",
+    formDestination: "bhargavateja.borra@gmail.com",
+    availableFor: "Open to senior IC and tech-lead opportunities in cloud, platform, and backend engineering",
+    showForm: true,
+  },
+  meta: {
+    titleTemplate: "Bhargava Teja Borra | Software Engineer (Cloud & Platform)",
+    description:
+      "Recruiter-first software engineering portfolio with resume-backed cloud architecture, reliability, and delivery outcomes.",
+    ogImage: "/og-image.svg",
+    analyticsId: "",
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Overlay merge
+//
+// Collections (projects/experience/skills/articles): when the DB overlay has
+// entries, they REPLACE the static defaults wholesale — never merged by index.
+//
+// siteConfig: identity/hero/about/social/contact/meta values from
+// /admin/settings are folded into the matching sections below. Empty strings
+// mean "not configured" and fall back to the static default.
+// ---------------------------------------------------------------------------
+
+const sc = overrides.siteConfig;
+
+function pick(value: string | undefined, fallback: string): string {
+  return value && value.trim() ? value : fallback;
+}
+
+function mergeSocialLinks(): { label: string; href: string }[] {
+  if (!sc) return basePortfolioContent.identity.socialLinks;
+  const links = basePortfolioContent.identity.socialLinks.map((link) => {
+    const label = link.label.toLowerCase();
+    if (label === "github" && sc.githubUrl?.trim()) return { ...link, href: sc.githubUrl };
+    if (label === "linkedin" && sc.linkedinUrl?.trim()) return { ...link, href: sc.linkedinUrl };
+    return link;
+  });
+  if (sc.twitterUrl?.trim() && !links.some((l) => /^(twitter|x)$/i.test(l.label))) {
+    links.push({ label: "Twitter", href: sc.twitterUrl });
+  }
+  const custom = sc.customLink;
+  if (custom?.label?.trim() && custom?.url?.trim() && !links.some((l) => l.label.toLowerCase() === custom.label.trim().toLowerCase())) {
+    links.push({ label: custom.label.trim(), href: custom.url });
+  }
+  return links;
+}
+
+const mergedIdentity = sc
+  ? {
+      ...basePortfolioContent.identity,
+      name: pick(sc.fullName, basePortfolioContent.identity.name),
+      publicAlias: pick(sc.fullName, basePortfolioContent.identity.publicAlias),
+      legalName: pick(sc.fullName, basePortfolioContent.identity.legalName),
+      role: pick(sc.roleLine, basePortfolioContent.identity.role),
+      location: pick(sc.location, basePortfolioContent.identity.location),
+      currentlyAt: pick(sc.currentEmployer, basePortfolioContent.identity.currentlyAt),
+      bio: pick(sc.aboutBio, basePortfolioContent.identity.bio),
+      intro: pick(sc.heroTagline, basePortfolioContent.identity.intro),
+      contactEmail: pick(sc.contactEmail || sc.email, basePortfolioContent.identity.contactEmail),
+      resumeHref: pick(sc.resumeUrl, basePortfolioContent.identity.resumeHref),
+      socialLinks: mergeSocialLinks(),
+    }
+  : basePortfolioContent.identity;
+
+const mergedAbout = sc
+  ? {
+      ...basePortfolioContent.about,
+      paragraphs: sc.aboutBio?.trim()
+        ? [sc.aboutBio, ...basePortfolioContent.about.paragraphs.slice(1)]
+        : basePortfolioContent.about.paragraphs,
+      stats: sc.aboutStats?.length ? sc.aboutStats : basePortfolioContent.about.stats,
+      specialties: sc.aboutSpecialties?.length ? sc.aboutSpecialties : basePortfolioContent.about.specialties,
+    }
+  : basePortfolioContent.about;
+
+const mergedContact = sc
+  ? {
+      heading: pick(sc.contactHeading, basePortfolioContent.contact.heading),
+      subheading: pick(sc.contactSubheading, basePortfolioContent.contact.subheading),
+      email: pick(sc.contactEmail, basePortfolioContent.contact.email),
+      formDestination: pick(sc.contactFormDestination, basePortfolioContent.contact.formDestination),
+      availableFor: pick(sc.availableFor, basePortfolioContent.contact.availableFor),
+      showForm: typeof sc.showContactForm === "boolean" ? sc.showContactForm : basePortfolioContent.contact.showForm,
+    }
+  : basePortfolioContent.contact;
+
+const mergedMeta = sc
+  ? {
+      titleTemplate: pick(sc.titleTemplate, basePortfolioContent.meta.titleTemplate),
+      description: pick(sc.metaDescription, basePortfolioContent.meta.description),
+      ogImage: pick(sc.ogImageUrl, basePortfolioContent.meta.ogImage),
+      analyticsId: pick(sc.analyticsId, basePortfolioContent.meta.analyticsId),
+    }
+  : basePortfolioContent.meta;
+
+export const portfolioContent = {
+  ...basePortfolioContent,
+  identity: mergedIdentity,
+  about: mergedAbout,
+  contact: mergedContact,
+  meta: mergedMeta,
+  projects: overrides.projects?.length ? overrides.projects : basePortfolioContent.projects,
+  experience: overrides.experience ?? basePortfolioContent.experience,
+  skills: overrides.skills?.length ? overrides.skills : basePortfolioContent.skills,
+  articles: overrides.articles?.length ? overrides.articles : basePortfolioContent.articles,
 };
 
 export type PortfolioContent = typeof portfolioContent;

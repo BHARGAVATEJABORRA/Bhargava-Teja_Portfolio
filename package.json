@@ -6,5 +6,8 @@
     "build": "npm --prefix frontend run build --",
     "start": "npm --prefix frontend run start --",
     "lint": "npm --prefix frontend run lint --"
+  },
+  "dependencies": {
+    "gsap": "^3.15.0"
   }
 }

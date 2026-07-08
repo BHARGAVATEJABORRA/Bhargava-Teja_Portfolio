@@ -1,40 +1,43 @@
 import Image from "next/image";
 import { LuMapPin } from "react-icons/lu";
 
-import { LiquidGlassPanel } from "@/components/ui/liquid-glass-panel";
+import GlassSurface from "@/components/ui/glass-surface";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { SectionShell } from "@/components/ui/section-shell";
 import { portfolioContent } from "@/content/portfolio-content";
 import { getResumeHref } from "@/lib/profile-links";
 
-const metrics = [
-  { value: "3+", label: "Years in production delivery" },
-  { value: "35%", label: "Lower compute cost" },
-  { value: "40%", label: "Faster APIs & deployments" },
-];
-
-const focusAreas = [
-  "AWS Platform Engineering",
-  "Infrastructure as Code",
-  "CI/CD & Automation",
-  "Observability & Reliability",
-];
-
 export function AboutSection() {
   const { identity, about, experience } = portfolioContent;
-  const bioParagraphs = (identity.bio || "").split(/\n\n+/).filter(Boolean);
-  const paragraphs = bioParagraphs.length > 0 ? bioParagraphs : about.paragraphs;
+  // Data source only — stats/specialties are admin-editable via /admin/settings.
+  const metrics = about.stats;
+  const focusAreas = about.specialties;
   const currentlyAt = identity.currentlyAt ?? experience.work[0]?.organization ?? "Capital One";
+  const whoIAm = about.paragraphs[0];
 
   return (
     <SectionShell id="about" labelledBy="about-title">
       <div className="liquid-stage liquid-stage--about space-y-8">
         <SectionHeading id="about-title" eyebrow="About" />
 
-        <LiquidGlassPanel as="article" radius={36} className="overflow-hidden">
-          <div className="grid gap-0 lg:grid-cols-[1.08fr_0.92fr]">
-            {/* Narrative column */}
-            <div className="flex flex-col gap-6 p-6 sm:p-8">
+        <GlassSurface
+          className="flush-glass overflow-hidden"
+          borderRadius={36}
+          distortionScale={-90}
+          redOffset={0}
+          greenOffset={0}
+          blueOffset={0}
+          brightness={60}
+          opacity={0.93}
+          blur={14}
+          displace={2}
+          backgroundOpacity={0.08}
+          saturation={1.1}
+          mixBlendMode="screen"
+        >
+          <article className="flex flex-col gap-7 p-6 sm:p-10">
+            {/* Identity row */}
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 {identity.avatarUrl ? (
                   <span className="relative inline-flex h-16 w-16 shrink-0 overflow-hidden rounded-2xl tint-accent-ring-45">
@@ -75,23 +78,32 @@ export function AboutSection() {
                 </span>
                 Currently at {currentlyAt}
               </span>
+            </div>
 
-              <div className="space-y-4">
-                {paragraphs.map((paragraph) => (
-                  <p key={paragraph} className="text-base leading-[1.8] text-[var(--color-muted-ink)] sm:text-lg">
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
+            {/* Who I am — one paragraph, front and center */}
+            <p className="max-w-3xl text-base leading-[1.85] text-[var(--color-ink)] sm:text-lg">{whoIAm}</p>
 
-              {/* Metrics strip */}
-              <dl className="grid grid-cols-3 gap-3 border-t border-white/20 pt-5">
+            {/* Focus chips */}
+            <ul className="flex flex-wrap gap-2">
+              {focusAreas.map((area) => (
+                <li
+                  key={area}
+                  className="rounded-full border border-white/25 bg-white/5 px-3 py-1.5 text-xs font-medium text-[var(--color-ink)]"
+                >
+                  {area}
+                </li>
+              ))}
+            </ul>
+
+            {/* Metrics + resume */}
+            <div className="flex flex-wrap items-end justify-between gap-6 border-t border-white/20 pt-6">
+              <dl className="grid grid-cols-3 gap-6 sm:gap-10">
                 {metrics.map((metric) => (
                   <div key={metric.label} className="space-y-1">
                     <dt className="text-2xl font-semibold tracking-tight text-[var(--color-ink)] sm:text-[1.7rem]">
                       {metric.value}
                     </dt>
-                    <dd className="text-xs leading-snug text-[var(--color-muted-ink)]">{metric.label}</dd>
+                    <dd className="max-w-[9rem] text-xs leading-snug text-[var(--color-muted-ink)]">{metric.label}</dd>
                   </div>
                 ))}
               </dl>
@@ -105,44 +117,8 @@ export function AboutSection() {
                 Download resume
               </a>
             </div>
-
-            {/* Principles + focus column */}
-            <div className="flex flex-col gap-7 border-t border-white/20 p-6 sm:p-8 lg:border-l lg:border-t-0">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-                  Operating Principles
-                </p>
-                <ul className="mt-4 space-y-4">
-                  {about.principles.map((principle) => (
-                    <li
-                      key={principle}
-                      className="flex items-start gap-3 text-base leading-[1.7] text-[var(--color-muted-ink)]"
-                    >
-                      <span aria-hidden className="mt-2.5 h-2 w-2 shrink-0 rounded-full bg-[var(--color-accent)]" />
-                      <span>{principle}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--color-accent)]">
-                  Focus Areas
-                </p>
-                <ul className="mt-4 flex flex-wrap gap-2">
-                  {focusAreas.map((area) => (
-                    <li
-                      key={area}
-                      className="rounded-full border border-white/25 bg-white/5 px-3 py-1.5 text-xs font-medium text-[var(--color-ink)]"
-                    >
-                      {area}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-          </div>
-        </LiquidGlassPanel>
+          </article>
+        </GlassSurface>
       </div>
     </SectionShell>
   );

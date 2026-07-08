@@ -9,10 +9,19 @@
     "start": "next start",
     "lint": "eslint",
     "test:scroll": "playwright test",
-    "verify": "npm run lint && npm run build && npm run test:scroll"
+    "verify": "npm run lint && npm run build && npm run test:scroll",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "prisma db seed",
+    "db:studio": "prisma studio"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@prisma/client": "^6.19.3",
+    "@simplewebauthn/browser": "^13.3.0",
+    "@simplewebauthn/server": "^13.3.2",
     "@types/three": "^0.184.1",
     "cmdk": "^1.1.1",
     "cobe": "^0.6.5",
@@ -35,7 +44,10 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "playwright": "^1.61.0",
+    "prisma": "^6.19.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.0",
     "typescript": "^5"
   }
 }

@@ -1,160 +1,255 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
 import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
-import ScrollStack, { ScrollStackItem } from "@/components/reactbits/ScrollStack";
-import { Container } from "@/components/ui/container";
+import { getActiveLenis } from "@/lib/smooth-scroll-instance";
+
+import { BorderGlowCard } from "@/components/ui/border-glow-card";
 import { portfolioContent } from "@/content/portfolio-content";
 import type { ArticleSummary } from "@/content/portfolio-content";
 
 function ArticleCard({ article, index }: { article: ArticleSummary; index: number }) {
+  // Blueprint look (ported from the original Projects cards), reworked to feel
+  // more like a real engineering drawing sheet: a deep technical-blue panel
+  // with an accent-tinted grid, a title-block header strip with the sheet
+  // number, corner registration ticks, and an accent glow. Each article's own
+  // accent tints the grid, header, corners, chips, and glow.
   const accent = article.accent ?? "#fcbc1d";
   const [liked, setLiked] = useState(false);
-  const [hovered, setHovered] = useState(false);
   const likeCount = (article.likes ?? 0) + (liked ? 1 : 0);
+  const sheet = `ART-${String(index + 1).padStart(3, "0")}`;
 
   return (
-    <article
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      className="article-card group"
-      style={{
-        zIndex: hovered ? 999 : index + 1,
-        ["--article-accent" as string]: accent,
-      }}
+    <BorderGlowCard
+      glowColor={accent}
+      className="h-[470px] w-[min(82vw,380px)] shrink-0"
     >
-      {hovered ? <span className="article-tooltip">{article.title}</span> : null}
-
-      {/* Like button */}
-      <button
-        type="button"
-        onClick={() => setLiked((v) => !v)}
-        aria-pressed={liked}
-        aria-label={liked ? "Unlike article" : "Like article"}
-        className="article-like"
-        data-liked={liked}
+      <div
+        className="relative flex h-full flex-col overflow-hidden rounded-2xl border"
+        style={{
+          background: "linear-gradient(150deg, #0a1628 0%, #0d1f3c 52%, #071422 100%)",
+          borderColor: `${accent}40`,
+        }}
       >
-        <LuThumbsUp size={18} aria-hidden />
-      </button>
+        {/* Faint engineering grid, tinted to the card accent. */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          aria-hidden
+          style={{
+            backgroundImage: `linear-gradient(${accent}12 1px, transparent 1px), linear-gradient(90deg, ${accent}12 1px, transparent 1px)`,
+            backgroundSize: "26px 26px",
+          }}
+        />
+        {/* Soft corner glow in the card accent. */}
+        <div
+          className="pointer-events-none absolute -right-16 -top-16 h-44 w-44 rounded-full blur-3xl"
+          aria-hidden
+          style={{ background: `radial-gradient(circle, ${accent}40, transparent 70%)` }}
+        />
 
-      <div className="article-info">
-        <p className="article-kicker">
-          <span>{article.source ?? "Article"}</span>
-          <span className="article-kicker-sep" aria-hidden>
-            |
+        {/* Corner registration ticks. */}
+        <span className="pointer-events-none absolute left-2.5 top-2.5 h-3.5 w-3.5 border-l border-t" style={{ borderColor: `${accent}66` }} aria-hidden />
+        <span className="pointer-events-none absolute right-2.5 top-2.5 h-3.5 w-3.5 border-r border-t" style={{ borderColor: `${accent}66` }} aria-hidden />
+        <span className="pointer-events-none absolute bottom-2.5 left-2.5 h-3.5 w-3.5 border-b border-l" style={{ borderColor: `${accent}66` }} aria-hidden />
+        <span className="pointer-events-none absolute bottom-2.5 right-2.5 h-3.5 w-3.5 border-b border-r" style={{ borderColor: `${accent}66` }} aria-hidden />
+
+        {/* Title-block header strip. */}
+        <div
+          className="relative flex items-center justify-between border-b px-6 py-3"
+          style={{ borderColor: `${accent}33`, background: `${accent}0f` }}
+        >
+          <span className="font-mono text-[10px] uppercase tracking-[0.22em]" style={{ color: `${accent}cc` }}>
+            {sheet}
           </span>
-          <span>{article.publishedAt}</span>
-        </p>
-
-        <h3 className="article-title">{article.title}</h3>
-
-        <span className="article-rule" aria-hidden />
-
-        {article.tagline ? <p className="article-tagline">&quot;{article.tagline}&quot;</p> : null}
-
-        <p className="article-body">{article.body ?? article.excerpt}</p>
-
-        <div className="article-meta">
-          <span>{article.readTime}</span>
-          {article.tags?.slice(0, 3).map((tag) => (
-            <span key={tag} className="article-tag">
-              {tag}
-            </span>
-          ))}
+          <span className="truncate pl-3 font-mono text-[10px] uppercase tracking-[0.18em] text-white/55">
+            {article.source ?? "Article"}
+          </span>
+          {/* Like button — sits inside the header, no clipping. */}
+          <button
+            type="button"
+            onClick={() => setLiked((v) => !v)}
+            aria-pressed={liked}
+            aria-label={liked ? "Unlike article" : "Like article"}
+            className="ml-3 inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[11px] transition-colors"
+            style={{
+              borderColor: liked ? accent : `${accent}55`,
+              background: liked ? `${accent}22` : "transparent",
+              color: liked ? "#fff" : `${accent}cc`,
+            }}
+          >
+            <LuThumbsUp size={14} aria-hidden />
+            {likeCount}
+          </button>
         </div>
 
-        <a
-          href={article.href}
-          target={article.isExternal ? "_blank" : undefined}
-          rel={article.isExternal ? "noopener noreferrer" : undefined}
-          className="article-learn"
-        >
-          Learn More <LuArrowRight size={16} aria-hidden />
-        </a>
-      </div>
+        <div className="relative flex flex-1 flex-col px-6 pb-6 pt-5">
+          <h3 className="font-mono text-lg font-bold leading-snug text-white">{article.title}</h3>
 
-      {/* Preview panel */}
-      <div className="article-image" aria-hidden>
-        <div className="article-image-glow" />
-        <span className="article-image-label">{article.source ?? "Article"}</span>
-        <span className="article-image-likes">Likes: {likeCount}</span>
+          {article.tagline ? (
+            <p className="mt-2 border-l-2 pl-3 text-xs italic text-white/70" style={{ borderColor: `${accent}80` }}>
+              &quot;{article.tagline}&quot;
+            </p>
+          ) : null}
+
+          <div className="mt-4 space-y-1.5">
+            <p className="font-mono text-[9px] uppercase tracking-[0.22em]" style={{ color: `${accent}99` }}>
+              ↳ Overview
+            </p>
+            <p className="line-clamp-3 text-sm leading-relaxed text-white/65">
+              {article.body ?? article.excerpt}
+            </p>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-1.5">
+            {article.tags?.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="rounded border px-2 py-0.5 font-mono text-[10px]"
+                style={{
+                  borderColor: `${accent}33`,
+                  backgroundColor: `${accent}10`,
+                  color: `${accent}cc`,
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+
+          <div
+            className="mt-auto flex items-center justify-between gap-3 border-t pt-4"
+            style={{ borderColor: `${accent}22` }}
+          >
+            <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-white/45">
+              {article.readTime}
+            </span>
+            <Link
+              href={`/articles/${article.slug}`}
+              className="inline-flex min-h-9 items-center gap-1.5 rounded-full border px-4 py-1.5 font-mono text-xs font-semibold text-white transition-colors hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2"
+              style={{ borderColor: `${accent}66` }}
+            >
+              Learn More <LuArrowRight size={15} aria-hidden />
+            </Link>
+          </div>
+        </div>
       </div>
-    </article>
+    </BorderGlowCard>
   );
 }
-
-// Per-card scale falloff in the stacked deck. ScrollStack pins card `i` at
-// `baseScale + i * step`, so baseScale must be derived from the card count:
-// the topmost (last) card pins at exactly 1 and each covered card sits one
-// step below the card above it, never collapsing past ~0.9.
-const CARD_SCALE_STEP = 0.012;
-
-// Cloud-shaped mask for the section-bottom dissolve: the same cloud plate the
-// footer uses, anchored to the bottom edge so card tops vanish into the puffs.
-const cloudDissolveMask = {
-  WebkitMaskImage: "url('/adaline-scenes/footer/footer-clouds.png')",
-  maskImage: "url('/adaline-scenes/footer/footer-clouds.png')",
-  WebkitMaskRepeat: "no-repeat",
-  maskRepeat: "no-repeat",
-  WebkitMaskPosition: "center bottom",
-  maskPosition: "center bottom",
-  WebkitMaskSize: "cover",
-  maskSize: "cover",
-  background: "linear-gradient(180deg, transparent 0%, #050e11 85%)",
-} satisfies CSSProperties;
 
 export function BlogsSection() {
   const articles = portfolioContent.articles ?? [];
 
-  return (
-    <section id="blogs" aria-labelledby="blogs-title" className="relative scroll-mt-28 pb-32 pt-20 sm:pt-24">
-      <Container className="w-full">
-        <p className="text-center text-xs font-semibold uppercase tracking-[0.2em] text-[var(--color-accent)]">
-          Writing
-        </p>
-        <h2
-          id="blogs-title"
-          className="mt-2 text-center text-4xl font-bold tracking-tight text-[var(--color-ink)] sm:text-5xl"
-        >
-          My Articles
-        </h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-[var(--color-muted-ink)]">
-          Scroll to flip through field notes from the cloud trenches. Sample stories for now — hover a
-          card to bring it forward.
-        </p>
+  const containerRef = useRef<HTMLDivElement>(null);
+  const galleryRef = useRef<HTMLDivElement>(null);
+  const activeIndexRef = useRef(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeArticle = articles[activeIndex] ?? articles[0];
 
-        <div className="article-deck mt-12">
-          <ScrollStack
-            itemDistance={80}
-            itemScale={CARD_SCALE_STEP}
-            itemStackDistance={20}
-            stackPosition="18%"
-            scaleEndPosition="8%"
-            baseScale={1 - Math.max(0, articles.length - 1) * CARD_SCALE_STEP}
-            blurAmount={1.5}
+  // Drive the horizontal translate from scroll progress manually. We read the
+  // track's geometry on every scroll tick (works with native scroll and Lenis)
+  // and write the transform straight to the element — no animation library
+  // between the scroll position and the pixels. (Ported from ProjectsSection.)
+  useEffect(() => {
+    if (articles.length < 2) return;
+    const clamp = (value: number) => Math.min(1, Math.max(0, value));
+
+    let travel = 0;
+    let currentTranslate = 0;
+
+    const measureTravel = () => {
+      const gallery = galleryRef.current;
+      if (!gallery || gallery.children.length < 2) return 0;
+      const cards = gallery.children;
+      const firstRect = cards[0].getBoundingClientRect();
+      const lastRect = cards[cards.length - 1].getBoundingClientRect();
+      const firstCenter = firstRect.left + firstRect.width / 2 - currentTranslate;
+      const lastCenter = lastRect.left + lastRect.width / 2 - currentTranslate;
+      return Math.max(0, lastCenter - firstCenter);
+    };
+
+    const update = () => {
+      const track = containerRef.current;
+      const gallery = galleryRef.current;
+      if (!track || !gallery) return;
+      const rect = track.getBoundingClientRect();
+      const distance = rect.height - window.innerHeight;
+      const progress = distance > 0 ? clamp(-rect.top / distance) : 0;
+      currentTranslate = -progress * travel;
+      gallery.style.transform = `translate3d(${currentTranslate}px, 0, 0)`;
+
+      const nextIndex = Math.round(progress * (articles.length - 1));
+      if (activeIndexRef.current !== nextIndex) {
+        activeIndexRef.current = nextIndex;
+        setActiveIndex(nextIndex);
+      }
+    };
+
+    const remeasure = () => {
+      travel = measureTravel();
+      update();
+    };
+
+    remeasure();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", remeasure);
+
+    const lenis = getActiveLenis();
+    lenis?.on("scroll", update);
+
+    // Fonts/layout can settle after mount; re-measure a few times.
+    const timeouts = [200, 600, 1200].map((delay) => window.setTimeout(remeasure, delay));
+
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", remeasure);
+      lenis?.off("scroll", update);
+      timeouts.forEach((timeout) => window.clearTimeout(timeout));
+    };
+  }, [articles.length]);
+
+  // Stable, SSR-safe scroll-track height. One extra "screen" of scroll per card.
+  const trackHeightVh = 100 + (articles.length - 1) * 55;
+
+  return (
+    <section id="blogs" aria-label="Articles" className="scroll-mt-28">
+      {/* Tall scroll track; the gallery sticks and translates horizontally as you scroll. */}
+      <div
+        ref={containerRef}
+        className="projects-scroll-track relative"
+        style={{ height: `${trackHeightVh}vh` }}
+      >
+        <div className="projects-sticky sticky top-0 flex h-svh items-center overflow-hidden">
+          <div className="projects-scroll-title pointer-events-none absolute left-4 right-4 top-[8rem] z-10 mx-auto flex max-w-6xl items-center justify-between gap-4 sm:left-6 sm:right-6 md:top-[calc(4.5rem+env(safe-area-inset-top))] lg:top-24">
+            <div className="min-w-0">
+              <p className="font-mono text-[0.62rem] uppercase tracking-[0.22em] text-[var(--color-muted)]">Articles</p>
+              <h3 className="truncate text-xl font-bold leading-tight text-[var(--color-ink)] sm:text-2xl">{activeArticle?.title}</h3>
+            </div>
+            {activeArticle?.source ? (
+              <p
+                className="hidden shrink-0 rounded-full border px-3 py-1 font-mono text-[0.66rem] uppercase tracking-[0.16em] sm:block"
+                style={{
+                  borderColor: `${activeArticle.accent ?? "#fcbc1d"}55`,
+                  backgroundColor: `${activeArticle.accent ?? "#fcbc1d"}12`,
+                  color: activeArticle.accent ?? "#fcbc1d",
+                }}
+              >
+                {activeArticle.source}
+              </p>
+            ) : null}
+          </div>
+
+          <div
+            ref={galleryRef}
+            className="projects-gallery flex gap-6 pl-[max(1.5rem,calc(50vw-190px))] pr-[50vw] will-change-transform"
           >
             {articles.map((article, index) => (
-              <ScrollStackItem key={article.slug}>
-                <ArticleCard article={article} index={index} />
-              </ScrollStackItem>
+              <ArticleCard key={article.slug} article={article} index={index} />
             ))}
-          </ScrollStack>
+          </div>
         </div>
-      </Container>
-
-      {/* Cloud dissolve into the footer night sky: the last cards rise into a
-          cloud-masked gradient that lands exactly on the footer base #050e11,
-          so the section boundary never shows as a hard cut. The plain seam
-          layer underneath guarantees the bottom edge is solid even where the
-          cloud plate's alpha has holes. */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[50vh]">
-        <div
-          className="absolute inset-0"
-          style={{ background: "linear-gradient(180deg, transparent 0%, transparent 35%, #050e11 100%)" }}
-        />
-        <div className="absolute inset-0" style={cloudDissolveMask} />
       </div>
     </section>
   );

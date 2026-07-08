@@ -149,7 +149,8 @@ export function layerDrift(a: LayerSample, b: LayerSample): { metric: string; va
   return drifts;
 }
 
-/** Sum a sparse sample of the aurora canvas pixels — changes frame to frame while animating. */
+/** Sum a sparse sample of the aurora canvas pixels — changes frame to frame while animating.
+ *  Samples the bottom-left quadrant, where the horizon-anchored curtains are brightest. */
 export async function auroraPixelSum(page: Page, selector: string): Promise<number | null> {
   return page.evaluate((sel) => {
     const canvas = document.querySelector<HTMLCanvasElement>(sel);
@@ -158,7 +159,7 @@ export async function auroraPixelSum(page: Page, selector: string): Promise<numb
     if (!context) return null;
     const w = Math.min(canvas.width, 400);
     const h = Math.min(canvas.height, 400);
-    const data = context.getImageData(0, 0, w, h).data;
+    const data = context.getImageData(0, canvas.height - h, w, h).data;
     let sum = 0;
     for (let i = 0; i < data.length; i += 53) sum += data[i];
     return sum;

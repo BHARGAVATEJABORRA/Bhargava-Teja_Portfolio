@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { LuLogIn, LuMoon, LuSun } from "react-icons/lu";
+import { LuLogIn } from "react-icons/lu";
 
+import { LoginModal } from "@/components/login/login-modal";
 import { portfolioContent } from "@/content/portfolio-content";
 import { trackEvent } from "@/lib/analytics";
 import { scrollToSection } from "@/lib/scroll-to-section";
@@ -88,48 +89,6 @@ function SectionNavigation({
   );
 }
 
-function ThemeToggle() {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
-
-  useEffect(() => {
-    const savedTheme = window.localStorage.getItem("portfolio-theme");
-    const nextTheme = savedTheme === "light" ? "light" : "dark";
-
-    document.documentElement.classList.toggle("dark", nextTheme === "dark");
-    const frameId = window.requestAnimationFrame(() => setTheme(nextTheme));
-
-    return () => {
-      window.cancelAnimationFrame(frameId);
-    };
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setTheme((currentTheme) => {
-      const nextTheme = currentTheme === "dark" ? "light" : "dark";
-
-      document.documentElement.classList.toggle("dark", nextTheme === "dark");
-      window.localStorage.setItem("portfolio-theme", nextTheme);
-      trackEvent("theme_change", { theme: nextTheme, source: "sticky_header" });
-
-      return nextTheme;
-    });
-  }, []);
-
-  const isDark = theme === "dark";
-
-  return (
-    <button
-      type="button"
-      aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
-      aria-pressed={isDark}
-      onClick={toggleTheme}
-      data-liquid-glass="on"
-      className="liquid-control inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
-    >
-      {isDark ? <LuMoon size={16} aria-hidden /> : <LuSun size={16} aria-hidden />}
-    </button>
-  );
-}
 
 export function SiteHeader() {
   const observedSectionIds = useMemo(
@@ -140,6 +99,12 @@ export function SiteHeader() {
   const [isScrolled, setIsScrolled] = useState(false);
   const manualActiveUntilRef = useRef(0);
   const [liquidEnabled, setLiquidEnabled] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
+
+  const openLogin = useCallback((source: "sticky_header" | "sticky_header_mobile") => {
+    trackEvent("login_icon_click", { source, target: "/admin" });
+    setLoginOpen(true);
+  }, []);
 
   const syncActiveHrefToViewport = useCallback(() => {
     if (Date.now() < manualActiveUntilRef.current) {
@@ -253,7 +218,8 @@ export function SiteHeader() {
           href="/#hero"
           onClick={(event) => {
             event.preventDefault();
-            scrollToSection("hero");
+            // act as a refresh button
+            window.location.reload();
             trackEvent("header_nav_click", { target: "/#hero", source: "brand_refresh" });
           }}
           className="inline-flex h-10 shrink-0 items-center px-1 text-sm font-semibold tracking-tight text-[var(--color-ink)]"
@@ -271,30 +237,36 @@ export function SiteHeader() {
               isScrolled={isScrolled}
             />
           </div>
-          <ThemeToggle />
-          <Link
-            href="/login"
-            aria-label="Open login page"
-            onClick={() => trackEvent("login_icon_click", { source: "sticky_header", target: "/login" })}
+          <button
+            type="button"
+            aria-label="Open secure login"
+            aria-haspopup="dialog"
+            aria-expanded={loginOpen}
+            onClick={() => openLogin("sticky_header")}
             data-liquid-glass="on"
             className="liquid-control inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           >
             <LuLogIn size={17} aria-hidden />
-          </Link>
+          </button>
         </div>
 
         <div className="flex shrink-0 items-center gap-2 md:hidden">
-          <ThemeToggle />
-          <Link
-            href="/login"
-            aria-label="Open login page"
-            onClick={() => trackEvent("login_icon_click", { source: "sticky_header_mobile", target: "/login" })}
+          <button
+            type="button"
+            aria-label="Open secure login"
+            aria-haspopup="dialog"
+            aria-expanded={loginOpen}
+            onClick={() => openLogin("sticky_header_mobile")}
             data-liquid-glass="on"
             className="liquid-control inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[var(--color-ink)] focus-visible:ring-2 focus-visible:ring-[var(--color-accent)]"
           >
             <LuLogIn size={17} aria-hidden />
-          </Link>
+          </button>
         </div>
+      </div>
+
+      <div className="pointer-events-auto">
+        <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} />
       </div>
 
       <div className="pointer-events-auto relative z-10 mt-3 md:hidden">

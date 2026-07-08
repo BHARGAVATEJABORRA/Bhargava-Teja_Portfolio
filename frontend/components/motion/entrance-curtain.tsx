@@ -12,7 +12,10 @@ const greetings = ["Hello", "नमस्ते", "నమస్కారం"];
 export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
   const shouldReduceMotion = useReducedMotion();
   const [wordIndex, setWordIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(false);
+  // Start visible so the curtain is present in the initial SSR HTML and paints
+  // instantly on reload — otherwise the dark body/hero flashes through before
+  // hydration runs the effect that would set isVisible=true.
+  const [isVisible, setIsVisible] = useState(true);
   const hasCompletedRef = useRef(false);
   const onDoneRef = useRef(onDone);
 
@@ -95,7 +98,7 @@ export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0, transition: { duration: 0.28, ease: [0.4, 0, 0.2, 1] } }}
           onPointerDown={completeEntrance}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-ink)] px-6 text-[var(--color-bg)]"
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-[var(--color-ink)] px-6 text-[var(--color-bg)]"
         >
           <div className="flex flex-col items-center gap-5 text-center">
             <motion.p

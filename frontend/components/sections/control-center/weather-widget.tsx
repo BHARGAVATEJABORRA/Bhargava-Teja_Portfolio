@@ -1,411 +1,369 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR from "swr";
 import {
   LuCloud,
+  LuCloudFog,
   LuCloudRain,
   LuCloudSnow,
   LuCloudSun,
+  LuDroplets,
   LuMoon,
   LuSun,
+  LuWind,
   LuZap,
 } from "react-icons/lu";
 
-import type { WeatherData } from "@/app/api/weather/route";
+import {
+  buildOpenMeteoUrl,
+  fetchWeatherSnapshot,
+  type WeatherKind,
+  type WeatherSnapshot,
+} from "@/lib/open-meteo";
+import { portfolioContent } from "@/content/portfolio-content";
 
 import { ControlCenterPanel } from "./control-center-panel";
 
-type HourWeather = {
-  day: "tod" | "tom";
-  hour: number;
-  weather:
-    | "clear-night"
-    | "partly-cloudy-night"
-    | "sunny"
-    | "partly-cloudy"
-    | "cloudy"
-    | "foggy"
-    | "rainy"
-    | "snowy"
-    | "thunderstorm";
-  temp: number;
-  time: string;
-};
+const WEATHER_TIMEZONE = portfolioContent.identity.controlCenter.weatherTimezone;
+const WEATHER_LOCATION = portfolioContent.identity.controlCenter.weatherLocation;
 
-const hoursData: HourWeather[] = [
-  { day: "tod", hour: 0, weather: "clear-night", temp: 11, time: "00:00" },
-  { day: "tod", hour: 1, weather: "partly-cloudy-night", temp: 10, time: "01:00" },
-  { day: "tod", hour: 2, weather: "rainy", temp: 9, time: "02:00" },
-  { day: "tod", hour: 3, weather: "cloudy", temp: 8, time: "03:00" },
-  { day: "tod", hour: 4, weather: "partly-cloudy-night", temp: 7, time: "04:00" },
-  { day: "tod", hour: 5, weather: "clear-night", temp: 7, time: "05:00" },
-  { day: "tod", hour: 6, weather: "sunny", temp: 12, time: "06:00" },
-  { day: "tod", hour: 7, weather: "sunny", temp: 12, time: "07:00" },
-  { day: "tod", hour: 8, weather: "sunny", temp: 13, time: "08:00" },
-  { day: "tod", hour: 9, weather: "partly-cloudy", temp: 14, time: "09:00" },
-  { day: "tod", hour: 10, weather: "cloudy", temp: 16, time: "10:00" },
-  { day: "tod", hour: 11, weather: "rainy", temp: 17, time: "11:00" },
-  { day: "tod", hour: 12, weather: "rainy", temp: 19, time: "12:00" },
-  { day: "tod", hour: 13, weather: "rainy", temp: 20, time: "13:00" },
-  { day: "tod", hour: 14, weather: "partly-cloudy", temp: 20, time: "14:00" },
-  { day: "tod", hour: 15, weather: "partly-cloudy", temp: 20, time: "15:00" },
-  { day: "tod", hour: 16, weather: "partly-cloudy", temp: 19, time: "16:00" },
-  { day: "tod", hour: 17, weather: "cloudy", temp: 20, time: "17:00" },
-  { day: "tod", hour: 18, weather: "cloudy", temp: 19, time: "18:00" },
-  { day: "tod", hour: 19, weather: "cloudy", temp: 18, time: "19:00" },
-  { day: "tod", hour: 20, weather: "rainy", temp: 17, time: "20:00" },
-  { day: "tod", hour: 21, weather: "rainy", temp: 15, time: "21:00" },
-  { day: "tod", hour: 22, weather: "rainy", temp: 12, time: "22:00" },
-  { day: "tod", hour: 23, weather: "rainy", temp: 10, time: "23:00" },
-  { day: "tom", hour: 0, weather: "thunderstorm", temp: 8, time: "00:00" },
-  { day: "tom", hour: 1, weather: "thunderstorm", temp: 6, time: "01:00" },
-  { day: "tom", hour: 2, weather: "thunderstorm", temp: 4, time: "02:00" },
-  { day: "tom", hour: 3, weather: "thunderstorm", temp: 3, time: "03:00" },
-  { day: "tom", hour: 4, weather: "thunderstorm", temp: 2, time: "04:00" },
-  { day: "tom", hour: 5, weather: "cloudy", temp: 2, time: "05:00" },
-  { day: "tom", hour: 6, weather: "cloudy", temp: 0, time: "06:00" },
-  { day: "tom", hour: 7, weather: "cloudy", temp: -1, time: "07:00" },
-  { day: "tom", hour: 8, weather: "partly-cloudy", temp: -1, time: "08:00" },
-  { day: "tom", hour: 9, weather: "partly-cloudy", temp: -1, time: "09:00" },
-  { day: "tom", hour: 10, weather: "snowy", temp: 0, time: "10:00" },
-  { day: "tom", hour: 11, weather: "snowy", temp: 1, time: "11:00" },
-  { day: "tom", hour: 12, weather: "snowy", temp: 1, time: "12:00" },
-  { day: "tom", hour: 13, weather: "partly-cloudy", temp: 3, time: "13:00" },
-  { day: "tom", hour: 14, weather: "partly-cloudy", temp: 5, time: "14:00" },
-  { day: "tom", hour: 15, weather: "cloudy", temp: 7, time: "15:00" },
-  { day: "tom", hour: 16, weather: "cloudy", temp: 9, time: "16:00" },
-  { day: "tom", hour: 17, weather: "rainy", temp: 9, time: "17:00" },
-  { day: "tom", hour: 18, weather: "rainy", temp: 10, time: "18:00" },
-  { day: "tom", hour: 19, weather: "cloudy", temp: 10, time: "19:00" },
-  { day: "tom", hour: 20, weather: "cloudy", temp: 9, time: "20:00" },
-  { day: "tom", hour: 21, weather: "rainy", temp: 8, time: "21:00" },
-  { day: "tom", hour: 22, weather: "rainy", temp: 7, time: "22:00" },
-  { day: "tom", hour: 23, weather: "rainy", temp: 5, time: "23:00" },
-];
-
-const fetcher = async (url: string): Promise<WeatherData> => {
-  const response = await fetch(url, { cache: "no-store" });
-
-  if (!response.ok) {
-    throw new Error(`Weather request failed with status ${response.status}`);
-  }
-
-  return (await response.json()) as WeatherData;
-};
-
-function celsiusToFahrenheit(value: number) {
-  return Math.round(value * 1.8 + 32);
+function currentHourInWeatherTimezone() {
+  const hour = Number(
+    new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hourCycle: "h23",
+      timeZone: WEATHER_TIMEZONE,
+    }).format(new Date()),
+  );
+  return Number.isFinite(hour) ? hour % 24 : 12;
 }
 
-function readableWeather(value: string) {
-  return value.replace(/-/g, " ");
+function hourLabel(hour: number) {
+  if (hour === 0) return "12am";
+  if (hour === 12) return "Noon";
+  return hour < 12 ? `${hour}am` : `${hour - 12}pm`;
 }
 
-function getIconFromWeather(value: string) {
-  if (value === "sunny") return "01d";
-  if (value === "clear-night") return "01n";
-  if (value === "partly-cloudy") return "02d";
-  if (value === "partly-cloudy-night") return "02n";
-  if (value === "cloudy" || value === "foggy") return "04d";
-  if (value === "rainy") return "10d";
-  if (value === "snowy") return "13d";
-  if (value === "thunderstorm") return "11d";
-  return "02d";
-}
-
-function WeatherGlyph({ icon, condition, size = 28 }: { icon: string; condition: string; size?: number }) {
-  const code = icon.slice(0, 2);
-  const isNight = icon.endsWith("n");
-  const common = {
-    size,
-    "aria-hidden": true,
-    className: "text-[var(--color-accent)]",
-  } as const;
-
-  switch (code) {
-    case "01":
-      return isNight ? <LuMoon {...common} /> : <LuSun {...common} />;
-    case "02":
-    case "03":
-      return <LuCloudSun {...common} />;
-    case "04":
-      return <LuCloud {...common} />;
-    case "09":
-    case "10":
-      return <LuCloudRain {...common} />;
-    case "11":
-      return <LuZap {...common} />;
-    case "13":
-      return <LuCloudSnow {...common} />;
-    default: {
-      const normalized = condition.toLowerCase();
-      if (normalized.includes("rain") || normalized.includes("drizzle")) return <LuCloudRain {...common} />;
-      if (normalized.includes("snow")) return <LuCloudSnow {...common} />;
-      if (normalized.includes("cloud")) return <LuCloud {...common} />;
-      if (normalized.includes("thunder")) return <LuZap {...common} />;
-      return <LuCloudSun {...common} />;
-    }
-  }
-}
-
-function AnimatedWeatherScene({
-  condition,
-  rotation,
-  isNight,
+function WeatherIcon({
+  kind,
+  isDay = true,
+  size = 18,
+  className = "",
 }: {
-  condition: string;
-  rotation: number;
-  isNight: boolean;
+  kind: WeatherKind;
+  isDay?: boolean;
+  size?: number;
+  className?: string;
 }) {
-  const normalized = condition.toLowerCase();
-  const isRain = normalized.includes("rain");
-  const isSnow = normalized.includes("snow");
-  const isStorm = normalized.includes("thunder") || normalized.includes("storm");
-  const showClouds = normalized.includes("cloud") || normalized.includes("rain") || normalized.includes("storm");
+  const props = { size, "aria-hidden": true, className } as const;
+  switch (kind) {
+    case "clear":
+      return isDay ? <LuSun {...props} /> : <LuMoon {...props} />;
+    case "partly-cloudy":
+      return isDay ? <LuCloudSun {...props} /> : <LuMoon {...props} />;
+    case "cloudy":
+      return <LuCloud {...props} />;
+    case "foggy":
+      return <LuCloudFog {...props} />;
+    case "rainy":
+      return <LuCloudRain {...props} />;
+    case "snowy":
+      return <LuCloudSnow {...props} />;
+    case "thunderstorm":
+      return <LuZap {...props} />;
+  }
+}
+
+// ─── Animated sky scene (liquid-glass backdrop) ──────────────────────────────
+function SkyScene({ kind, isNight, sunRotation }: { kind: WeatherKind; isNight: boolean; sunRotation: number }) {
+  const isRain = kind === "rainy";
+  const isSnow = kind === "snowy";
+  const isStorm = kind === "thunderstorm";
+  const hasClouds = kind === "partly-cloudy" || kind === "cloudy" || kind === "foggy" || isRain || isStorm;
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
-      <div className="absolute inset-0 bg-[linear-gradient(0deg,#fefefe_0%,#00a4e4_74%)] transition-opacity duration-700" style={{ opacity: isNight ? 0 : 1 }} />
-      <div className="absolute inset-0 bg-[linear-gradient(0deg,#4c5177_0%,#051428_74%)] transition-opacity duration-700" style={{ opacity: isNight ? 1 : 0 }} />
+      {/* Sky gradient */}
       <div
-        className="absolute left-[52%] bottom-[58%] h-14 w-14 rounded-full bg-[#fceabb] shadow-[0_0_32px_10px_#fceabb] transition-all duration-700"
-        style={{ opacity: isNight ? 0 : 1, transform: `rotate(${rotation}deg)`, transformOrigin: "0px 92px" }}
+        className="absolute inset-0 transition-opacity duration-700"
+        style={{
+          background: "linear-gradient(180deg,#fefefe 0%,#5bc8f5 60%,#e8f5fe 100%)",
+          opacity: isNight ? 0 : 1,
+        }}
       />
       <div
-        className="absolute left-[52%] bottom-[54%] h-14 w-14 rounded-full bg-white/90 shadow-[0_0_18px_5px_#ffffff] transition-all duration-700 before:absolute before:right-[-6px] before:top-[-3px] before:h-14 before:w-14 before:rounded-full before:bg-[#121a35]"
-        style={{ opacity: isNight ? 1 : 0, transform: `rotate(${rotation}deg)`, transformOrigin: "0px 92px" }}
+        className="absolute inset-0 transition-opacity duration-700"
+        style={{
+          background: "linear-gradient(180deg,#060e22 0%,#1a2d5a 60%,#2d4a7a 100%)",
+          opacity: isNight ? 1 : 0,
+        }}
       />
 
-      {showClouds ? (
+      {/* Sun / Moon disc */}
+      <div
+        className="absolute left-[52%] h-12 w-12 rounded-full transition-all duration-700"
+        style={{
+          bottom: "56%",
+          background: isNight ? "rgba(255,255,255,0.9)" : "#fceabb",
+          boxShadow: isNight ? "0 0 18px 5px #ffffff88" : "0 0 32px 10px #fceabb",
+          transform: `rotate(${sunRotation}deg)`,
+          transformOrigin: "0px 88px",
+          opacity: isStorm ? 0.3 : 1,
+        }}
+      />
+
+      {/* Moon crater overlay */}
+      {isNight && (
+        <div
+          className="absolute left-[52%] h-12 w-12 overflow-hidden rounded-full transition-opacity duration-700"
+          style={{ bottom: "56%", transform: `rotate(${sunRotation}deg)`, transformOrigin: "0px 88px" }}
+        >
+          <div className="absolute -right-1.5 -top-1.5 h-12 w-12 rounded-full bg-[#10213f]" />
+        </div>
+      )}
+
+      {/* Clouds */}
+      {hasClouds && (
         <>
-          <div className="codepen-cloud codepen-cloud-one absolute left-[-16%] top-[24%] h-9 w-28 rounded-full bg-white/75 blur-[1px]" />
-          <div className="codepen-cloud codepen-cloud-two absolute left-[30%] top-[42%] h-10 w-32 rounded-full bg-white/60 blur-[1px]" />
-          <div className="codepen-cloud codepen-cloud-three absolute right-[-10%] top-[58%] h-8 w-24 rounded-full bg-white/55 blur-[1px]" />
+          <div className="weather-cloud weather-cloud-1 absolute left-0 top-[14%] h-6 w-24 rounded-full bg-white/40 blur-[2px]" />
+          <div className="weather-cloud weather-cloud-2 absolute left-0 top-[28%] h-7 w-28 rounded-full bg-white/30 blur-[2px]" />
+          <div className="weather-cloud weather-cloud-3 absolute left-0 top-[6%]  h-5 w-18 rounded-full bg-white/25 blur-[2px]" />
         </>
-      ) : null}
+      )}
 
-      {isRain ? (
-        <div className="absolute inset-0 opacity-80">
-          {Array.from({ length: 70 }).map((_, index) => (
-            <span
-              key={index}
-              className="rain-line absolute h-8 w-px bg-gradient-to-b from-white/70 to-white/0"
-              style={{ left: `${(index * 17) % 100}%`, top: `${(index * 29) % 100}%`, animationDelay: `${index * 0.02}s` }}
+      {/* Stars (clear nights) */}
+      {isNight && !hasClouds && (
+        <div className="absolute inset-0">
+          {[15, 25, 40, 55, 70, 82, 12, 34, 60, 78, 90, 48].map((x, i) => (
+            <div
+              key={i}
+              className="absolute h-0.5 w-0.5 rounded-full bg-white"
+              style={{
+                left: `${x}%`,
+                top: `${[10, 20, 8, 18, 12, 25, 35, 30, 22, 15, 28, 5][i]}%`,
+                opacity: 0.6 + (i % 3) * 0.15,
+              }}
             />
           ))}
         </div>
-      ) : null}
+      )}
 
-      {isSnow ? (
+      {/* Rain */}
+      {isRain && (
+        <div className="absolute inset-0 opacity-70">
+          {Array.from({ length: 40 }).map((_, i) => (
+            <span
+              key={i}
+              className="weather-rain absolute h-6 w-px bg-gradient-to-b from-white/80 to-white/0"
+              style={{ left: `${(i * 23) % 100}%`, top: `${(i * 31) % 80}%`, animationDelay: `${i * 0.03}s` }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Snow */}
+      {isSnow && (
         <div className="absolute inset-0 opacity-90">
-          {Array.from({ length: 110 }).map((_, index) => (
+          {Array.from({ length: 50 }).map((_, i) => (
             <span
-              key={index}
-              className="snow-dot absolute h-1.5 w-1.5 rounded-full bg-white"
-              style={{ left: `${(index * 13) % 100}%`, top: `${(index * 19) % 100}%`, animationDelay: `${index * 0.05}s` }}
+              key={i}
+              className="weather-snow absolute h-1.5 w-1.5 rounded-full bg-white"
+              style={{ left: `${(i * 17) % 100}%`, top: `${(i * 23) % 80}%`, animationDelay: `${i * 0.07}s` }}
             />
           ))}
         </div>
-      ) : null}
+      )}
 
-      {isStorm ? <div className="lightning-flash absolute -top-52 left-0 h-[150%] w-full bg-[radial-gradient(closest-side,rgba(255,255,255,1),rgba(255,255,255,0.5))]" /> : null}
+      {/* Lightning */}
+      {isStorm && (
+        <div className="weather-lightning absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.9),rgba(255,255,255,0)_60%)]" />
+      )}
+
+      {/* Liquid-glass finish: specular top highlight + soft inner edge */}
+      <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(165deg,rgba(255,255,255,0.28)_0%,rgba(255,255,255,0.06)_28%,rgba(255,255,255,0)_46%)]" />
+      <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(255,255,255,0.08)]" />
 
       <style jsx>{`
-        .codepen-cloud {
-          animation: cloud-slide 11s linear infinite;
-          filter: brightness(200%) drop-shadow(0 0 10px rgba(255, 255, 255, 1));
+        .weather-cloud {
+          animation: cloud-drift 28s linear infinite;
         }
-
-        .codepen-cloud::before,
-        .codepen-cloud::after {
+        .weather-cloud::before,
+        .weather-cloud::after {
           content: "";
           position: absolute;
           border-radius: 9999px;
           background: inherit;
         }
-
-        .codepen-cloud::before {
-          width: 45%;
-          height: 140%;
-          left: 18%;
-          top: -70%;
+        .weather-cloud::before { width: 45%; height: 140%; left: 18%; top: -70%; }
+        .weather-cloud::after  { width: 55%; height: 165%; right: 10%; top: -88%; }
+        .weather-cloud-2 { animation-delay: -10s; }
+        .weather-cloud-3 { animation-delay: -20s; }
+        @keyframes cloud-drift {
+          from { transform: translateX(-150%); }
+          to   { transform: translateX(700%);  }
         }
-
-        .codepen-cloud::after {
-          width: 55%;
-          height: 165%;
-          right: 10%;
-          top: -88%;
+        .weather-rain {
+          animation: rain-fall 0.4s linear infinite;
         }
-
-        .codepen-cloud-two {
-          animation-delay: -4s;
-        }
-
-        .codepen-cloud-three {
-          animation-delay: -7s;
-        }
-
-        .rain-line {
-          animation: rain-fall 0.38s linear infinite;
-        }
-
-        .snow-dot {
-          animation: snow-fall 4.4s linear infinite;
-        }
-
-        .lightning-flash {
-          opacity: 0;
-          animation: lightning-flash 2.4s linear infinite;
-        }
-
-        @keyframes cloud-slide {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(160%);
-          }
-        }
-
         @keyframes rain-fall {
-          to {
-            transform: translateY(500px);
-          }
+          to { transform: translateY(400px); }
         }
-
+        .weather-snow {
+          animation: snow-fall 5s linear infinite;
+        }
         @keyframes snow-fall {
-          0% {
-            transform: translateY(-40px) translateX(0);
-          }
-          100% {
-            transform: translateY(620px) translateX(30px);
-          }
+          from { transform: translateY(-30px) translateX(0);   }
+          to   { transform: translateY(500px) translateX(20px); }
         }
-
-        @keyframes lightning-flash {
-          0%,
-          24%,
-          26%,
-          29%,
-          100% {
-            opacity: 0;
-          }
-          25%,
-          28% {
-            opacity: 1;
-          }
+        .weather-lightning {
+          opacity: 0;
+          animation: lightning 2.8s linear infinite;
+        }
+        @keyframes lightning {
+          0%, 22%, 24%, 27%, 100% { opacity: 0; }
+          23%, 26% { opacity: 0.9; }
         }
       `}</style>
     </div>
   );
 }
 
+// ─── Main component ───────────────────────────────────────────────────────────
 export function WeatherWidget() {
-  const { data, error } = useSWR("/api/weather", fetcher, {
+  const { data, error } = useSWR<WeatherSnapshot>(buildOpenMeteoUrl(), fetchWeatherSnapshot, {
     refreshInterval: 10 * 60_000,
     revalidateOnFocus: true,
     dedupingInterval: 60_000,
   });
-  const [selectedIndex, setSelectedIndex] = useState(11);
+
+  const [nowHour, setNowHour] = useState<number>(12);
+
+  useEffect(() => {
+    const update = () => setNowHour(currentHourInWeatherTimezone());
+    // First sync happens in a frame callback (not synchronously in the effect)
+    // so SSR/static HTML hydrates cleanly before the real local hour applies.
+    const frame = window.requestAnimationFrame(update);
+    const id = window.setInterval(update, 60_000);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.clearInterval(id);
+    };
+  }, []);
 
   const isLoading = !data && !error;
-  const feelsLikeF = typeof data?.feelsLikeF === "number" ? data.feelsLikeF : Number(data?.feelsLikeF);
-  const humidity = typeof data?.humidity === "number" ? data.humidity : Number(data?.humidity);
-  const windMph = typeof data?.windMph === "number" ? data.windMph : Number(data?.windMph);
-  const liveTempF = typeof data?.tempF === "number" ? data.tempF : Number(data?.tempF);
-  const hasLiveWeather = data?.configured === true && Number.isFinite(liveTempF);
-  const unavailable = Boolean(error) || (data ? !hasLiveWeather : false);
+  const isNight = data ? !data.isDay : !(nowHour >= 6 && nowHour <= 21);
+  const sunRotation = isNight
+    ? -90 + ((nowHour < 7 ? nowHour + 24 : nowHour) - 6) * (180 / 8)
+    : -90 + (nowHour - 7) * (180 / 15);
+  const kind: WeatherKind = data?.kind ?? "partly-cloudy";
 
-  const selected = hoursData[selectedIndex] ?? hoursData[11];
-  const selectedTempF = celsiusToFahrenheit(selected.temp);
-  const selectedWeather = selected.weather;
-  const selectedDayLabel = selected.day === "tom" ? "Tomorrow" : "Today";
-  const isNightSelected = !(selected.hour >= 6 && selected.hour <= 21);
-  const liveCondition = data?.condition && data.condition !== "Unavailable" ? data.condition : readableWeather(selectedWeather);
-  const displayTempF = Number.isFinite(liveTempF) ? Math.round(liveTempF) : selectedTempF;
-  const foregroundClass = isNightSelected ? "text-white" : "text-black";
-  const mutedForegroundClass = isNightSelected ? "text-white/72" : "text-black/60";
-  const statPanelClass = isNightSelected ? "bg-white/18 text-white/76" : "bg-white/34 text-black/70";
-  const statValueClass = isNightSelected ? "text-white" : "text-black";
-  const rotation = !isNightSelected
-    ? -90 + (selected.hour - 7) * (180 / 15)
-    : -90 + ((selected.hour < 7 ? selected.hour + 24 : selected.hour) - 6) * (180 / 8);
+  // Foreground colour based on night vs day
+  const fg = isNight ? "text-white" : "text-black";
+  const fgMuted = isNight ? "text-white/65" : "text-black/55";
+  const chip = isNight
+    ? "border border-white/15 bg-white/12 text-white/80"
+    : "border border-white/45 bg-white/35 text-black/70";
+  const chipVal = isNight ? "text-white" : "text-black";
 
   return (
-    <ControlCenterPanel radius={28} className="relative flex h-[220px] min-w-0 w-full flex-col overflow-hidden border-0 p-0 text-black shadow-[0_10px_28px_rgba(0,0,0,0.16)] lg:h-full">
-      {!unavailable && data ? <AnimatedWeatherScene condition={selectedWeather} rotation={rotation} isNight={isNightSelected} /> : null}
+    <ControlCenterPanel
+      radius={28}
+      className="relative flex h-[220px] min-w-0 w-full flex-col overflow-hidden border-0 p-0 text-black shadow-[0_10px_28px_rgba(0,0,0,0.14)] lg:h-full"
+    >
+      {/* Sky animation — always shown once loaded */}
+      {!isLoading && <SkyScene kind={kind} isNight={isNight} sunRotation={sunRotation} />}
 
-      {isLoading ? (
-        <div className="relative z-10 flex h-full flex-col justify-center p-4 sm:p-5" aria-label="Loading weather">
-          <div className="h-10 w-28 animate-pulse rounded bg-white/35" />
-          <div className="mt-3 h-4 w-2/3 animate-pulse rounded bg-white/25" />
+      {/* ── Loading skeleton ── */}
+      {isLoading && (
+        <div className="relative z-10 flex h-full flex-col justify-center gap-3 p-5">
+          <div className="h-4 w-24 animate-pulse rounded-lg bg-white/30" />
+          <div className="h-12 w-32 animate-pulse rounded-xl bg-white/30" />
+          <div className="h-3 w-40 animate-pulse rounded-lg bg-white/20" />
         </div>
-      ) : unavailable ? (
-        <div className="relative z-10 flex h-full flex-col justify-center p-4 sm:p-5">
-          <p className="text-sm font-semibold">{data?.location ?? "Weather"}</p>
-          <p className="mt-1 text-xs leading-relaxed text-black/60">
-            {data?.configured === false
-              ? "Add OPENWEATHER_API_KEY to enable live weather."
-              : error
-                ? "Live weather request failed. Check /api/weather response."
-                : "Live weather is unavailable right now."}
-          </p>
-        </div>
-      ) : (
-        <div className={`relative z-10 flex h-full min-h-0 flex-col justify-between p-4 sm:p-5 ${foregroundClass}`}>
-          <div className="flex items-start justify-between gap-4">
+      )}
+
+      {/* ── Live (or graceful unavailable) ── */}
+      {!isLoading && (
+        <div className={`relative z-10 flex h-full min-h-0 flex-col p-4 sm:p-5 ${fg}`}>
+          {/* Top row: location + condition | big temp */}
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">{data?.location}</p>
-              <p className={`mt-1 text-[11px] font-medium uppercase tracking-[0.16em] ${mutedForegroundClass}`}>
-                {selectedDayLabel} {selected.time}
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-70">
+                {data?.location ?? WEATHER_LOCATION}
+              </p>
+              <p className={`mt-0.5 text-[11px] leading-tight ${fgMuted}`}>
+                {data ? data.condition : "Live weather unavailable"}
+              </p>
+              {data && (
+                <p className={`mt-0.5 text-[10px] tabular-nums ${fgMuted}`}>
+                  H {data.todayHighF}° · L {data.todayLowF}°
+                </p>
+              )}
+            </div>
+
+            <div className="flex shrink-0 items-start gap-2">
+              <WeatherIcon
+                kind={kind}
+                isDay={!isNight}
+                size={28}
+                className={isNight ? "text-white/80" : "text-black/60"}
+              />
+              <p className="text-[2.6rem] font-bold leading-none tabular-nums sm:text-[3rem]">
+                {data ? `${data.tempF}°` : "--"}
               </p>
             </div>
-            <div className="shrink-0 text-right">
-              <p className="text-[2rem] font-semibold leading-none tabular-nums sm:text-[2.35rem]">{displayTempF}°F</p>
-              <p className="mt-1 max-w-32 truncate text-xs capitalize leading-none sm:max-w-40">{liveCondition}</p>
+          </div>
+
+          {/* Middle: frosted stat chips */}
+          <div className="mt-auto flex gap-2 pt-2">
+            <div className={`flex flex-1 items-center gap-1 rounded-2xl px-2.5 py-1.5 text-[10px] backdrop-blur-xl ${chip}`}>
+              <LuSun size={11} aria-hidden />
+              <span className={`font-bold ${chipVal}`}>{data ? `${data.feelsLikeF}°` : "--"}</span>
+              <span>Feels</span>
+            </div>
+            <div className={`flex flex-1 items-center gap-1 rounded-2xl px-2.5 py-1.5 text-[10px] backdrop-blur-xl ${chip}`}>
+              <LuDroplets size={11} aria-hidden />
+              <span className={`font-bold ${chipVal}`}>{data ? `${data.humidity}%` : "--"}</span>
+              <span>Hum</span>
+            </div>
+            <div className={`flex flex-1 items-center gap-1 rounded-2xl px-2.5 py-1.5 text-[10px] backdrop-blur-xl ${chip}`}>
+              <LuWind size={11} aria-hidden />
+              <span className={`font-bold ${chipVal}`}>{data ? data.windMph : "--"}</span>
+              <span>mph</span>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2 text-center text-[11px]">
-            <div className={`rounded-2xl px-2 py-1.5 backdrop-blur-xl ${statPanelClass}`}>
-              <p className={`font-bold ${statValueClass}`}>{Number.isFinite(feelsLikeF) ? `${Math.round(feelsLikeF)}°` : "--"}</p>
-              <p>Feels</p>
-            </div>
-            <div className={`rounded-2xl px-2 py-1.5 backdrop-blur-xl ${statPanelClass}`}>
-              <p className={`font-bold ${statValueClass}`}>{Number.isFinite(humidity) ? `${Math.round(humidity)}%` : "--"}</p>
-              <p>Humidity</p>
-            </div>
-            <div className={`rounded-2xl px-2 py-1.5 backdrop-blur-xl ${statPanelClass}`}>
-              <p className={`font-bold ${statValueClass}`}>{Number.isFinite(windMph) ? `${Math.round(windMph)} mph` : "--"}</p>
-              <p>Wind</p>
-            </div>
-          </div>
-
-          <div className="-mx-2 min-w-0 overflow-x-auto whitespace-nowrap px-2 backdrop-blur-[20px]">
-            <div className="flex gap-1">
-              {hoursData.map((entry, index) => {
-                const isActive = index === selectedIndex;
-                return (
-                  <button
-                    key={`${entry.day}-${entry.time}-${index}`}
-                    type="button"
-                    onClick={() => setSelectedIndex(index)}
-                    className={`flex h-12 min-w-14 cursor-pointer items-center justify-center gap-1.5 rounded-xl px-2 text-center text-[11px] transition-colors duration-300 hover:bg-white/30 ${
-                      isActive ? (isNightSelected ? "bg-white/25" : "bg-white/70") : "bg-transparent"
-                    }`}
-                    aria-label={`${entry.day === "tom" ? "Tomorrow" : "Today"} ${entry.time}, ${celsiusToFahrenheit(entry.temp)} degrees, ${readableWeather(entry.weather)}`}
-                  >
-                    <span className="font-medium tabular-nums">{entry.time}</span>
-                    <span className="flex h-6 items-center justify-center">
-                      <WeatherGlyph icon={getIconFromWeather(entry.weather)} condition={entry.weather} size={18} />
-                    </span>
-                    <span className="font-bold">{celsiusToFahrenheit(entry.temp)}°</span>
-                  </button>
-                );
-              })}
-            </div>
+          {/* Bottom: real upcoming hours + tomorrow */}
+          <div className="mt-2 flex gap-1">
+            {(data?.hours ?? []).map((slot) => (
+              <div
+                key={slot.time}
+                className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] backdrop-blur-xl ${chip}`}
+              >
+                <span className={fgMuted}>{hourLabel(slot.hour)}</span>
+                <WeatherIcon
+                  kind={slot.kind}
+                  isDay={slot.isDay}
+                  size={13}
+                  className={isNight ? "text-white/70" : "text-black/60"}
+                />
+                <span className={`font-semibold tabular-nums ${chipVal}`}>{slot.tempF}°</span>
+              </div>
+            ))}
+            {data && (
+              <div className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] backdrop-blur-xl ${chip}`}>
+                <span className={fgMuted}>Tmrw</span>
+                <WeatherIcon
+                  kind={data.tomorrow.kind}
+                  size={13}
+                  className={isNight ? "text-white/70" : "text-black/60"}
+                />
+                <span className={`font-semibold tabular-nums ${chipVal}`}>
+                  {data.tomorrow.highF}°<span className={fgMuted}>/{data.tomorrow.lowF}°</span>
+                </span>
+              </div>
+            )}
           </div>
         </div>
       )}

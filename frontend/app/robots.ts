@@ -2,6 +2,9 @@ import type { MetadataRoute } from "next";
 
 import { siteConfig } from "@/lib/site";
 
+// Required for `output: "export"` (GitHub Pages static build).
+export const dynamic = "force-static";
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: {

@@ -42,11 +42,16 @@ export const SKY_TOP: [Rgb, Rgb] = [
 ];
 export const SKY_MIDDLE: [Rgb, Rgb] = [
   [185, 164, 160],
-  [15, 32, 36],
+  [16, 34, 39],
 ];
+// Night mid/bottom stops re-measured 2026-07-07 on the LIVE adaline footer
+// (#home-footer-bg-gradient computed style at the CTA):
+//   linear-gradient(rgb(5,13,17), rgb(16,34,39), rgb(32,63,56))
+// The deep teal→green lower sky is what the aurora's screen blend lands on —
+// over near-black the same shader reads neon; over this it reads soft.
 export const SKY_BOTTOM: [Rgb, Rgb] = [
   [216, 178, 132],
-  [25, 50, 56],
+  [32, 63, 56],
 ];
 
 // The horizon keeps the light longest: each lower stop's collapse starts
@@ -63,13 +68,18 @@ export const SKY_STOP_WINDOWS = [
 
 // Cloud tint rides lighter/warmer than the sky so the streak tops catch the
 // last sunset light, then collapses into the same night base as the sky.
+// Night endpoints re-measured 2026-07-07 on the LIVE adaline footer
+// (#home-footer-clouds-gradient: linear-gradient(rgb(16,34,39), rgb(32,63,56))):
+// at night the cloud plate stays a VISIBLE teal — it does not collapse to
+// near-black. This is what keeps soft cloud texture in the night sky behind
+// the aurora instead of an empty black field.
 export const CLOUD_TOP: [Rgb, Rgb] = [
   [172, 138, 164],
-  [12, 22, 30],
+  [16, 34, 39],
 ];
 export const CLOUD_BOTTOM: [Rgb, Rgb] = [
   [248, 196, 142],
-  [6, 14, 20],
+  [32, 63, 56],
 ];
 
 // Scroll curves — band progress (0 = band top at viewport bottom, 1 = band
@@ -96,9 +106,13 @@ export function footerSkyKey(bandProgress: number) {
   );
 }
 
-// The sky is fully opaque within the first 18% of the band.
+// The sky fades in as the footer enters so the sunset sky (its onset
+// endpoints match the day-cycle ocean's SUNSET) takes over from the ocean —
+// the day → footer handoff is a same-color sunset crossfade. The window is
+// wide enough (0–0.14) that the ocean's sun/waves dissolve softly under the
+// gradient instead of being wiped by a fast opacity ramp.
 export function skyAlpha(bandProgress: number) {
-  return quantize(smoothStep(clamp01(bandProgress / 0.18)));
+  return quantize(smoothStep(clamp01(bandProgress / 0.14)));
 }
 
 // Clouds catch the last light: the plate's dense alpha rows (0.45–0.75 of

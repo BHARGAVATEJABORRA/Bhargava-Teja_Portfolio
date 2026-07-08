@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 
-import { LiquidGlassPanel } from "@/components/ui/liquid-glass-panel";
+import GlassSurface from "@/components/ui/glass-surface";
 import { trackEvent } from "@/lib/analytics";
 
 type ContactStatus = "idle" | "submitting" | "success" | "error";
@@ -73,8 +73,25 @@ export function ContactForm({ className = "", compact = false }: ContactFormProp
   };
 
   return (
-    <LiquidGlassPanel radius={compact ? 30 : 36} className={`${compact ? "p-3.5 sm:p-4" : "p-6 sm:p-7"} ${className}`.trim()}>
-      <form onSubmit={submitForm} className={compact ? "space-y-2" : "space-y-4"}>
+    <GlassSurface
+      className={`flush-glass ${className}`.trim()}
+      borderRadius={compact ? 30 : 36}
+      distortionScale={-90}
+      redOffset={0}
+      greenOffset={0}
+      blueOffset={0}
+      brightness={60}
+      opacity={0.93}
+      blur={14}
+      displace={2}
+      backgroundOpacity={0.08}
+      saturation={1.1}
+      mixBlendMode="screen"
+    >
+      <form
+        onSubmit={submitForm}
+        className={`${compact ? "p-3.5 sm:p-4 space-y-2" : "p-6 sm:p-7 space-y-4"} contact-form-inner`}
+      >
         <div aria-hidden className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden">
           <label>
             Website
@@ -150,6 +167,6 @@ export function ContactForm({ className = "", compact = false }: ContactFormProp
           </p>
         </div>
       </form>
-    </LiquidGlassPanel>
+    </GlassSurface>
   );
 }

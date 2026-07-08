@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { portfolioContent } from "@/content/portfolio-content";
+import { getSiteConfig } from "@/lib/content-store";
 
 export const runtime = "nodejs";
 
@@ -89,7 +90,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Message is required." }, { status: 400 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  // /admin/settings (AI Companion section) takes precedence; env vars remain a fallback.
+  const config = await getSiteConfig().catch(() => null);
+
+  if (config && config.aiEnabled === false && !process.env.OPENAI_API_KEY) {
+    return NextResponse.json({
+      answer: fallbackAnswer(message),
+      mode: "local-preview",
+    });
+  }
+
+  const apiKey = config?.openaiApiKey || process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json({
@@ -110,12 +121,15 @@ export async function POST(request: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: process.env.OPENAI_MODEL ?? "gpt-4.1-mini",
+        model: config?.openaiModel || process.env.OPENAI_MODEL || "gpt-4o-mini",
         instructions: [
-          "You are the AI companion on Bhargava Teja Borra's portfolio.",
-          "Answer in first person only when referring to the companion, not as Bhargava.",
-          "Use only the provided portfolio context. If a detail is missing, say that directly.",
-          "Keep answers concise, specific, recruiter-friendly, and under 140 words unless asked for detail.",
+          config?.aiSystemPrompt?.trim() ||
+            [
+              "You are the AI companion on Bhargava Teja Borra's portfolio.",
+              "Answer in first person only when referring to the companion, not as Bhargava.",
+              "Use only the provided portfolio context. If a detail is missing, say that directly.",
+              "Keep answers concise, specific, recruiter-friendly, and under 140 words unless asked for detail.",
+            ].join("\n\n"),
           `Portfolio context:\n${context}`,
         ].join("\n\n"),
         input: `${transcript ? `Conversation so far:\n${transcript}\n\n` : ""}Visitor question: ${message}`,

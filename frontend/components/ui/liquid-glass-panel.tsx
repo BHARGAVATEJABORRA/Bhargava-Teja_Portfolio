@@ -19,6 +19,22 @@ interface LiquidGlassPanelProps {
   className?: string;
   contentClassName?: string;
   radius?: number;
+  /** Tuning passthroughs — defaults match the proven-clean Experience-section glass. */
+  scale?: number;
+  border?: number;
+  blur?: number;
+  displace?: number;
+  lightness?: number;
+  alpha?: number;
+  frost?: number;
+  saturation?: number;
+  /** Legacy props (silently accepted so existing call sites keep compiling). */
+  redOffset?: number;
+  greenOffset?: number;
+  blueOffset?: number;
+  xChannel?: "R" | "G" | "B";
+  yChannel?: "R" | "G" | "B";
+  blend?: string;
   displacement?: number;
   chroma?: number;
   mapBlur?: number;
@@ -27,59 +43,59 @@ interface LiquidGlassPanelProps {
   style?: CSSProperties;
 }
 
-function supportsLiquidGlassUrl() {
-  if (typeof window === "undefined" || typeof CSS === "undefined") {
-    return false;
-  }
-
-  const hasBackdropFilter =
-    CSS.supports("backdrop-filter: blur(1px)") || CSS.supports("-webkit-backdrop-filter: blur(1px)");
-  const userAgent = window.navigator.userAgent;
-  const isChromium = /(Chrome|Chromium|Edg)\//.test(userAgent) && !/Firefox\//.test(userAgent);
-
-  return hasBackdropFilter && isChromium;
+function supportsBackdropUrlFilter() {
+  if (typeof window === "undefined" || typeof CSS === "undefined") return false;
+  const hasBackdrop =
+    CSS.supports("backdrop-filter: blur(1px)") ||
+    CSS.supports("-webkit-backdrop-filter: blur(1px)");
+  const ua = window.navigator.userAgent;
+  const isChromium = /(Chrome|Chromium|Edg)\//.test(ua) && !/Firefox\//.test(ua);
+  return hasBackdrop && isChromium;
 }
 
+/**
+ * Build the displacement map — same SVG technique as <GlassSurface>.
+ *
+ * Two linear gradients (red horizontal, blue vertical) blended with
+ * difference, plus an inner blurred neutral-grey rect that defines the
+ * non-distorting glass body. With xChannel="R" / yChannel="G" (G has no
+ * gradient → near-zero Y displacement) only gentle horizontal refraction
+ * fires, which avoids the corner-cross "sparkle" pattern entirely.
+ */
 function buildDisplacementImage(
   width: number,
   height: number,
   radius: number,
   border: number,
-  inset: number,
+  lightness: number,
+  alpha: number,
   blur: number,
 ) {
-  const safeWidth = Math.max(64, Math.round(width));
-  const safeHeight = Math.max(64, Math.round(height));
-  const safeInset = Math.max(0, inset);
-  const safeRadius = Math.max(0, radius - safeInset);
-  const safeBorder = Math.max(1, border);
-  const safeBlur = Math.max(0.1, blur);
-  const rectWidth = Math.max(1, safeWidth - safeInset * 2);
-  const rectHeight = Math.max(1, safeHeight - safeInset * 2);
+  const w = Math.max(64, Math.round(width));
+  const h = Math.max(64, Math.round(height));
+  const r = Math.max(0, radius);
+  const edge = Math.min(w, h) * (border * 0.5);
+  const innerW = Math.max(1, w - edge * 2);
+  const innerH = Math.max(1, h - edge * 2);
 
-  const svg = `
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${safeWidth} ${safeHeight}" preserveAspectRatio="none">
-      <defs>
-        <filter id="liquid-map-blur" color-interpolation-filters="sRGB">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="${safeBlur}" />
-        </filter>
-      </defs>
-      <rect
-        x="${safeInset}"
-        y="${safeInset}"
-        width="${rectWidth}"
-        height="${rectHeight}"
-        rx="${safeRadius}"
-        ry="${safeRadius}"
-        fill="none"
-        stroke="white"
-        stroke-width="${safeBorder}"
-        filter="url(#liquid-map-blur)"
-      />
-    </svg>
-  `;
+  const svg = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="r" x1="100%" y1="0%" x2="0%" y2="0%">
+      <stop offset="0%" stop-color="#000"/>
+      <stop offset="100%" stop-color="red"/>
+    </linearGradient>
+    <linearGradient id="b" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#000"/>
+      <stop offset="100%" stop-color="blue"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="${w}" height="${h}" fill="black"/>
+  <rect x="0" y="0" width="${w}" height="${h}" rx="${r}" fill="url(#r)"/>
+  <rect x="0" y="0" width="${w}" height="${h}" rx="${r}" fill="url(#b)" style="mix-blend-mode:difference"/>
+  <rect x="${edge}" y="${edge}" width="${innerW}" height="${innerH}" rx="${r}" fill="hsl(0 0% ${lightness}% / ${alpha})" style="filter:blur(${blur}px)"/>
+</svg>`;
 
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
 export function LiquidGlassPanel({
@@ -88,63 +104,78 @@ export function LiquidGlassPanel({
   className = "",
   contentClassName = "",
   radius = 32,
-  displacement = 26,
-  chroma = 4,
-  mapBlur = 18,
-  mapBorder = 10,
-  mapInset = 0,
+  // Proven-clean defaults — same numbers GlassSurface uses in the Experience
+  // section, which is the panel the user explicitly approves of.
+  scale = -90,
+  border = 0.07,
+  blur = 11,
+  displace = 2,
+  lightness = 60,
+  alpha = 0.93,
+  frost = 0,
+  saturation = 1.1,
+  // legacy / unused props — accepted silently
+  redOffset: _r,
+  greenOffset: _g,
+  blueOffset: _b,
+  xChannel: _x,
+  yChannel: _y,
+  blend: _blend,
+  displacement: _displacement,
+  chroma: _chroma,
+  mapBlur: _mapBlur,
+  mapBorder: _mapBorder,
+  mapInset: _mapInset,
   style,
   ...rest
 }: LiquidGlassPanelProps & HTMLAttributes<HTMLElement>) {
+  void _r; void _g; void _b; void _x; void _y; void _blend;
+  void _displacement; void _chroma; void _mapBlur; void _mapBorder; void _mapInset;
+
   const rootRef = useRef<HTMLElement | null>(null);
   const rawId = useId();
-  const filterId = useMemo(() => `liquid-panel-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`, [rawId]);
-  const [supportsUrlFilter] = useState(() => supportsLiquidGlassUrl());
+  const filterId = useMemo(
+    () => `liquid-panel-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`,
+    [rawId],
+  );
+  const [supportsUrlFilter, setSupportsUrlFilter] = useState(false);
   const [bounds, setBounds] = useState({ width: 640, height: 320 });
 
   useEffect(() => {
+    setSupportsUrlFilter(supportsBackdropUrlFilter());
+  }, []);
+
+  useEffect(() => {
     const node = rootRef.current;
-
-    if (!node || typeof ResizeObserver === "undefined") {
-      return;
-    }
-
+    if (!node || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
-
-      if (!entry) {
-        return;
-      }
-
-      const nextWidth = Math.max(1, Math.round(entry.contentRect.width));
-      const nextHeight = Math.max(1, Math.round(entry.contentRect.height));
-
+      if (!entry) return;
+      const w = Math.max(1, Math.round(entry.contentRect.width));
+      const h = Math.max(1, Math.round(entry.contentRect.height));
       setBounds((current) =>
-        current.width === nextWidth && current.height === nextHeight
-          ? current
-          : { width: nextWidth, height: nextHeight },
+        current.width === w && current.height === h ? current : { width: w, height: h },
       );
     });
-
     observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, []);
 
   const displacementImage = useMemo(
-    () => buildDisplacementImage(bounds.width, bounds.height, radius, mapBorder, mapInset, mapBlur),
-    [bounds.height, bounds.width, mapBlur, mapBorder, mapInset, radius],
+    () => buildDisplacementImage(bounds.width, bounds.height, radius, border, lightness, alpha, blur),
+    [bounds.width, bounds.height, radius, border, lightness, alpha, blur],
   );
 
+  // Backdrop filter: just url() + saturate(). No brightness/contrast/blur —
+  // those would frost the glass and obscure the refraction.
   const backdropValue = supportsUrlFilter
-    ? `blur(0.45px) url(#${filterId}) saturate(138%) brightness(1.04)`
-    : "blur(26px) saturate(155%) brightness(1.03)";
+    ? `url(#${filterId}) saturate(${saturation})`
+    : `blur(14px) saturate(${1 + saturation * 0.5}) brightness(1.05)`;
 
   const sharedStyle = {
     ...style,
     ["--liquid-radius" as string]: `${radius}px`,
+    ["--liquid-frost" as string]: `${frost}`,
   } as CSSProperties;
 
   const content = (
@@ -158,79 +189,32 @@ export function LiquidGlassPanel({
         style={{ position: "absolute", overflow: "hidden", pointerEvents: "none" }}
       >
         <defs>
-          <filter id={filterId} x="-35%" y="-35%" width="170%" height="170%" colorInterpolationFilters="sRGB">
+          <filter
+            id={filterId}
+            x="0%"
+            y="0%"
+            width="100%"
+            height="100%"
+            colorInterpolationFilters="sRGB"
+          >
             <feImage
               href={displacementImage}
-              x="0%"
-              y="0%"
+              x="0"
+              y="0"
               width="100%"
               height="100%"
               preserveAspectRatio="none"
-              result="MAP"
+              result="map"
             />
             <feDisplacementMap
               in="SourceGraphic"
-              in2="MAP"
-              scale={displacement}
+              in2="map"
+              scale={scale}
               xChannelSelector="R"
               yChannelSelector="G"
-              result="BASE"
+              result="displaced"
             />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="MAP"
-              scale={Math.max(1, chroma * 0.6)}
-              xChannelSelector="R"
-              yChannelSelector="G"
-              result="RED_SOURCE"
-            />
-            <feColorMatrix
-              in="RED_SOURCE"
-              type="matrix"
-              values="1 0 0 0 0
-                      0 0 0 0 0
-                      0 0 0 0 0
-                      0 0 0 1 0"
-              result="RED_CHANNEL"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="MAP"
-              scale={Math.max(1.5, chroma)}
-              xChannelSelector="R"
-              yChannelSelector="G"
-              result="GREEN_SOURCE"
-            />
-            <feColorMatrix
-              in="GREEN_SOURCE"
-              type="matrix"
-              values="0 0 0 0 0
-                      0 1 0 0 0
-                      0 0 0 0 0
-                      0 0 0 1 0"
-              result="GREEN_CHANNEL"
-            />
-            <feDisplacementMap
-              in="SourceGraphic"
-              in2="MAP"
-              scale={Math.max(2, chroma * 1.35)}
-              xChannelSelector="R"
-              yChannelSelector="G"
-              result="BLUE_SOURCE"
-            />
-            <feColorMatrix
-              in="BLUE_SOURCE"
-              type="matrix"
-              values="0 0 0 0 0
-                      0 0 0 0 0
-                      0 0 1 0 0
-                      0 0 0 1 0"
-              result="BLUE_CHANNEL"
-            />
-            <feBlend in="RED_CHANNEL" in2="GREEN_CHANNEL" mode="screen" result="RG_BLEND" />
-            <feBlend in="RG_BLEND" in2="BLUE_CHANNEL" mode="screen" result="RGB_BLEND" />
-            <feComposite in="RGB_BLEND" in2="BASE" operator="arithmetic" k1="0" k2="0.24" k3="0.92" k4="0" result="COMPOSITE" />
-            <feGaussianBlur in="COMPOSITE" stdDeviation="0.15" />
+            <feGaussianBlur in="displaced" stdDeviation={displace} />
           </filter>
         </defs>
       </svg>
@@ -240,84 +224,29 @@ export function LiquidGlassPanel({
         className="liquid-panel__backdrop"
         style={{ WebkitBackdropFilter: backdropValue, backdropFilter: backdropValue }}
       />
-      <span aria-hidden="true" className="liquid-panel__rim" />
       <div className={`liquid-panel__content ${contentClassName}`.trim()}>{children}</div>
     </>
   );
 
-  if (as === "article") {
-    return (
-      <article
-        {...rest}
-        ref={rootRef as never}
-        className={`liquid-panel ${className}`.trim()}
-        style={sharedStyle}
-      >
-        {content}
-      </article>
-    );
-  }
+  const commonProps = {
+    ...rest,
+    ref: rootRef as never,
+    className: `liquid-panel ${className}`.trim(),
+    style: sharedStyle,
+  };
 
-  if (as === "aside") {
-    return (
-      <aside
-        {...rest}
-        ref={rootRef as never}
-        className={`liquid-panel ${className}`.trim()}
-        style={sharedStyle}
-      >
-        {content}
-      </aside>
-    );
+  switch (as) {
+    case "article":
+      return <article {...commonProps}>{content}</article>;
+    case "aside":
+      return <aside {...commonProps}>{content}</aside>;
+    case "form":
+      return <form {...commonProps}>{content}</form>;
+    case "nav":
+      return <nav {...commonProps}>{content}</nav>;
+    case "section":
+      return <section {...commonProps}>{content}</section>;
+    default:
+      return <div {...commonProps}>{content}</div>;
   }
-
-  if (as === "form") {
-    return (
-      <form
-        {...rest}
-        ref={rootRef as never}
-        className={`liquid-panel ${className}`.trim()}
-        style={sharedStyle}
-      >
-        {content}
-      </form>
-    );
-  }
-
-  if (as === "nav") {
-    return (
-      <nav
-        {...rest}
-        ref={rootRef as never}
-        className={`liquid-panel ${className}`.trim()}
-        style={sharedStyle}
-      >
-        {content}
-      </nav>
-    );
-  }
-
-  if (as === "section") {
-    return (
-      <section
-        {...rest}
-        ref={rootRef as never}
-        className={`liquid-panel ${className}`.trim()}
-        style={sharedStyle}
-      >
-        {content}
-      </section>
-    );
-  }
-
-  return (
-    <div
-      {...rest}
-      ref={rootRef as never}
-      className={`liquid-panel ${className}`.trim()}
-      style={sharedStyle}
-    >
-      {content}
-    </div>
-  );
 }

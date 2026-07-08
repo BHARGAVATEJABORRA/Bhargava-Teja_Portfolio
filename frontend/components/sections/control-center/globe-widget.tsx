@@ -1,12 +1,50 @@
 "use client";
 
-import createGlobe, { type COBEOptions } from "cobe";
 import { useCallback, useEffect, useRef, useState } from "react";
+import * as THREE from "three";
 import { LuMapPin } from "react-icons/lu";
 
 import { portfolioContent } from "@/content/portfolio-content";
 
 import { ControlCenterPanel } from "./control-center-panel";
+
+/**
+ * Realistic earth: NASA Blue Marble texture (blue oceans, green land) loaded
+ * at runtime from a CDN, wrapped in a soft blue atmosphere glow. three.js is
+ * already in the bundle (footer dock scene), so this shares that chunk.
+ */
+const EARTH_TEXTURE_URL = "https://unpkg.com/three-globe@2.31.0/example/img/earth-blue-marble.jpg";
+
+const AUTO_SPIN_SPEED = 0.0022;
+const GLOBE_TILT = 0.32;
+
+/** lat/lng (degrees) → position on a unit sphere that matches an equirectangular texture. */
+function latLngToVector3(lat: number, lng: number, radius = 1): THREE.Vector3 {
+  const phi = ((90 - lat) * Math.PI) / 180;
+  const theta = ((lng + 180) * Math.PI) / 180;
+  return new THREE.Vector3(
+    -radius * Math.sin(phi) * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta),
+  );
+}
+
+const ATMOSPHERE_VERTEX = /* glsl */ `
+  varying vec3 vNormal;
+  void main() {
+    vNormal = normalize(normalMatrix * normal);
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+  }
+`;
+
+const ATMOSPHERE_FRAGMENT = /* glsl */ `
+  varying vec3 vNormal;
+  void main() {
+    float intensity = pow(0.62 - dot(vNormal, vec3(0.0, 0.0, 1.0)), 3.0);
+    // Blue-teal halo — "glowing blue" per the design direction.
+    gl_FragColor = vec4(0.25, 0.65, 0.95, 1.0) * intensity;
+  }
+`;
 
 interface GlobeWidgetProps {
   markerLocation?: [number, number];
@@ -20,20 +58,18 @@ export function GlobeWidget({
   ],
   label = portfolioContent.identity.controlCenter.location,
 }: GlobeWidgetProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const globeRef = useRef<ReturnType<typeof createGlobe> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [hasRenderError, setHasRenderError] = useState(false);
   const [ready, setReady] = useState(false);
   const [markerLat, markerLng] = markerLocation;
 
   // Auto-spin baseline plus drag offset accumulated from pointer interaction.
-  const phiRef = useRef(4.5);
   const pointerInteractingRef = useRef<number | null>(null);
   const dragDeltaRef = useRef(0);
 
-  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLCanvasElement>) => {
+  const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     pointerInteractingRef.current = event.clientX - dragDeltaRef.current;
-    if (canvasRef.current) canvasRef.current.style.cursor = "grabbing";
+    if (containerRef.current) containerRef.current.style.cursor = "grabbing";
   }, []);
 
   useEffect(() => {
@@ -44,7 +80,7 @@ export function GlobeWidget({
     }
     function onPointerUp() {
       pointerInteractingRef.current = null;
-      if (canvasRef.current) canvasRef.current.style.cursor = "grab";
+      if (containerRef.current) containerRef.current.style.cursor = "grab";
     }
 
     window.addEventListener("pointermove", onPointerMove, { passive: true });
@@ -56,59 +92,157 @@ export function GlobeWidget({
   }, []);
 
   useEffect(() => {
-    if (!canvasRef.current) {
+    const container = containerRef.current;
+    if (!container) return;
+
+    let disposed = false;
+    let frame = 0;
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
+    camera.position.z = 2.85;
+
+    let renderer: THREE.WebGLRenderer;
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch (error) {
+      console.error("Failed to initialize globe renderer.", error);
+      window.requestAnimationFrame(() => setHasRenderError(true));
       return;
     }
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.domElement.style.width = "100%";
+    renderer.domElement.style.height = "100%";
+    renderer.domElement.style.display = "block";
+    container.appendChild(renderer.domElement);
 
-    let width = 0;
-    const onResize = () => {
-      if (canvasRef.current) {
-        width = canvasRef.current.offsetWidth;
-      }
-    };
-    window.addEventListener("resize", onResize);
-    onResize();
+    // Soft, even light so the day side reads naturally over the dark panel.
+    scene.add(new THREE.AmbientLight(0xffffff, 2.1));
+    const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+    sun.position.set(4, 2.5, 5);
+    scene.add(sun);
 
-    const options: COBEOptions = {
-      devicePixelRatio: 2,
-      width: width * 2,
-      height: width * 2,
-      phi: phiRef.current,
-      theta: 0.25,
-      dark: 0,
-      diffuse: 1.1,
-      mapSamples: 18000,
-      mapBrightness: 4,
-      baseColor: [0.85, 0.88, 0.92],
-      markerColor: [0.06, 0.56, 0.51],
-      glowColor: [0.9, 0.92, 1.0],
-      markers: [{ location: [markerLat, markerLng], size: 0.1 }],
-      onRender: (state) => {
-        // Auto-rotate slowly, but let the drag offset steer the longitude.
-        if (pointerInteractingRef.current === null) {
-          phiRef.current += 0.0032;
+    const globeGroup = new THREE.Group();
+    globeGroup.rotation.x = GLOBE_TILT;
+    scene.add(globeGroup);
+
+    const sphereGeometry = new THREE.SphereGeometry(1, 64, 64);
+    const sphereMaterial = new THREE.MeshPhongMaterial({
+      color: 0xffffff,
+      specular: new THREE.Color(0x223344),
+      shininess: 9,
+    });
+    const globe = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    globeGroup.add(globe);
+
+    // Atmosphere halo (rendered on a slightly larger back-facing shell).
+    const atmosphereGeometry = new THREE.SphereGeometry(1, 64, 64);
+    const atmosphereMaterial = new THREE.ShaderMaterial({
+      vertexShader: ATMOSPHERE_VERTEX,
+      fragmentShader: ATMOSPHERE_FRAGMENT,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false,
+    });
+    const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+    atmosphere.scale.setScalar(1.16);
+    scene.add(atmosphere);
+
+    // Location marker: glowing green dot + pulsing ring, pinned to the surface.
+    const markerPosition = latLngToVector3(markerLat, markerLng, 1.005);
+    const markerGroup = new THREE.Group();
+    markerGroup.position.copy(markerPosition);
+    markerGroup.lookAt(markerPosition.clone().multiplyScalar(2));
+    globe.add(markerGroup);
+
+    const markerDot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.02, 16, 16),
+      new THREE.MeshBasicMaterial({ color: 0x4ade80 }),
+    );
+    markerGroup.add(markerDot);
+
+    const markerRingMaterial = new THREE.MeshBasicMaterial({
+      color: 0x4ade80,
+      transparent: true,
+      opacity: 0.7,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    });
+    const markerRing = new THREE.Mesh(new THREE.RingGeometry(0.032, 0.044, 32), markerRingMaterial);
+    markerGroup.add(markerRing);
+
+    // Start with the marker's longitude facing the camera.
+    const baseRotation = -Math.atan2(markerPosition.x, markerPosition.z);
+    let spin = 0;
+
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.setCrossOrigin("anonymous");
+    let texture: THREE.Texture | null = null;
+    textureLoader.load(
+      EARTH_TEXTURE_URL,
+      (loaded) => {
+        if (disposed) {
+          loaded.dispose();
+          return;
         }
-        state.phi = phiRef.current + dragDeltaRef.current / 200;
-        state.width = width * 2;
-        state.height = width * 2;
-      },
-    };
-
-    try {
-      globeRef.current = createGlobe(canvasRef.current, options);
-      window.requestAnimationFrame(() => {
-        setHasRenderError(false);
+        loaded.colorSpace = THREE.SRGBColorSpace;
+        loaded.anisotropy = Math.min(4, renderer.capabilities.getMaxAnisotropy());
+        texture = loaded;
+        sphereMaterial.map = loaded;
+        sphereMaterial.needsUpdate = true;
         setReady(true);
-      });
-    } catch (error) {
-      globeRef.current = null;
-      window.requestAnimationFrame(() => setHasRenderError(true));
-      console.error("Failed to initialize globe widget.", error);
-    }
+      },
+      undefined,
+      () => {
+        // Texture unreachable (offline / CDN blocked): stylized fallback —
+        // deep ocean-blue sphere so the widget still reads as an earth.
+        if (disposed) return;
+        sphereMaterial.color = new THREE.Color(0x1b4f82);
+        sphereMaterial.needsUpdate = true;
+        setReady(true);
+      },
+    );
+
+    const resize = () => {
+      const width = container.clientWidth || 1;
+      const height = container.clientHeight || 1;
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    };
+    resize();
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(container);
+
+    const clock = new THREE.Clock();
+    const animate = () => {
+      frame = window.requestAnimationFrame(animate);
+      if (pointerInteractingRef.current === null) {
+        spin += AUTO_SPIN_SPEED;
+      }
+      globe.rotation.y = baseRotation + spin + dragDeltaRef.current / 200;
+
+      const pulse = 1 + 0.35 * Math.sin(clock.getElapsedTime() * 2.6);
+      markerRing.scale.setScalar(pulse);
+      markerRingMaterial.opacity = 0.75 - 0.35 * Math.sin(clock.getElapsedTime() * 2.6);
+
+      renderer.render(scene, camera);
+    };
+    animate();
 
     return () => {
-      window.removeEventListener("resize", onResize);
-      globeRef.current?.destroy();
+      disposed = true;
+      window.cancelAnimationFrame(frame);
+      resizeObserver.disconnect();
+      texture?.dispose();
+      sphereGeometry.dispose();
+      sphereMaterial.dispose();
+      atmosphereGeometry.dispose();
+      atmosphereMaterial.dispose();
+      markerRingMaterial.dispose();
+      renderer.dispose();
+      renderer.domElement.remove();
     };
   }, [markerLat, markerLng]);
 
@@ -119,25 +253,28 @@ export function GlobeWidget({
         <span>Location</span>
       </div>
 
-      <div className="relative mx-auto mt-2 flex flex-1 items-end justify-center">
-        <div className="pointer-events-none absolute inset-x-[16%] bottom-4 top-[24%] rounded-full bg-[radial-gradient(circle_at_center,rgba(15,143,131,0.16),transparent_62%)] blur-3xl" />
+      {/* min-h-0 keeps this flex item inside the panel even though the sphere
+          is taller than the row — otherwise the pill anchored to its bottom
+          edge lands below the panel and is clipped away. */}
+      <div className="relative mx-auto mt-2 flex min-h-0 flex-1 items-end justify-center">
+        <div className="pointer-events-none absolute inset-x-[16%] bottom-4 top-[24%] rounded-full bg-[radial-gradient(circle_at_center,rgba(56,132,196,0.2),transparent_62%)] blur-3xl" />
         <div className="relative aspect-square w-full max-w-[15rem] translate-y-8 select-none sm:max-w-[17rem] sm:translate-y-9">
           {hasRenderError ? (
-            <div className="flex h-full w-full items-center justify-center rounded-full border border-white/18 bg-[radial-gradient(circle_at_38%_34%,rgba(158,191,255,0.3)_0%,rgba(158,191,255,0.12)_22%,rgba(18,34,62,0.08)_56%,rgba(8,18,31,0.04)_100%)]">
+            <div className="flex h-full w-full items-center justify-center rounded-full border border-white/18 bg-[radial-gradient(circle_at_38%_34%,rgba(120,178,236,0.32)_0%,rgba(84,140,201,0.16)_26%,rgba(18,50,86,0.1)_58%,rgba(8,18,31,0.05)_100%)]">
               <span className="text-center text-sm font-medium text-[var(--color-muted-ink)]">{label}</span>
             </div>
           ) : (
-            <canvas
-              ref={canvasRef}
+            <div
+              ref={containerRef}
               onPointerDown={handlePointerDown}
               data-ready={ready}
-              className="h-full w-full cursor-grab touch-none rounded-full opacity-0 transition-opacity duration-500 data-[ready=true]:opacity-100"
+              className="h-full w-full cursor-grab touch-none overflow-hidden rounded-full opacity-0 transition-opacity duration-500 data-[ready=true]:opacity-100"
             />
           )}
         </div>
 
         <div className="pointer-events-none absolute bottom-3 left-1/2 z-10 -translate-x-1/2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/40 bg-[rgba(255,255,255,0.72)] px-3 py-1 text-xs font-semibold text-[var(--color-ink)] shadow-[0_8px_24px_rgba(10,23,42,0.16)] backdrop-blur-md">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-[rgba(8,16,26,0.66)] px-3 py-1 text-xs font-semibold text-[var(--color-ink)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md">
             <LuMapPin size={12} className="text-[var(--color-accent)]" aria-hidden />
             {label}
           </span>
