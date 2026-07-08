@@ -59,6 +59,13 @@ export interface SiteConfigShape {
   contactFormDestination: string;
   availableFor: string;
   showContactForm: boolean;
+  // G. Availability & section visibility (feature flags)
+  availabilityStatus: string; // "available" | "freelance" | "employed-open" | "not-looking"
+  showAvailabilityBadge: boolean;
+  showProjects: boolean;
+  showExperience: boolean;
+  showSkills: boolean;
+  showArticles: boolean;
 }
 
 export type SiteConfigKey = keyof SiteConfigShape;
@@ -115,6 +122,21 @@ export const DEFAULT_SITE_CONFIG: SiteConfigShape = {
   contactFormDestination: "bhargavateja.borra@gmail.com",
   availableFor: "Open to senior IC and tech-lead opportunities in cloud, platform, and backend engineering",
   showContactForm: true,
+  // G. Availability & section visibility
+  availabilityStatus: "available",
+  showAvailabilityBadge: true,
+  showProjects: true,
+  showExperience: true,
+  showSkills: true,
+  showArticles: true,
+};
+
+/** Availability status → public badge label + tailwind-ish accent color. */
+export const AVAILABILITY_META: Record<string, { label: string; color: string }> = {
+  available: { label: "Available for hire", color: "#34d399" },
+  freelance: { label: "Open to freelance", color: "#38bdf8" },
+  "employed-open": { label: "Employed · open to collabs", color: "#f59e0b" },
+  "not-looking": { label: "Not currently looking", color: "#94a3b8" },
 };
 
 export const SITE_CONFIG_KEYS = Object.keys(DEFAULT_SITE_CONFIG) as SiteConfigKey[];

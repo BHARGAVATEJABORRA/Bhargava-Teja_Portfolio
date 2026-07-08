@@ -22,6 +22,7 @@ import {
   LuLink,
   LuMail,
   LuMusic,
+  LuToggleRight,
   LuUpload,
   LuUser,
 } from "react-icons/lu";
@@ -147,6 +148,32 @@ const SECTIONS: SectionDef[] = [
       { key: "contactFormDestination", label: "Form destination email", type: "text", half: true, hint: "Where contact-form submissions are delivered" },
       { key: "availableFor", label: "“Available for” status line", type: "text" },
       { key: "showContactForm", label: "Show contact form", type: "toggle" },
+    ],
+  },
+  {
+    id: "controls",
+    title: "G · Availability & Sections",
+    icon: LuToggleRight,
+    accent: "text-emerald-400",
+    fields: [
+      {
+        key: "availabilityStatus",
+        label: "Availability status",
+        type: "select",
+        half: true,
+        hint: "Shown as a live badge in the About section",
+        options: [
+          { value: "available", label: "Available for hire" },
+          { value: "freelance", label: "Open to freelance" },
+          { value: "employed-open", label: "Employed · open to collabs" },
+          { value: "not-looking", label: "Not currently looking" },
+        ],
+      },
+      { key: "showAvailabilityBadge", label: "Show availability badge", type: "toggle", half: true },
+      { key: "showProjects", label: "Show Projects section", type: "toggle", half: true },
+      { key: "showExperience", label: "Show Experience section", type: "toggle", half: true },
+      { key: "showSkills", label: "Show Skills section", type: "toggle", half: true },
+      { key: "showArticles", label: "Show Articles / blog section", type: "toggle", half: true },
     ],
   },
 ];

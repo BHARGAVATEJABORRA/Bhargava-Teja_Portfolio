@@ -769,12 +769,29 @@ const mergedMeta = sc
     }
   : basePortfolioContent.meta;
 
+// Feature flags + availability status from /admin settings (default on / available).
+const flag = (value: boolean | undefined, fallback = true): boolean => (typeof value === "boolean" ? value : fallback);
+
+const mergedFeatures = {
+  projects: flag(sc?.showProjects),
+  experience: flag(sc?.showExperience),
+  skills: flag(sc?.showSkills),
+  articles: flag(sc?.showArticles),
+};
+
+const mergedAvailability = {
+  status: sc?.availabilityStatus?.trim() || "available",
+  show: flag(sc?.showAvailabilityBadge),
+};
+
 export const portfolioContent = {
   ...basePortfolioContent,
   identity: mergedIdentity,
   about: mergedAbout,
   contact: mergedContact,
   meta: mergedMeta,
+  features: mergedFeatures,
+  availability: mergedAvailability,
   projects: overrides.projects?.length ? overrides.projects : basePortfolioContent.projects,
   experience: overrides.experience ?? basePortfolioContent.experience,
   skills: overrides.skills?.length ? overrides.skills : basePortfolioContent.skills,

@@ -6,9 +6,11 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { SectionShell } from "@/components/ui/section-shell";
 import { portfolioContent } from "@/content/portfolio-content";
 import { getResumeHref } from "@/lib/profile-links";
+import { AVAILABILITY_META } from "@/lib/site-config";
 
 export function AboutSection() {
-  const { identity, about, experience } = portfolioContent;
+  const { identity, about, experience, availability } = portfolioContent;
+  const availabilityMeta = availability.show ? AVAILABILITY_META[availability.status] : undefined;
   // Data source only — stats/specialties are admin-editable via /admin/settings.
   const metrics = about.stats;
   const focusAreas = about.specialties;
@@ -107,6 +109,23 @@ export function AboutSection() {
                   </div>
                 ))}
               </dl>
+
+              {availabilityMeta && (
+                <span
+                  className="inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
+                  style={{
+                    borderColor: `${availabilityMeta.color}55`,
+                    backgroundColor: `${availabilityMeta.color}1a`,
+                    color: availabilityMeta.color,
+                  }}
+                >
+                  <span className="relative inline-flex h-2 w-2" aria-hidden>
+                    <span className="absolute inset-0 animate-ping rounded-full opacity-70" style={{ backgroundColor: availabilityMeta.color }} />
+                    <span className="relative inline-flex h-2 w-2 rounded-full" style={{ backgroundColor: availabilityMeta.color }} />
+                  </span>
+                  {availabilityMeta.label}
+                </span>
+              )}
 
               <a
                 href={getResumeHref()}

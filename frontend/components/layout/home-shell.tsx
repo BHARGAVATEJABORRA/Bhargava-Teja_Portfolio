@@ -15,8 +15,10 @@ import { HeroSection, HeroSocialDock } from "@/components/sections/hero-section"
 import { TidesBackground } from "@/components/scenes/tides-background";
 import { ProjectsSection } from "@/components/sections/projects-section";
 import { SkillsSection } from "@/components/sections/skills-section";
+import { portfolioContent } from "@/content/portfolio-content";
 
 export function HomeShell() {
+  const features = portfolioContent.features;
   const [showContent, setShowContent] = useState(false);
   const handleEntranceDone = useCallback(() => {
     setShowContent(true);
@@ -48,10 +50,10 @@ export function HomeShell() {
             <div className="relative isolate">
               <ControlCenterSection />
               <AboutSection />
-              <SkillsSection />
-              <ExperienceSection />
-              <ProjectsSection />
-              <BlogsSection />
+              {features.skills && <SkillsSection />}
+              {features.experience && <ExperienceSection />}
+              {features.projects && <ProjectsSection />}
+              {features.articles && <BlogsSection />}
             </div>
 
             <ContactFooterSection />
