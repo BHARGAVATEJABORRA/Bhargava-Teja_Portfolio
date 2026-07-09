@@ -37,6 +37,11 @@ const WATER_Y = 0.76;
 // the glow pools read as circles on screen instead of 3:1 ellipses.
 const TEX_ASPECT = 3;
 
+// Render the dock taller than its native 3:1 without widening it — the deck
+// gets more vertical presence. On-screen display aspect = TEX_ASPECT / stretch.
+const DOCK_V_STRETCH = 1.2;
+const DOCK_DISPLAY_ASPECT = TEX_ASPECT / DOCK_V_STRETCH; // 2.5
+
 const VERTEX_SHADER = /* glsl */ `
   varying vec2 vUv;
   void main() {
@@ -67,24 +72,19 @@ const FRAGMENT_SHADER = /* glsl */ `
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
-    // Lamp halos: gentle flicker once each lamp has ignited. Softer falloff
-    // (17 vs 22) makes each glow read as a larger, more natural halo.
+    // Lamp halos: gentle flicker once each lamp has ignited.
     float flicker1 = 0.92 + 0.08 * sin(uTime * 6.3 + 1.7);
     float flicker2 = 0.92 + 0.08 * sin(uTime * 5.1);
-    float bulb1 = exp(-radialDist(vUv, uLamp1) * 17.0) * uLamp1On * flicker1;
-    float bulb2 = exp(-radialDist(vUv, uLamp2) * 17.0) * uLamp2On * flicker2;
+    float bulb1 = exp(-radialDist(vUv, uLamp1) * 22.0) * uLamp1On * flicker1;
+    float bulb2 = exp(-radialDist(vUv, uLamp2) * 22.0) * uLamp2On * flicker2;
 
-    // Light pool on the planks under each lamp — widened falloff (24 vs 30) so
-    // the spill feels natural instead of a hard dot.
-    float pool1 = exp(-radialDist(vUv, uPool1) * 24.0) * uLamp1On * flicker1;
-    float pool2 = exp(-radialDist(vUv, uPool2) * 24.0) * uLamp2On * flicker2;
+    // Discrete light pool on the planks under each lamp — a tight falloff
+    // that dies out within ~1–2 plank widths, so the mid-deck between the
+    // lamps stays dark exactly like the adaline reference.
+    float pool1 = exp(-radialDist(vUv, uPool1) * 30.0) * uLamp1On * flicker1;
+    float pool2 = exp(-radialDist(vUv, uPool2) * 30.0) * uLamp2On * flicker2;
 
-    // Broad, low warm wash that links the two pools so the deck reads as
-    // naturally lit rather than two isolated spots.
-    float wash = (exp(-radialDist(vUv, uPool1) * 6.5) + exp(-radialDist(vUv, uPool2) * 6.5))
-                 * max(uLamp1On, uLamp2On);
-
-    vec3 lampWarm = vec3(1.0, 0.79, 0.54);
+    vec3 lampWarm = vec3(1.0, 0.78, 0.52);
 
     // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
     // slightly past the dock so warm light pools onto the water below.
@@ -93,7 +93,6 @@ const FRAGMENT_SHADER = /* glsl */ `
     vec3 col = tex.rgb;
     col += (bulb1 + bulb2) * lampWarm * 0.42 * max(onDock, bulbBleed);
     col += (pool1 + pool2) * lampWarm * 0.5 * onDock;
-    col += wash * lampWarm * 0.13 * onDock;
 
     gl_FragColor = vec4(col, tex.a * uOpacity);
   }
@@ -246,7 +245,8 @@ export function FooterDockThree() {
       // The plane always fills the wrapper: the wrapper (adaline-scenes.tsx)
       // owns the scene's width in vw, so resizing there never desyncs this.
       const planeWidth = wrapper.clientWidth || viewportWidth * 1.5;
-      const planeHeight = planeWidth / TEX_ASPECT;
+      // Taller than native 3:1 so the dock reads bigger vertically (width unchanged).
+      const planeHeight = planeWidth / DOCK_DISPLAY_ASPECT;
       const width = planeWidth;
       const height = wrapper.clientHeight || planeHeight;
 
@@ -347,15 +347,15 @@ export function FooterDockThree() {
           src="/adaline-scenes/footer/footer-dock-reflection.webp"
           alt=""
           aria-hidden
-          className="absolute left-0 top-0 aspect-[3] w-full object-cover opacity-60"
+          className="absolute left-0 top-0 aspect-[2.5] w-full object-fill opacity-60"
         />
-        <img src="/adaline-scenes/footer/footer-dock.webp" alt="" aria-hidden className="relative aspect-[3] w-full object-cover" />
+        <img src="/adaline-scenes/footer/footer-dock.webp" alt="" aria-hidden className="relative aspect-[2.5] w-full object-fill" />
       </>
     );
   }
 
   return (
-    <div ref={wrapperRef} data-scroll-scene="dock-three" className="relative aspect-[3] w-full">
+    <div ref={wrapperRef} data-scroll-scene="dock-three" className="relative aspect-[2.5] w-full">
       <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
     </div>
   );
