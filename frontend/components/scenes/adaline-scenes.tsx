@@ -691,7 +691,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
             #050e11 base. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[9vw] w-[150vw] -translate-x-1/2"
+          className="pointer-events-none absolute left-1/2 top-[7vw] w-[182vw] -translate-x-1/2"
           style={{
             WebkitMaskImage:
               "linear-gradient(to bottom, black 0%, black 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.18) 80%, transparent 96%)",

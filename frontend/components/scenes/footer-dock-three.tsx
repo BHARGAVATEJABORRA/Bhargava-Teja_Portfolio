@@ -67,19 +67,24 @@ const FRAGMENT_SHADER = /* glsl */ `
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
-    // Lamp halos: gentle flicker once each lamp has ignited.
+    // Lamp halos: gentle flicker once each lamp has ignited. Softer falloff
+    // (17 vs 22) makes each glow read as a larger, more natural halo.
     float flicker1 = 0.92 + 0.08 * sin(uTime * 6.3 + 1.7);
     float flicker2 = 0.92 + 0.08 * sin(uTime * 5.1);
-    float bulb1 = exp(-radialDist(vUv, uLamp1) * 22.0) * uLamp1On * flicker1;
-    float bulb2 = exp(-radialDist(vUv, uLamp2) * 22.0) * uLamp2On * flicker2;
+    float bulb1 = exp(-radialDist(vUv, uLamp1) * 17.0) * uLamp1On * flicker1;
+    float bulb2 = exp(-radialDist(vUv, uLamp2) * 17.0) * uLamp2On * flicker2;
 
-    // Discrete light pool on the planks under each lamp — a tight falloff
-    // that dies out within ~1–2 plank widths, so the mid-deck between the
-    // lamps stays dark exactly like the adaline reference.
-    float pool1 = exp(-radialDist(vUv, uPool1) * 30.0) * uLamp1On * flicker1;
-    float pool2 = exp(-radialDist(vUv, uPool2) * 30.0) * uLamp2On * flicker2;
+    // Light pool on the planks under each lamp — widened falloff (24 vs 30) so
+    // the spill feels natural instead of a hard dot.
+    float pool1 = exp(-radialDist(vUv, uPool1) * 24.0) * uLamp1On * flicker1;
+    float pool2 = exp(-radialDist(vUv, uPool2) * 24.0) * uLamp2On * flicker2;
 
-    vec3 lampWarm = vec3(1.0, 0.78, 0.52);
+    // Broad, low warm wash that links the two pools so the deck reads as
+    // naturally lit rather than two isolated spots.
+    float wash = (exp(-radialDist(vUv, uPool1) * 6.5) + exp(-radialDist(vUv, uPool2) * 6.5))
+                 * max(uLamp1On, uLamp2On);
+
+    vec3 lampWarm = vec3(1.0, 0.79, 0.54);
 
     // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
     // slightly past the dock so warm light pools onto the water below.
@@ -88,6 +93,7 @@ const FRAGMENT_SHADER = /* glsl */ `
     vec3 col = tex.rgb;
     col += (bulb1 + bulb2) * lampWarm * 0.42 * max(onDock, bulbBleed);
     col += (pool1 + pool2) * lampWarm * 0.5 * onDock;
+    col += wash * lampWarm * 0.13 * onDock;
 
     gl_FragColor = vec4(col, tex.a * uOpacity);
   }
