@@ -44,8 +44,8 @@ export function HomeShell() {
     <>
       <EntranceCurtain onDone={handleEntranceDone} />
 
-      {/* The aurora lives INSIDE the footer scene now (adaline architecture):
-          see FooterAurora mounted in the CTA band of AdalineFooterScene. */}
+      {/* The aurora lives inside the footer scene: see FooterAurora mounted in
+          the CTA band of AdalineFooterScene. */}
 
       <SiteHeader />
 

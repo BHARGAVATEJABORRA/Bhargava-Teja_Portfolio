@@ -523,8 +523,8 @@ const basePortfolioContent = {
       ],
     },
   ] as SkillCategory[],
-  // NOTE: Placeholder ("cooked up") stories themed on the resume. Swap in real
-  // published posts later; `isReal: false` keeps them flagged as samples.
+  // Placeholder posts themed on the resume. Swap in real published posts later;
+  // `isReal: false` keeps them flagged as samples.
   articles: [
     {
       slug: "cutting-aws-bill-35-percent",

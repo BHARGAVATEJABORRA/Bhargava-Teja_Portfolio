@@ -1,14 +1,7 @@
-// Hand-painted footer sky — the adaline.ai architecture. One palette and one
-// set of scroll curves recolor the sky gradient AND the sunset cloud streaks
-// continuously per scroll, so the clouds always catch the current sky light
-// instead of washing out against an already-night gradient.
-//
-// Endpoint colors are sampled from the live adaline.ai footer scroll:
-//   sunset top/mid/bottom measured ≈ (97,97,134) / (174,151,151) / (212,172,129)
-//   night  top/mid/bottom measured ≈ (17,28,31) / near-black teal / (10,18,18)
-// The sky endpoints below sit between the previous repo values and the
-// measured screen samples (the screen numbers include cloud light and the
-// top-fade overlay, so the raw gradient endpoints stay a touch deeper).
+// Hand-painted footer sky. One palette and one set of scroll curves recolor
+// both the sky gradient and the sunset cloud streaks together as you scroll,
+// so the clouds always catch the current sky light instead of washing out
+// against an already-night gradient.
 
 export type Rgb = readonly [number, number, number];
 
@@ -29,13 +22,9 @@ export function mixRgb(from: Rgb, to: Rgb, t: number) {
   return `rgb(${lerpChannel(from[0], to[0], t)}, ${lerpChannel(from[1], to[1], t)}, ${lerpChannel(from[2], to[2], t)})`;
 }
 
-// Sky band: a true sunset (tint 0) melting into night (tint 1). The sunset
-// endpoints sit on the measured "sunset onset" frame — the brightest sky the
-// live scroll ever shows, i.e. adaline's effective sunset endpoint; the
-// measured "full sunset" (97,97,134 / 174,151,151 / 212,172,129) is reached
-// partway along the collapse. Night endpoints land on the dark-teal horizon
-// adaline uses — the seam below the band must keep converging on the page
-// base #050e11/#050d10.
+// Sky band: a sunset (tint 0) melting into night (tint 1). Sunset endpoints are
+// the brightest sky the scroll ever shows; night endpoints land on a dark-teal
+// horizon so the seam below the band converges on the page base (#050e11).
 export const SKY_TOP: [Rgb, Rgb] = [
   [116, 118, 152],
   [5, 13, 16],
@@ -44,35 +33,25 @@ export const SKY_MIDDLE: [Rgb, Rgb] = [
   [185, 164, 160],
   [16, 34, 39],
 ];
-// Night mid/bottom stops re-measured 2026-07-07 on the LIVE adaline footer
-// (#home-footer-bg-gradient computed style at the CTA):
-//   linear-gradient(rgb(5,13,17), rgb(16,34,39), rgb(32,63,56))
-// The deep teal→green lower sky is what the aurora's screen blend lands on —
-// over near-black the same shader reads neon; over this it reads soft.
+// Deep teal->green lower sky. This is what the aurora's screen blend lands on:
+// over near-black the same shader reads neon, over this it reads soft.
 export const SKY_BOTTOM: [Rgb, Rgb] = [
   [216, 178, 132],
   [32, 63, 56],
 ];
 
-// The horizon keeps the light longest: each lower stop's collapse starts
-// later than the zenith's, which is what gives adaline's dusk its rose
-// horizon under an already-violet top (measured: full-sunset mid drops only
-// 11 RGB units while the top has already dropped 19). All three windows
-// still converge at band ~0.68 (global ~0.93), so the whole sky has settled
-// into night when the CTA arrives.
+// The horizon keeps light longest: each lower stop starts collapsing later than
+// the zenith, giving a rose horizon under an already-violet top. All three
+// windows converge near band 0.68, so the sky is fully night when the CTA lands.
 export const SKY_STOP_WINDOWS = [
   [0.4, 0.28],
   [0.42, 0.26],
   [0.44, 0.24],
 ] as const;
 
-// Cloud tint rides lighter/warmer than the sky so the streak tops catch the
-// last sunset light, then collapses into the same night base as the sky.
-// Night endpoints re-measured 2026-07-07 on the LIVE adaline footer
-// (#home-footer-clouds-gradient: linear-gradient(rgb(16,34,39), rgb(32,63,56))):
-// at night the cloud plate stays a VISIBLE teal — it does not collapse to
-// near-black. This is what keeps soft cloud texture in the night sky behind
-// the aurora instead of an empty black field.
+// Cloud tint rides lighter and warmer than the sky so the streak tops catch the
+// last sunset light, then settles to a visible night teal (not black) so soft
+// cloud texture still shows behind the aurora instead of an empty black field.
 export const CLOUD_TOP: [Rgb, Rgb] = [
   [172, 138, 164],
   [16, 34, 39],
@@ -89,10 +68,8 @@ function quantize(value: number) {
   return Math.round(clamp01(value) * 1000) / 1000;
 }
 
-// The sunset holds: the articles seam + top-fade occupy the band until
-// ~0.40, so the collapse to night only starts once the full sky is on screen
-// — the warm phase is actually seen instead of fading in while the gradient
-// is already converging to night.
+// The sunset holds until ~0.40 (the articles seam and top-fade occupy the band
+// until then), so the warm phase is actually seen before the collapse to night.
 export function skyStopTint(bandProgress: number, stop: 0 | 1 | 2) {
   const [start, span] = SKY_STOP_WINDOWS[stop];
   return quantize(smoothStep(clamp01((bandProgress - start) / span)));
@@ -106,21 +83,17 @@ export function footerSkyKey(bandProgress: number) {
   );
 }
 
-// The sky fades in as the footer enters so the sunset sky (its onset
-// endpoints match the day-cycle ocean's SUNSET) takes over from the ocean —
-// the day → footer handoff is a same-color sunset crossfade. The window is
-// wide enough (0–0.14) that the ocean's sun/waves dissolve softly under the
-// gradient instead of being wiped by a fast opacity ramp.
+// The sky fades in as the footer enters, taking over from the day-cycle ocean
+// in a same-color sunset crossfade. The window is wide (0-0.14) so the ocean's
+// sun and waves dissolve softly instead of being wiped by a fast opacity ramp.
 export function skyAlpha(bandProgress: number) {
   return quantize(smoothStep(clamp01(bandProgress / 0.14)));
 }
 
-// Clouds catch the last light: the plate's dense alpha rows (0.45–0.75 of
-// the plate) fill the viewport around band progress 0.5–0.7, so the cloud
-// tint must still be warm there. The collapse lags the sky top's — the
-// streaks stay lit against the darkening sky — and converges to the
-// identical night base at the same ~0.68 point as the sky, right as the
-// plate's own alpha runs out near the CTA.
+// Clouds catch the last light: the plate's dense rows fill the viewport around
+// band 0.5-0.7, so the tint must still be warm there. The collapse lags the
+// sky's and converges to the same night base near 0.68, as the plate's alpha
+// runs out by the CTA.
 export function cloudTint(bandProgress: number) {
   return quantize(smoothStep(clamp01((bandProgress - 0.48) / 0.2)));
 }
@@ -149,10 +122,9 @@ export function paintFooterSky(
 }
 
 /**
- * Paint the cloud band: the current cloud tint masked by the adaline cloud
- * plate's alpha (destination-in), exactly like painting the streaks on the
- * sky canvas — the gradient spans the whole band so each streak picks up the
- * light for its own altitude.
+ * Paint the cloud band: the current cloud tint masked by the cloud plate's
+ * alpha (destination-in). The gradient spans the whole band so each streak
+ * picks up the light for its own altitude.
  */
 export function paintFooterClouds(
   context: CanvasRenderingContext2D,

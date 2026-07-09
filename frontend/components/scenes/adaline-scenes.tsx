@@ -72,13 +72,11 @@ function progressToFrame(progress: number) {
   return clampFrame(HERO_SEQUENCE_START + frameOffset);
 }
 
-// Meteors — full rewrite. The adaline reference has ZERO meteor elements
-// (the night sky is completely calm), so meteors here are an extremely rare
-// Painterly drifting clouds for the warm sunset/dusk band — each cloud is a
-// cluster of 4–6 overlapping blurred ellipses (never a single flat pill),
-// drifting horizontally on an infinite loop at its own speed for parallax.
-// Negative delays start every cloud mid-flight so the band is populated the
-// moment it scrolls into view.
+// Drifting sunset clouds for the warm dusk band. Each cloud is a cluster of
+// 4-6 overlapping blurred ellipses (never a single flat pill), drifting
+// horizontally on an infinite loop at its own speed for parallax. Negative
+// delays start every cloud mid-flight so the band is populated the moment it
+// scrolls into view.
 interface CloudPuff {
   left: string;
   top: string;
@@ -463,11 +461,11 @@ interface AdalineFooterSceneProps {
   footer: ReactNode;
 }
 
-// Faithful reconstruction of the adaline.ai footer: a fixed sky gradient that
-// scrubs sunset → night as you scroll, a cloud-masked dusk band and a starfield
-// that scroll up inside a very tall container, a single aurora canvas in the CTA
-// band, and the hills + dock + reflection rendered as full-bleed 200vw images.
-// Only the foreground copy (contact + nav) is swapped for portfolio content.
+// The scrolling footer scene: a fixed sky gradient that scrubs sunset -> night
+// as you scroll, a cloud-masked dusk band and a starfield that rise inside a
+// very tall container, a single aurora canvas in the CTA band, and the hills +
+// dock + reflection rendered as full-bleed 200vw images. The foreground copy
+// (contact + nav) holds the portfolio content.
 export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooterSceneProps) {
   const bandRef = useRef<HTMLDivElement | null>(null);
   const skyCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -476,11 +474,10 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
   const shouldReduceMotion = useReducedMotion();
 
   // Lenis is the single clock for the whole sequence: it eases the native
-  // scroll position itself, and every layer below is a *pure function* of
-  // that position — repainted only on scroll/resize, never from a second
-  // spring/lerp/rAF clock. This is the adaline.ai architecture: the sky and
-  // the sunset cloud streaks are hand-painted on canvases and recolored
-  // continuously per scroll, so the streaks always catch the current light.
+  // scroll position, and every layer below is a pure function of that position,
+  // repainted only on scroll/resize rather than from a second spring/rAF clock.
+  // The sky and the sunset cloud streaks are hand-painted on canvases and
+  // recolored per scroll, so the streaks always catch the current light.
   useEffect(() => {
     const band = bandRef.current;
     const skyCanvas = skyCanvasRef.current;
@@ -500,10 +497,9 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
     let lastCloudsKey = "";
     let lastStarsKey = "";
 
-    // The tall day→night zone drives the whole transition — same mapping as
-    // the previous useScroll offset ["start end", "end 35%"]: 0 when the
-    // band's top reaches the viewport bottom, 1 when its bottom reaches 35%
-    // of the viewport, at which point the sky has fully settled into night.
+    // The tall day->night zone drives the whole transition: 0 when the band's
+    // top reaches the viewport bottom, 1 when its bottom reaches 35% of the
+    // viewport, where the sky has fully settled into night.
     const bandProgress = () => {
       const rect = band.getBoundingClientRect();
       const viewportHeight = window.innerHeight;
@@ -521,9 +517,8 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         lastSkyKey = "";
       }
 
-      // Tints are quantized inside the painter curves, so the key both skips
-      // no-op repaints and guarantees the same scroll position always shows
-      // byte-identical pixels regardless of scroll history.
+      // Tints are quantized inside the painter curves, so this key skips no-op
+      // repaints and keeps the same scroll position pixel-identical.
       const skyKey = footerSkyKey(progress);
       if (skyKey !== lastSkyKey) {
         paintFooterSky(skyContext, skyWidth, skyHeight, progress);
@@ -567,14 +562,12 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
 
   return (
     <div className="adaline-footer-scene relative flex flex-col overflow-clip text-[#f4fbf7]" style={footerSceneTheme}>
-      {/* NO opaque bridge and NO opaque scene background at the seam: the
-          fixed sky canvas below fades in over the still-visible tides ocean
-          (its sunset endpoints equal the tides SUNSET palette), so the
-          articles → footer handoff is a same-color crossfade with no hard
-          horizontal edge. The dark base returns on the CTA + dock bands only. */}
+      {/* No opaque bridge or scene background at the seam: the fixed sky canvas
+          fades in over the still-visible tides ocean (matching sunset palettes),
+          so the articles -> footer handoff is a same-color crossfade with no
+          hard edge. The dark base returns on the CTA and dock bands only. */}
 
-      {/* #home-footer-bg-gradient — the fixed sunset→night sky behind
-          everything, hand-painted per scroll exactly like adaline. */}
+      {/* Fixed sunset -> night sky behind everything, hand-painted per scroll. */}
       <canvas
         ref={skyCanvasRef}
         aria-hidden
@@ -584,10 +577,10 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
 
       {/* Tall scroll zone: only the cloud band + stars move through it. */}
       <div ref={bandRef} data-scroll-scene="sky-band" className="relative -mb-[80vh] h-[200vw] min-h-[300vh]">
-        {/* #home-footer-clouds-gradient — the adaline cloud plate, painted on
-            canvas with the current sky light (tint gradient masked by the
-            plate's alpha), never a static-tint CSS mask. The wrapper drifts
-            slowly sideways so the entry reads as passing clouds, not a cut. */}
+        {/* Cloud plate painted on canvas with the current sky light (tint
+            gradient masked by the plate's alpha), not a static CSS mask. The
+            wrapper drifts slowly sideways so the entry reads as passing
+            clouds, not a cut. */}
         <div aria-hidden className="adaline-footer-clouds-drift pointer-events-none absolute inset-0">
           <canvas
             ref={cloudsCanvasRef}
@@ -595,10 +588,9 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
             className="h-full w-full object-cover object-top"
           />
         </div>
-        {/* Painterly drifting clouds — puff-cluster divs riding the warm
-            sunset/dusk zone at the top of the band only (never over the CTA,
-            hills or water). The wrapper clips + edge-masks them so each
-            cloud fades in/out at the viewport edges seamlessly. */}
+        {/* Drifting cloud puffs riding the warm dusk zone at the top of the
+            band only (never over the CTA, hills or water). The wrapper clips
+            and edge-masks them so each cloud fades in/out at the edges. */}
         <div aria-hidden data-scroll-scene="drift-clouds" className="adaline-drift-clouds pointer-events-none absolute inset-x-0 top-0 h-[110vh]">
           {DRIFT_CLOUDS.map((cloud, cloudIndex) => (
             <div
@@ -632,7 +624,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
             </div>
           ))}
         </div>
-        {/* #home-footer-stars — repeating starfield that rises with the scroll. */}
+        {/* Repeating starfield that rises with the scroll. */}
         <div
           ref={starsRef}
           aria-hidden
@@ -642,26 +634,20 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         />
       </div>
 
-      {/* CTA band: foreground contact card. The aurora is anchored INSIDE
-          this band (adaline architecture: absolute top-0 h-[90%] masked
-          layer), so it scrolls with the scene and the hills band below
-          paints over its lower edge — the glow rises from BEHIND the
-          ridgeline. Its rAF loop is IntersectionObserver-gated (§3.3). */}
+      {/* CTA band: foreground contact card. The aurora is anchored inside this
+          band (absolute, top-masked) so it scrolls with the scene and the hills
+          band below paints over its lower edge — the glow rises from behind the
+          ridgeline. */}
       <div data-scroll-scene="cta-band" className="relative flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-[#050e11] to-100%">
         <FooterStars />
         <FooterAurora />
-        {/* Meteors — adaline's REAL system (footer-meteors.tsx): their
-            "bg-black mix-blend-plus-lighter" div is the meteor layer itself;
-            JS spawns streak <img>s into it every 5–10s and flies them
-            down-left at their exact velocity/fade. Replaces the old CSS
-            keyframe meteors (2026-07-07, Tony asked for adaline's exact
-            timing + placement). */}
+        {/* Meteor layer (footer-meteors.tsx): JS spawns streak <img>s into it
+            every 5-10s and flies them down-left. */}
         <FooterMeteors />
 
-        {/* pt 28vh → 34vh (2026-07-07): the collapsed "Contact me" pill sits
-            low in the band; its panel opens DOWNWARD (over the hills/lake),
-            so it stays fully on-screen even at the deepest footer scroll —
-            opening upward got clipped by the viewport top. */}
+        {/* The collapsed "Contact me" pill sits low in the band and its panel
+            opens downward (over the hills/lake), so it stays on-screen even at
+            the deepest footer scroll; opening upward got clipped at the top. */}
         <div className="relative z-20 w-full px-6 pt-[34vh] pb-[12vh] sm:px-8 lg:px-12">
           <div className="mx-auto max-w-[120rem]">
             <div id={contactId} className="mx-auto w-full max-w-[34rem] scroll-mt-28">
@@ -671,27 +657,24 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         </div>
       </div>
 
-      {/* Docking-port band: hills, dock + water reflection, and the nav.
-          Mirrors the adaline.ai source (see Adaline reference) — hills 100vw at
-          -14vw, dock+reflection a 200vw masked image group, nav z-100 overlaying
-          on xl. The one intentional deviation is the dock anchor (see below):
-          our footer's content proportions differ from Adaline's, so their exact
-          left/bottom-0 anchor detached the pier — we center + lift it instead. */}
+      {/* Docking-port band: hills, dock + water reflection, and the nav. Hills
+          are 100vw at -14vw; the dock + reflection are a masked 200vw image
+          group; the nav sits at z-100 on xl. The dock is centered and lifted
+          rather than anchored bottom-left, since the footer's proportions here
+          left the bottom-left anchor detaching the pier. */}
       <div className="relative z-[2] bg-[#050e11] xl:h-[40vw]">
         <div aria-hidden className="pointer-events-none absolute -top-[14vw] w-full">
           <img src="/adaline-scenes/footer/footer-hills.webp" alt="" aria-hidden className="w-full object-cover" />
         </div>
 
         {/* Dock + reflection: a 150vw image group centered on the scene and
-            seated LOW (top-[9vw]) so the pier deck rests at the hills'
-            waterline near the bottom of the band — the lake between the hills
-            and the deck stays open instead of the dock covering it. Both
-            hills and dock scale in vw, so the offset composes identically at
-            every width. The fade mask blends the foreground planks into the
-            #050e11 base. */}
+            seated low (top-3vw) so the pier deck rests at the hills' waterline,
+            leaving the lake between the hills and the deck open. Hills and dock
+            both scale in vw, so the offset composes identically at every width.
+            The fade mask blends the foreground planks into the #050e11 base. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[9vw] w-[150vw] -translate-x-1/2"
+          className="pointer-events-none absolute left-1/2 top-[2vw] w-[105vw] -translate-x-1/2"
           style={{
             WebkitMaskImage:
               "linear-gradient(to bottom, black 0%, black 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.18) 80%, transparent 96%)",
@@ -716,7 +699,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
             </>
           ) : (
             // Three.js + GSAP ScrollTrigger night scene: same dock/reflection
-            // textures, plus scroll-driven lamp ignition (two discrete pools).
+            // textures, plus scroll-driven lamp ignition (two discrete light pools).
             <FooterDockThree />
           )}
         </div>

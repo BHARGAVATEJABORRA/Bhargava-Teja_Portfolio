@@ -104,7 +104,10 @@ export function ContactFooterSection() {
               </div>
             </div>
 
-            <p className="basis-full pt-10 text-center text-[0.7rem] font-medium uppercase tracking-[0.32em] text-white/40">
+            {/* Dropped down to sit at the vertical mid-line of the two fixed
+                viewport toggles (links dock bottom-left, AI companion dock
+                bottom-right). Nudge the xl translate-y value to fine-tune. */}
+            <p className="basis-full translate-y-6 pt-10 text-center text-[0.7rem] font-medium uppercase tracking-[0.32em] text-white/40 xl:translate-y-[3.25rem]">
               Built with Accuracy and Precision
             </p>
           </>

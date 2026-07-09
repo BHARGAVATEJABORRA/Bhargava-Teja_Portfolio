@@ -1,32 +1,22 @@
 "use client";
 
-// FooterMeteors — EXACT port of adaline.ai's meteor layer, extracted from
-// their production bundle (chunks/app/layout-6f83c0bbb7f343d1.js, the footer
-// module). The long-mysterious `bg-black mix-blend-plus-lighter` div in their
-// footer is NOT a no-op: it is this layer. Meteors are <img> elements
-// (a white streak on black; plus-lighter = additive blend, so the black jpg
-// background adds nothing and only the streak shows) spawned by JS and moved
-// per-frame with inline transforms — no CSS keyframes at all.
+// Footer meteor layer. Meteors are <img> streaks (a white streak on a black
+// jpg; plus-lighter blend is additive, so only the streak shows) spawned by JS
+// and moved each frame with inline transforms — no CSS keyframes.
 //
-// Their exact numbers, all preserved here:
-//   velocity  (-2800/3.61, +4200/3.61) px/s  ≈ (-776, +1163) — down-left
-//   rotation  34deg (streak img is vertical, head at bottom)
-//   fade      opacity = 1 - 1.4·ageSeconds   → gone in ~0.71s
-//   spawn x   (0.35·rnd + 0.1 + (rnd<0.5 ? 0 : 0.55)) · innerWidth
-//             → bimodal: 10–45% or 65–100% of the viewport width
-//   spawn y   0 (img sits at -top-80, so the 320px streak starts above the
-//             layer's top edge and dives into view)
-//   cadence   next spawn in 5000 + 5000·rnd ms; first spawn 800ms after the
-//             layer becomes visible (3000ms if it was visible <5s ago)
-//   img class "absolute -top-80 left-0 h-80 origin-bottom object-contain"
+// The numbers below drive the look:
+//   velocity  (-2800/3.61, +4200/3.61) px/s ≈ (-776, +1163) — down-left
+//   rotation  34deg (the streak image is vertical, head at the bottom)
+//   fade      opacity = 1 - 1.4 * ageSeconds  → gone in ~0.71s
+//   spawn x   bimodal: 10-45% or 65-100% of the viewport width
+//   spawn y   0 (the img sits at -top-80 so the streak starts above the edge)
+//   cadence   next spawn in 5-10s; first spawn 800ms after the layer shows
+//             (3000ms if it was visible less than 5s ago)
 //
-// Differences from adaline (deliberate, invisible):
-//   • Movement runs on a plain always-on rAF loop gated by visibilitychange
-//     (this repo's proven pattern — their IO-driven onFrame hook is what froze
-//     our aurora); the loop does no work while no meteors are alive.
-//   • Spawning is still gated by an IntersectionObserver so meteors only
-//     appear while the footer is on screen (like their onVisibilityChange),
-//     and reduced-motion disables the layer entirely.
+// Movement runs on a plain rAF loop gated by tab visibility and does no work
+// while no meteors are alive. Spawning is gated by an IntersectionObserver so
+// meteors only appear while the footer is on screen; reduced-motion disables
+// the layer entirely.
 
 import { useEffect, useRef } from "react";
 
@@ -163,8 +153,8 @@ export function FooterMeteors() {
     };
   }, []);
 
-  // Adaline's exact layer DOM: bg-black + plus-lighter (additive; invisible
-  // until a streak img is inside), masked so nothing pokes above the band.
+  // Layer container: black background with additive plus-lighter blend (stays
+  // invisible until a streak img is inside), masked so nothing pokes above.
   return (
     <div
       ref={layerRef}

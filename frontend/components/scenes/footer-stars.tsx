@@ -10,11 +10,9 @@ import { useMemo } from 'react';
 // the first child of the CTA band, below the aurora and contact card in
 // z-index. Pure divs, no canvas/WebGL.
 //
-// NOTE: this repo's ESLint runs `react-hooks/purity`, which forbids calling the
-// impure `Math.random()` during render (it errors the build). So the scatter is
-// generated from a deterministic seeded PRNG (mulberry32) instead — same
-// random-looking distribution, but pure and stable, which is exactly what the
-// useMemo guarantee wants anyway.
+// The scatter comes from a seeded PRNG (mulberry32) rather than Math.random(),
+// so it stays pure and stable across renders (the lint rules forbid impure
+// calls during render anyway) — same random-looking spread, no reshuffling.
 function mulberry32(seed: number) {
   let a = seed;
   return function () {

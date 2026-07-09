@@ -1,21 +1,9 @@
 "use client";
 
-// Aurora — EXACT port of adaline.ai's footer aurora, extracted from their
-// production bundle (www.adaline.ai/_next/static/chunks/35515.969aa68e0ec1e16b.js).
-//
-// This is NOT the react-bits screen-space curtain shader (the previous
-// approximation). Adaline's real aurora is a Three.js scene: a huge
-// 40000×250000 plane (50×400 segments) whose Z is displaced by 2D simplex
-// noise in the VERTEX shader, laid flat and viewed nearly edge-on by a tilted
-// perspective camera — the rippling sheet seen from the side IS the curtain.
-// The fragment shader paints it pure green->teal, vec4(0.0, 1.0, noise, noise2),
-// with two banded sine stacks animating the blue channel and the alpha, and a
-// smoothstep horizontal fade replacing an old CSS blur. The clock runs at
-// (now - start) / 200000 — glacially slow, which is exactly the drift adaline has.
-//
-// Everything below matches their bundle 1:1: geometry, camera transform, mesh
-// transform, renderer flags, DPR cap 1.25, resize handling, reduced-motion
-// bail-out, and the IntersectionObserver-gated rAF (rootMargin 200px).
+// Footer aurora. A large Three.js plane is displaced along Z by 2D simplex
+// noise in the vertex shader, then laid flat and viewed nearly edge-on so the
+// rippling sheet reads as a curtain. The fragment shader tints it green->teal
+// and fades the edges. The clock drifts very slowly (time = elapsed / 2e5).
 
 import {
   DoubleSide,
@@ -28,10 +16,8 @@ import {
 } from "three";
 import { useEffect, useRef, type HTMLAttributes } from "react";
 
-// Adaline stores this in state via a first effect; this repo's
-// react-hooks/set-state-in-effect rule forbids that pattern, so each effect
-// checks the media query itself on mount — same behaviour (client-only,
-// evaluated once), no cascading render.
+// Client-only reduced-motion check, read fresh on each mount so we never store
+// it in state (keeps the hooks lint happy).
 const prefersReducedMotion = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -102,11 +88,8 @@ const fragmentShader = `
 
           vec4 mainColor = vec4(0.0, 1, noise, noise2);
 
-          // In-shader replacement for the previous CSS blur(8px)
-          // filter. Smoothstep gives an almost-imperceptibly softer
-          // edge than the pow(x*10, 3) ramp, which together with the
-          // mix-blend-screen on the canvas produces the same diffuse
-          // aurora glow without a separable Gaussian post-pass.
+          // Soft edge fade done in-shader. Together with the canvas
+          // mix-blend-screen this gives the diffuse glow without a blur pass.
           float xn = vUv.x * 10.0;
           float left  = smoothstep(0.0, 1.0, xn);
           float right = smoothstep(1.0, 0.0, xn / 9.0);
@@ -153,12 +136,8 @@ export function Aurora({ className, ...rest }: AuroraProps) {
       const width = element.clientWidth;
       const height = element.clientHeight;
       renderer.setSize(width, height, false);
-      // Canvas-derived aspect (adaline's behaviour). Safe while the wrapper
-      // stays TALL (≈1570px): the aspect lands at or below adaline's 1.96
-      // and the bright zone spans the frame. Only short/wide canvases
-      // (aspect ≳2.2) widen the horizontal FOV enough to shove the bright
-      // end to one side — if the wrapper is ever shortened again, either
-      // re-lock this to 3082/1570 or expect left-biased beams.
+      // Use the canvas aspect directly. Fine while the wrapper stays tall; a
+      // short, wide canvas widens the FOV and pushes the bright band to one side.
       camera.aspect = width / height;
       camera.updateProjectionMatrix();
     };
@@ -197,41 +176,27 @@ export function Aurora({ className, ...rest }: AuroraProps) {
     mesh.rotation.y = -(0.5 * Math.PI);
     mesh.rotation.x = -(0.5 * Math.PI);
 
-    // Clock: adaline runs (now - pageLoad) / 2e5 from zero. Empirically (pixel
-    // stats vs their live site) the shader has a bright "wall" transient for
-    // the first ~2 time-units (≈6 min wall-clock): the fragment sine stacks
-    // start phase-aligned, so alpha is high across the whole sheet before they
-    // dephase into the distinct dim beams adaline is known for. Adaline
-    // visitors never see the transient at the footer (their clock has been
-    // running since page load, minutes before anyone scrolls to the bottom) —
-    // but this portfolio can be opened straight at /#contact, so we pre-age
-    // the clock by 600s (t₀ = 3.0, verified beams-over-dark-sky state). From
-    // there it evolves exactly like theirs.
+    // Pre-age the clock by 10 minutes so the aurora opens in its settled
+    // beams-over-dark-sky state. From a cold start the sine stacks are
+    // phase-aligned and the whole sheet glows bright for the first few minutes;
+    // that never shows on a slow scroll, but the site can deep-link to #contact.
     const start = performance.now() - 600_000;
     const renderFrame = () => {
       const time = (performance.now() - start) / 2e5;
       material.uniforms.time.value = time;
       renderer.render(scene, camera);
-      // Heartbeat: lets us verify from DevTools/automation that the loop is
-      // actually advancing (the aurora drifts slowly, so a frozen loop and a
-      // live one can look similar over a few seconds).
+      // Expose the current time on the canvas so a frozen loop is easy to spot
+      // in automation; the drift is too slow to catch by eye over a few seconds.
       canvas.dataset.auroraTime = time.toFixed(3);
     };
 
-    // Adaline defers initial sizing to a rAF and renders only inside the rAF
-    // loop. Sizing + painting the first frame synchronously here is visually
-    // identical on a focused page but makes the first frame deterministic
-    // (and lets a backgrounded tab — where rAF is paused — still show a
-    // static aurora frame).
+    // Size and paint one frame up front so a backgrounded tab (where rAF is
+    // paused) still shows a static aurora instead of a blank canvas.
     applySize();
     renderFrame();
 
-    // Animation loop: plain rAF gated by visibilitychange — the SAME pattern
-    // as this repo's proven WebGL components (iridescence, the old OGL
-    // aurora, which animated reliably). The previous split-effect
-    // IntersectionObserver wiring left the canvas frozen on its first frame
-    // in some sessions, and a static aurora is worse than the battery cost
-    // of an always-running loop while the tab is visible.
+    // Plain rAF gated by tab visibility. Simpler and steadier here than an
+    // IntersectionObserver, which sometimes left the canvas stuck on frame one.
     let rafId = 0;
     let running = false;
 
@@ -275,9 +240,7 @@ export function Aurora({ className, ...rest }: AuroraProps) {
     };
   }, []);
 
-  // Adaline merges cn("relative w-full", className) with tailwind-merge, so a
-  // caller-supplied position class replaces `relative`. Same net result here:
-  // the caller's className wins outright when provided.
+  // A caller-supplied className replaces the default positioning outright.
   return (
     <div className={className ?? "relative w-full"} {...rest}>
       <canvas ref={canvasRef} className="h-full w-full mix-blend-screen blur-[6px]" />

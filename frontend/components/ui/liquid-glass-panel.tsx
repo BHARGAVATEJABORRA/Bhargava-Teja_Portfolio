@@ -19,7 +19,7 @@ interface LiquidGlassPanelProps {
   className?: string;
   contentClassName?: string;
   radius?: number;
-  /** Tuning passthroughs — defaults match the proven-clean Experience-section glass. */
+  /** Tuning passthroughs — defaults match the Experience-section glass. */
   scale?: number;
   border?: number;
   blur?: number;
@@ -104,8 +104,7 @@ export function LiquidGlassPanel({
   className = "",
   contentClassName = "",
   radius = 32,
-  // Proven-clean defaults — same numbers GlassSurface uses in the Experience
-  // section, which is the panel the user explicitly approves of.
+  // Defaults match the GlassSurface numbers used in the Experience-section glass.
   scale = -90,
   border = 0.07,
   blur = 11,

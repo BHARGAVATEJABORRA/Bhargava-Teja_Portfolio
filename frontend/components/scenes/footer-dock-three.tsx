@@ -10,23 +10,26 @@ if (typeof window !== "undefined") {
 }
 
 // ---------------------------------------------------------------------------
-// Scroll-bound Three.js rebuild of the adaline.ai footer dock ("night theme").
-// The dock + water-reflection textures are the original adaline assets, drawn
-// on shader planes so the scene stays pixel-faithful at rest. Matching the
-// adaline reference exactly: the only light is two discrete warm pools, one
-// under each lamp, each dying out within a plank or two — the deck between
-// the lamps stays dark, and the texture keeps its natural exposure. Scroll
-// progress (GSAP ScrollTrigger, scrubbed) only ignites the lamps as night
-// settles. The reflection plane mirrors the pools about the waterline and
-// ripples them with a time-based wobble.
+// Scroll-bound Three.js build of the footer dock ("night theme"). The dock and
+// water-reflection textures are drawn on shader planes so the scene stays
+// pixel-faithful at rest. The only light is two discrete warm pools, one under
+// each lamp, each dying out within a plank or two — the deck between the lamps
+// stays dark and the texture keeps its natural exposure. Scroll progress (GSAP
+// ScrollTrigger, scrubbed) ignites the lamps as night settles. The reflection
+// plane mirrors the pools about the waterline and ripples them with a
+// time-based wobble.
 // ---------------------------------------------------------------------------
 
-// Lamp bulbs, measured as the two bright clusters in footer-dock.webp.
+// Lamp bulbs on the T-pier cross-bar: left / middle / right. LAMP_3 (left) is a
+// fixture cloned onto the pier's left arm in footer-dock.webp; its reflection is
+// shader-driven (the reflection texture has only a faint bulb, like LAMP_1/2).
+const LAMP_3: readonly [number, number] = [0.185, 0.866];
 const LAMP_1: readonly [number, number] = [0.355, 0.866];
 const LAMP_2: readonly [number, number] = [0.575, 0.866];
 
 // Warm pools on the walkway planks directly beneath each bulb. The walkway
 // surface sits just below the lamp heads in the texture.
+const POOL_3: readonly [number, number] = [0.185, 0.795];
 const POOL_1: readonly [number, number] = [0.355, 0.795];
 const POOL_2: readonly [number, number] = [0.575, 0.795];
 
@@ -37,8 +40,11 @@ const WATER_Y = 0.76;
 // the glow pools read as circles on screen instead of 3:1 ellipses.
 const TEX_ASPECT = 3;
 
-// Render the dock taller than its native 3:1 without widening it — the deck
-// gets more vertical presence. On-screen display aspect = TEX_ASPECT / stretch.
+// Render the dock slightly taller than its native 3:1. On-screen display aspect
+// = TEX_ASPECT / stretch. Keep the wrapper aspect-[2.5] in the return + the
+// fallback imgs in sync with this. NOTE: overall pier SIZE is driven by the
+// group width (w-[..vw] in adaline-scenes.tsx), NOT this — keep the pier smaller
+// than the hills/lake so it reads as receding into the distance (perspective).
 const DOCK_V_STRETCH = 1.2;
 const DOCK_DISPLAY_ASPECT = TEX_ASPECT / DOCK_V_STRETCH; // 2.5
 
@@ -55,10 +61,13 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform float uTime;
   uniform vec2 uLamp1;
   uniform vec2 uLamp2;
+  uniform vec2 uLamp3;
   uniform vec2 uPool1;
   uniform vec2 uPool2;
+  uniform vec2 uPool3;
   uniform float uLamp1On;
   uniform float uLamp2On;
+  uniform float uLamp3On;
   uniform float uOpacity;
   varying vec2 vUv;
 
@@ -75,24 +84,27 @@ const FRAGMENT_SHADER = /* glsl */ `
     // Lamp halos: gentle flicker once each lamp has ignited.
     float flicker1 = 0.92 + 0.08 * sin(uTime * 6.3 + 1.7);
     float flicker2 = 0.92 + 0.08 * sin(uTime * 5.1);
+    float flicker3 = 0.92 + 0.08 * sin(uTime * 5.7 + 3.1);
     float bulb1 = exp(-radialDist(vUv, uLamp1) * 22.0) * uLamp1On * flicker1;
     float bulb2 = exp(-radialDist(vUv, uLamp2) * 22.0) * uLamp2On * flicker2;
+    float bulb3 = exp(-radialDist(vUv, uLamp3) * 22.0) * uLamp3On * flicker3;
 
     // Discrete light pool on the planks under each lamp — a tight falloff
-    // that dies out within ~1–2 plank widths, so the mid-deck between the
-    // lamps stays dark exactly like the adaline reference.
+    // that dies out within ~1-2 plank widths, so the mid-deck between the
+    // lamps stays dark.
     float pool1 = exp(-radialDist(vUv, uPool1) * 30.0) * uLamp1On * flicker1;
     float pool2 = exp(-radialDist(vUv, uPool2) * 30.0) * uLamp2On * flicker2;
+    float pool3 = exp(-radialDist(vUv, uPool3) * 30.0) * uLamp3On * flicker3;
 
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
 
     // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
     // slightly past the dock so warm light pools onto the water below.
     float onDock = smoothstep(0.0, 0.15, tex.a);
-    float bulbBleed = (bulb1 + bulb2) * 0.6;
+    float bulbBleed = (bulb1 + bulb2 + bulb3) * 0.6;
     vec3 col = tex.rgb;
-    col += (bulb1 + bulb2) * lampWarm * 0.42 * max(onDock, bulbBleed);
-    col += (pool1 + pool2) * lampWarm * 0.5 * onDock;
+    col += (bulb1 + bulb2 + bulb3) * lampWarm * 0.42 * max(onDock, bulbBleed);
+    col += (pool1 + pool2 + pool3) * lampWarm * 0.5 * onDock;
 
     gl_FragColor = vec4(col, tex.a * uOpacity);
   }
@@ -137,10 +149,13 @@ function makeUniforms(texture: THREE.Texture, mirrored: boolean) {
     uTime: { value: 0 },
     uLamp1: { value: new THREE.Vector2(...(mirrored ? mirrorY(LAMP_1) : LAMP_1)) },
     uLamp2: { value: new THREE.Vector2(...(mirrored ? mirrorY(LAMP_2) : LAMP_2)) },
+    uLamp3: { value: new THREE.Vector2(...(mirrored ? mirrorY(LAMP_3) : LAMP_3)) },
     uPool1: { value: new THREE.Vector2(...(mirrored ? mirrorY(POOL_1) : POOL_1)) },
     uPool2: { value: new THREE.Vector2(...(mirrored ? mirrorY(POOL_2) : POOL_2)) },
+    uPool3: { value: new THREE.Vector2(...(mirrored ? mirrorY(POOL_3) : POOL_3)) },
     uLamp1On: { value: 0 },
     uLamp2On: { value: 0 },
+    uLamp3On: { value: 0 },
     uOpacity: { value: mirrored ? 0.55 : 1 },
   };
 }
@@ -188,8 +203,8 @@ export function FooterDockThree() {
       return texture;
     };
 
-    const dockTexture = loadTexture("/adaline-scenes/footer/footer-dock.webp");
-    const reflectionTexture = loadTexture("/adaline-scenes/footer/footer-dock-reflection.webp");
+    const dockTexture = loadTexture("/adaline-scenes/footer/footer-dock.webp?v=3");
+    const reflectionTexture = loadTexture("/adaline-scenes/footer/footer-dock-reflection.webp?v=2");
 
     const geometry = new THREE.PlaneGeometry(1, 1);
 
@@ -222,14 +237,16 @@ export function FooterDockThree() {
 
     const applyProgress = () => {
       // Night settles in: the lamps ignite in sequence as the band scrolls.
-      // The texture keeps its natural exposure throughout — adaline has no
-      // global brightness lift, only the two discrete pools.
+      // The texture keeps its natural exposure throughout — no global
+      // brightness lift, only the two discrete pools.
       const lamp1On = smoothstep(0.18, 0.4, progress);
       const lamp2On = smoothstep(0.3, 0.52, progress);
+      const lamp3On = smoothstep(0.12, 0.34, progress);
 
       for (const material of [refs.dockMaterial, refs.reflectionMaterial]) {
         material.uniforms.uLamp1On.value = lamp1On;
         material.uniforms.uLamp2On.value = lamp2On;
+        material.uniforms.uLamp3On.value = lamp3On;
       }
 
       wrapper.dataset.dockProgress = progress.toFixed(3);
@@ -242,8 +259,8 @@ export function FooterDockThree() {
 
     const resize = () => {
       const viewportWidth = window.innerWidth;
-      // The plane always fills the wrapper: the wrapper (adaline-scenes.tsx)
-      // owns the scene's width in vw, so resizing there never desyncs this.
+      // The plane always fills the wrapper: the parent scene owns the width in
+      // vw, so resizing there never desyncs this.
       const planeWidth = wrapper.clientWidth || viewportWidth * 1.5;
       // Taller than native 3:1 so the dock reads bigger vertically (width unchanged).
       const planeHeight = planeWidth / DOCK_DISPLAY_ASPECT;

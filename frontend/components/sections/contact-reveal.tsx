@@ -1,11 +1,10 @@
 "use client";
 
 // ContactReveal — the footer contact panel collapsed to a single "Contact me"
-// pill (Tony, 2026-07-07). Hovering (or keyboard-focusing) the pill reveals
-// the full contact panel above it with a react-bits-style "blur up" reveal
-// (opacity + rise + scale + blur, like react-bits BlurText/AnimatedContent);
-// the pill itself runs a react-bits ShinyText sweep. Click pins the panel
-// open so touch devices work; Esc or clicking again releases it.
+// pill. Hovering (or keyboard-focusing) the pill reveals the full contact panel
+// above it with a "blur up" transition (opacity + rise + scale + blur); the
+// pill itself runs a shine sweep. Click pins the panel open so touch devices
+// work; Esc or clicking again releases it.
 //
 // Popover notes:
 // • The panel is an absolutely-positioned DESCENDANT of the hover wrapper, so

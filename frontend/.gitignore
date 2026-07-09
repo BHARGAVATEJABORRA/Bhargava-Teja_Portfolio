@@ -54,3 +54,6 @@ next-env.d.ts
 /prisma/dev.db-journal
 /.next-preview/
 /.next-build/
+
+# Auto-generated content overlay (DB snapshot — do not commit)
+content/portfolio-overrides.json
