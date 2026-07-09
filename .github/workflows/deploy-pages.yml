@@ -39,6 +39,7 @@ jobs:
           NEXT_PUBLIC_BASE_PATH: /Bhargava-Teja_Portfolio
         run: |
           find app/api -type f -name '*.ts' | xargs rm -f
+          rm -rf app/admin
           npx next build
 
       - name: Upload artifact
