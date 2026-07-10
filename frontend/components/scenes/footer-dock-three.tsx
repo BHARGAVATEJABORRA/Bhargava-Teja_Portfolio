@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import * as THREE from "three";
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
@@ -92,9 +92,16 @@ const FRAGMENT_SHADER = /* glsl */ `
     // Discrete light pool on the planks under each lamp — a tight falloff
     // that dies out within ~1-2 plank widths, so the mid-deck between the
     // lamps stays dark.
-    float pool1 = exp(-radialDist(vUv, uPool1) * 30.0) * uLamp1On * flicker1;
-    float pool2 = exp(-radialDist(vUv, uPool2) * 30.0) * uLamp2On * flicker2;
-    float pool3 = exp(-radialDist(vUv, uPool3) * 30.0) * uLamp3On * flicker3;
+    float pool1 = exp(-radialDist(vUv, uPool1) * 26.0) * uLamp1On * flicker1;
+    float pool2 = exp(-radialDist(vUv, uPool2) * 26.0) * uLamp2On * flicker2;
+    float pool3 = exp(-radialDist(vUv, uPool3) * 26.0) * uLamp3On * flicker3;
+
+    // Broad, dim warm wash: real lamplight spills far across the planks and
+    // dies out gradually, so the deck reads as one lit pier surface receding
+    // into the dark instead of three isolated spotlights on a black slab.
+    float wash1 = exp(-radialDist(vUv, uPool1) * 7.5) * uLamp1On;
+    float wash2 = exp(-radialDist(vUv, uPool2) * 7.5) * uLamp2On;
+    float wash3 = exp(-radialDist(vUv, uPool3) * 7.5) * uLamp3On;
 
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
 
@@ -104,6 +111,7 @@ const FRAGMENT_SHADER = /* glsl */ `
     float bulbBleed = (bulb1 + bulb2 + bulb3) * 0.6;
     vec3 col = tex.rgb;
     col += (bulb1 + bulb2 + bulb3) * lampWarm * 0.42 * max(onDock, bulbBleed);
+    col += (wash1 + wash2 + wash3) * lampWarm * 0.14 * onDock;
     col += (pool1 + pool2 + pool3) * lampWarm * 0.5 * onDock;
 
     gl_FragColor = vec4(col, tex.a * uOpacity);
@@ -160,18 +168,30 @@ function makeUniforms(texture: THREE.Texture, mirrored: boolean) {
   };
 }
 
+// Shared helpers for the client-only mounted check (stable identities so the
+// store never resubscribes).
+const subscribeNoop = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export function FooterDockThree() {
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [webglFailed, setWebglFailed] = useState(false);
+  // Client-only guard: Three.js/GSAP must never run during SSR/hydration.
+  // useSyncExternalStore: false on the server snapshot, true on the client —
+  // the lint-clean version of the setMounted(true)-in-effect pattern.
+  const mounted = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
   useEffect(() => {
+    if (!mounted) return;
     const wrapper = wrapperRef.current;
     const canvas = canvasRef.current;
     if (!wrapper || !canvas) {
       return;
     }
 
+    const setup = (): (() => void) | undefined => {
     let renderer: THREE.WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: "low-power" });
@@ -354,7 +374,20 @@ export function FooterDockThree() {
       reflectionTexture.dispose();
       renderer.dispose();
     };
-  }, []);
+    };
+
+    // Any throw during scene construction (shader compile, texture setup,
+    // ScrollTrigger) downgrades to the static image fallback instead of
+    // crashing the footer.
+    try {
+      return setup();
+    } catch {
+      queueMicrotask(() => setWebglFailed(true));
+      return;
+    }
+  }, [mounted]);
+
+  if (!mounted) return null;
 
   if (webglFailed) {
     // Static fallback: the original image stack this scene replaces.

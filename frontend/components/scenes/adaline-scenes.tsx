@@ -1,14 +1,30 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import type { CSSProperties, ReactNode } from "react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import type { MotionValue } from "framer-motion";
 import { motion, useReducedMotion, useTransform } from "framer-motion";
 
-import { FooterAurora } from "@/components/scenes/ambient-aurora";
-import { FooterMeteors } from "@/components/scenes/footer-meteors";
-import { FooterStars } from "@/components/scenes/footer-stars";
-import { FooterDockThree } from "@/components/scenes/footer-dock-three";
+// Client-only layers: the aurora + dock are WebGL and the meteors drive raw
+// DOM nodes — none of them can server-render, so ssr:false keeps the SSR
+// markup clean and prevents silent hydration failures on Vercel.
+const FooterAurora = dynamic(
+  () => import("@/components/scenes/ambient-aurora").then((m) => m.FooterAurora),
+  { ssr: false },
+);
+const FooterMeteors = dynamic(
+  () => import("@/components/scenes/footer-meteors").then((m) => m.FooterMeteors),
+  { ssr: false },
+);
+const FooterStars = dynamic(
+  () => import("@/components/scenes/footer-stars").then((m) => m.FooterStars),
+  { ssr: false },
+);
+const FooterDockThree = dynamic(
+  () => import("@/components/scenes/footer-dock-three").then((m) => m.FooterDockThree),
+  { ssr: false },
+);
 import {
   clamp01,
   cloudTint,
@@ -18,6 +34,12 @@ import {
   starsAlpha,
 } from "@/components/scenes/footer-sky-painter";
 import { subscribeToScroll } from "@/lib/scroll-progress";
+
+// Shared helpers for the client-only mounted check (stable identities so the
+// store never resubscribes).
+const subscribeNoop = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 const footerSceneTheme = {
   "--color-ink": "#f2fbff",
@@ -472,6 +494,10 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
   const cloudsCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const starsRef = useRef<HTMLDivElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
+  // Render only after mount: the sky/cloud canvases and the fixed-position
+  // layers depend on window metrics that don't exist during SSR/prerender.
+  // useSyncExternalStore: false on the server snapshot, true on the client.
+  const mounted = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
   // Lenis is the single clock for the whole sequence: it eases the native
   // scroll position, and every layer below is a pure function of that position,
@@ -479,11 +505,21 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
   // The sky and the sunset cloud streaks are hand-painted on canvases and
   // recolored per scroll, so the streaks always catch the current light.
   useEffect(() => {
+    if (!mounted) return;
     const band = bandRef.current;
     const skyCanvas = skyCanvasRef.current;
     const cloudsCanvas = cloudsCanvasRef.current;
-    const skyContext = skyCanvas?.getContext("2d");
-    const cloudsContext = cloudsCanvas?.getContext("2d");
+    // try/catch: getContext can throw in headless/limited environments; a
+    // missing backdrop must never crash hydration of the footer content.
+    const getContext2d = (canvas: HTMLCanvasElement | null) => {
+      try {
+        return canvas?.getContext("2d") ?? null;
+      } catch {
+        return null;
+      }
+    };
+    const skyContext = getContext2d(skyCanvas);
+    const cloudsContext = getContext2d(cloudsCanvas);
 
     if (!band || !skyCanvas || !cloudsCanvas || !skyContext || !cloudsContext) {
       return;
@@ -558,7 +594,9 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
       cloudImage.removeEventListener("load", paint);
       unsubscribe();
     };
-  }, []);
+  }, [mounted]);
+
+  if (!mounted) return null;
 
   return (
     <div className="adaline-footer-scene relative flex flex-col overflow-clip text-[#f4fbf7]" style={footerSceneTheme}>
@@ -677,9 +715,9 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           className="pointer-events-none absolute left-1/2 top-[2vw] w-[105vw] -translate-x-1/2"
           style={{
             WebkitMaskImage:
-              "linear-gradient(to bottom, black 0%, black 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.18) 80%, transparent 96%)",
+              "linear-gradient(to bottom, black 0%, black 30%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.12) 72%, transparent 88%)",
             maskImage:
-              "linear-gradient(to bottom, black 0%, black 42%, rgba(0,0,0,0.55) 62%, rgba(0,0,0,0.18) 80%, transparent 96%)",
+              "linear-gradient(to bottom, black 0%, black 30%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.12) 72%, transparent 88%)",
           }}
         >
           {shouldReduceMotion ? (
