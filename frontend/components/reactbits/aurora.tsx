@@ -123,12 +123,19 @@ export function Aurora({ className, ...rest }: AuroraProps) {
       1000,
       1e6,
     );
-    const renderer = new WebGLRenderer({
-      canvas,
-      alpha: true,
-      antialias: false,
-      powerPreference: "low-power",
-    });
+    // WebGL can be unavailable (headless, exhausted contexts, blocked GPU).
+    // The aurora is decorative — fail to a blank layer, never crash the footer.
+    let renderer: WebGLRenderer;
+    try {
+      renderer = new WebGLRenderer({
+        canvas,
+        alpha: true,
+        antialias: false,
+        powerPreference: "low-power",
+      });
+    } catch {
+      return;
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.25));
 
     const applySize = () => {
