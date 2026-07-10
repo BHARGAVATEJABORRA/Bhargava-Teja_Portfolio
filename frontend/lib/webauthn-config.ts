@@ -16,8 +16,12 @@ export const ADMIN_USER_ID = "portfolio-admin";
 export const ADMIN_USER_NAME = "admin";
 
 function envOrigin(): string {
-  const explicit = process.env.WEBAUTHN_ORIGIN?.trim();
+  const explicit = (process.env.WEBAUTHN_RP_ORIGIN ?? process.env.WEBAUTHN_ORIGIN)?.trim();
   if (explicit) return explicit.replace(/\/$/, "");
+  // On Vercel, derive the origin from the deployment URL so the RP ID matches
+  // the serving domain instead of falling back to localhost.
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl}`;
   // Default to localhost (passkey-friendly), NOT NEXT_PUBLIC_SITE_URL which may be an IP.
   return "http://localhost:3000";
 }

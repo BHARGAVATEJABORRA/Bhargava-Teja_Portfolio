@@ -20,7 +20,9 @@ export type StoredCredential = {
   createdAt: string;
 };
 
-const DATA_DIR = path.join(process.cwd(), ".data");
+// Vercel's filesystem is read-only except /tmp; credentials there are ephemeral
+// (re-register after a cold start), but the passcode fallback always works.
+const DATA_DIR = process.env.VERCEL ? "/tmp/.data" : path.join(process.cwd(), ".data");
 const STORE_FILE = path.join(DATA_DIR, "webauthn.json");
 
 type StoreShape = { credentials: StoredCredential[] };
