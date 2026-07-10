@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  // Ship the migration SQL with every serverless function so lib/db.ts can
+  // rebuild the ephemeral /tmp SQLite database on Vercel cold starts.
+  outputFileTracingIncludes: {
+    "/**/*": ["./prisma/migrations/**/*"],
+  },
   devIndicators: false,
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
 };
