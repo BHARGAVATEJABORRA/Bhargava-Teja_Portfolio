@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 
 import { CommandPalette } from "@/components/layout/command-palette";
@@ -8,14 +9,24 @@ import { EntranceCurtain } from "@/components/motion/entrance-curtain";
 import { AboutSection } from "@/components/sections/about-section";
 import { AiCompanionDock } from "@/components/sections/ai-companion-dock";
 import { BlogsSection } from "@/components/sections/blogs-section";
-import { ContactFooterSection } from "@/components/sections/contact-footer-section";
 import { ControlCenterSection } from "@/components/sections/control-center-section";
 import { ExperienceSection } from "@/components/sections/experience-section";
 import { HeroSection, HeroSocialDock } from "@/components/sections/hero-section";
-import { TidesBackground } from "@/components/scenes/tides-background";
 import { ProjectsSection } from "@/components/sections/projects-section";
 import { SkillsSection } from "@/components/sections/skills-section";
 import { portfolioContent } from "@/content/portfolio-content";
+
+// Canvas/WebGL scenes must never server-render: the SSR pass has no window or
+// WebGL, and a markup mismatch on hydration kills the scene silently in
+// production. ssr:false keeps them strictly client-side.
+const TidesBackground = dynamic(
+  () => import("@/components/scenes/tides-background").then((m) => m.TidesBackground),
+  { ssr: false },
+);
+const ContactFooterSection = dynamic(
+  () => import("@/components/sections/contact-footer-section").then((m) => m.ContactFooterSection),
+  { ssr: false },
+);
 
 export function HomeShell() {
   const features = portfolioContent.features;

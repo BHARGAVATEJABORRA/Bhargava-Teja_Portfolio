@@ -74,9 +74,13 @@ function SectionNavigation({
                 className="index-pill-link inline-flex items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
               >
                 <span aria-hidden className="index-pill-hover-circle" />
-                <span className="index-pill-label-stack">
-                  <span className="index-pill-label index-pill-label--base">{item.label}</span>
-                  <span aria-hidden className="index-pill-label index-pill-label--hover">
+                {/* Tailwind grid utilities double up the .index-pill-label-stack
+                    rules so the base + hover copies always overlay in one grid
+                    cell — without them a missed custom rule renders the label
+                    text twice side-by-side ("AboutAbout"). */}
+                <span className="index-pill-label-stack inline-grid place-items-center">
+                  <span className="index-pill-label index-pill-label--base col-start-1 row-start-1">{item.label}</span>
+                  <span aria-hidden className="index-pill-label index-pill-label--hover col-start-1 row-start-1 opacity-0">
                     {item.label}
                   </span>
                 </span>
