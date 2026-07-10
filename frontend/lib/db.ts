@@ -1,18 +1,27 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@prisma/client";
 
 import { seedAll } from "@/lib/seed-content";
 
 /**
- * On Vercel the filesystem is ephemeral and read-only except /tmp, so the
- * SQLite database lives at /tmp/dev.db and is rebuilt on every cold start:
- * the committed migration SQL creates the schema, then the static defaults
- * from content/portfolio-content.ts are seeded in. Admin edits persist only
- * for the lifetime of the lambda instance — the source of truth remains the
- * static content files.
+ * Storage backends, in order of preference:
+ *
+ * 1. Turso/libSQL — set TURSO_DATABASE_URL (+ TURSO_AUTH_TOKEN) and every
+ *    environment shares one durable database. This is what production
+ *    (Vercel) should use: admin edits persist across deploys and cold starts.
+ * 2. Local SQLite file — DATABASE_URL=file:./prisma/dev.db for dev, managed
+ *    with `prisma migrate dev` / `db:seed`.
+ * 3. Legacy /tmp fallback — only if the app runs on Vercel *without* Turso
+ *    vars. Ephemeral per-lambda; kept so a misconfigured deploy degrades to
+ *    read-only defaults instead of crashing outright.
  */
+const tursoUrl = process.env.TURSO_DATABASE_URL?.trim() || "";
+const tursoAuthToken = process.env.TURSO_AUTH_TOKEN?.trim() || "";
+const useTurso = Boolean(tursoUrl);
+
 const dbPath = process.env.VERCEL
   ? "/tmp/dev.db"
   : process.env.DATABASE_URL?.replace("file:", "") ?? "./prisma/dev.db";
@@ -22,10 +31,22 @@ const datasourceUrl = process.env.VERCEL
   : process.env.DATABASE_URL ?? `file:${dbPath}`;
 
 function createBaseClient(): PrismaClient {
+  if (useTurso) {
+    const adapter = new PrismaLibSQL({
+      url: tursoUrl,
+      ...(tursoAuthToken ? { authToken: tursoAuthToken } : {}),
+    });
+    return new PrismaClient({ adapter });
+  }
+  if (process.env.VERCEL) {
+    console.warn(
+      "[db] TURSO_DATABASE_URL is not set — falling back to ephemeral /tmp SQLite. Admin edits will NOT persist.",
+    );
+  }
   return new PrismaClient({ datasourceUrl });
 }
 
-/** Apply committed Prisma migration SQL to a fresh SQLite file. */
+/** Apply committed Prisma migration SQL to a fresh (lib)SQL database. */
 async function applyMigrations(client: PrismaClient): Promise<void> {
   const migrationsDir = path.join(process.cwd(), "prisma", "migrations");
   if (!existsSync(migrationsDir)) return;
@@ -62,11 +83,17 @@ async function tableExists(client: PrismaClient, table: string): Promise<boolean
   }
 }
 
-/** Ensure schema + seed data exist (cold-start recovery on Vercel). */
+/**
+ * Ensure schema + seed data exist. For Turso this bootstraps a brand-new
+ * database exactly once (migrations run only if the schema is missing, seeds
+ * only if the Project table is empty); afterwards it's a cheap no-op check.
+ * For the legacy /tmp fallback it rebuilds the DB on every cold start.
+ */
 async function initDatabase(client: PrismaClient): Promise<void> {
   try {
     if (!(await tableExists(client, "Project"))) {
       await applyMigrations(client);
+      console.log("[db] applied migrations to fresh database");
     }
     const projectCount = await client.project.count().catch(() => 0);
     if (projectCount === 0) {
@@ -81,9 +108,9 @@ async function initDatabase(client: PrismaClient): Promise<void> {
 function createClient() {
   const base = createBaseClient();
 
-  // Locally the DB is managed with `prisma migrate dev` / `db:seed`; only the
-  // ephemeral Vercel runtime needs the lazy auto-init.
-  if (!process.env.VERCEL) return base;
+  // Locally the DB is managed with `prisma migrate dev` / `db:seed`; Turso and
+  // the ephemeral Vercel fallback bootstrap themselves via the lazy auto-init.
+  if (!process.env.VERCEL && !useTurso) return base;
 
   let initPromise: Promise<void> | null = null;
   const ensureInit = () => {
@@ -92,7 +119,7 @@ function createClient() {
   };
 
   // Gate every query behind the one-time init so any route hitting a cold
-  // lambda transparently rebuilds the schema + seed data first.
+  // lambda transparently bootstraps the schema + seed data first.
   return base.$extends({
     query: {
       async $allOperations({ args, query }) {

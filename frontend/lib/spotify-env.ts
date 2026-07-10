@@ -67,10 +67,12 @@ export function getSpotifyEnvConfig(): SpotifyEnvConfig {
   const clientId = readRuntimeEnvValue(localEnv, "SPOTIFY_CLIENT_ID");
   const clientSecret = readRuntimeEnvValue(localEnv, "SPOTIFY_CLIENT_SECRET");
   const refreshToken = readRuntimeEnvValue(localEnv, "SPOTIFY_REFRESH_TOKEN");
+  const vercelUrl = readEnvValue(process.env.VERCEL_URL);
   const siteUrl =
     readRuntimeEnvValue(localEnv, "NEXT_PUBLIC_SITE_URL") ||
     readRuntimeEnvValue(localEnv, "NEXTAUTH_URL") ||
     readRuntimeEnvValue(localEnv, "AUTH_URL") ||
+    (vercelUrl ? `https://${vercelUrl}` : "") ||
     "http://127.0.0.1:3000";
   const redirectUri = readRuntimeEnvValue(localEnv, "SPOTIFY_REDIRECT_URI") || `${siteUrl}/api/auth/callback/spotify`;
   const hasCredentials = Boolean(clientId && clientSecret);

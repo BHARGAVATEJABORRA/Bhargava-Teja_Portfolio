@@ -59,17 +59,21 @@ const UNAVAILABLE: SpotifyData = {
   detail: "Spotify did not return an access token or track data right now",
 };
 
-const TOKEN_REJECTED: SpotifyData = {
-  ...OFFLINE,
-  detail:
-    "Spotify rejected the refresh token (likely expired or revoked). Re-mint it: open http://127.0.0.1:3000/api/auth/signin, authorize, then retry /api/spotify",
-};
+// Point re-auth instructions at whatever origin this deployment runs on
+// (NEXT_PUBLIC_SITE_URL et al via getSpotifyEnvConfig) instead of localhost.
+function tokenRejected(siteUrl: string): SpotifyData {
+  return {
+    ...OFFLINE,
+    detail: `Spotify rejected the refresh token (likely expired or revoked). Re-mint it: open ${siteUrl}/api/auth/signin, authorize, then retry /api/spotify`,
+  };
+}
 
-const FORBIDDEN: SpotifyData = {
-  ...OFFLINE,
-  detail:
-    "Spotify returned 403 on the player/track endpoints (usually missing scopes). Re-run http://127.0.0.1:3000/api/auth/signin to re-grant scopes",
-};
+function forbidden(siteUrl: string): SpotifyData {
+  return {
+    ...OFFLINE,
+    detail: `Spotify returned 403 on the player/track endpoints (usually missing scopes). Re-run ${siteUrl}/api/auth/signin to re-grant scopes`,
+  };
+}
 
 async function getAccessToken(): Promise<AccessTokenResult | null> {
   const { clientId, clientSecret, refreshToken, isConfigured } = getSpotifyEnvConfig();
@@ -171,7 +175,7 @@ export async function GET() {
   if (!accessToken) {
     // We already know credentials are configured, so a null token means the
     // refresh exchange itself failed — almost always an expired/revoked token.
-    return NextResponse.json(TOKEN_REJECTED, {
+    return NextResponse.json(tokenRejected(spotifyConfig.siteUrl), {
       headers: { "Cache-Control": "no-store" },
     });
   }
@@ -182,7 +186,7 @@ export async function GET() {
       cache: "no-store",
     });
     const nowPlayingText = await nowPlayingResponse.text();
-    let forbidden = nowPlayingResponse.status === 403;
+    let wasForbidden = nowPlayingResponse.status === 403;
 
     if (nowPlayingResponse.ok && nowPlayingResponse.status !== 204) {
       const nowData = JSON.parse(nowPlayingText || "{}") as SpotifyPlaybackResponse;
@@ -196,7 +200,7 @@ export async function GET() {
     }
 
     const recent = await getRecentlyPlayed(accessToken.token);
-    forbidden = forbidden || recent.forbidden;
+    wasForbidden = wasForbidden || recent.forbidden;
     if (recent.payload) {
       return NextResponse.json(recent.payload, {
         headers: { "Cache-Control": "s-maxage=8, stale-while-revalidate=2" },
@@ -206,15 +210,15 @@ export async function GET() {
     const topTrack = accessToken.scopes.has("user-top-read")
       ? await getTopTrack(accessToken.token)
       : { payload: null, forbidden: false };
-    forbidden = forbidden || topTrack.forbidden;
+    wasForbidden = wasForbidden || topTrack.forbidden;
     if (topTrack.payload) {
       return NextResponse.json(topTrack.payload, {
         headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=300" },
       });
     }
 
-    if (forbidden) {
-      return NextResponse.json(FORBIDDEN, {
+    if (wasForbidden) {
+      return NextResponse.json(forbidden(spotifyConfig.siteUrl), {
         headers: { "Cache-Control": "no-store" },
       });
     }

@@ -443,5 +443,17 @@ export async function getPublishedCollections(): Promise<{
 
 export async function publishContentOverrides(): Promise<void> {
   const collections = await getPublishedCollections();
-  await fs.writeFile(OVERRIDES_FILE, `${JSON.stringify(collections, null, 2)}\n`, "utf8");
+  try {
+    await fs.writeFile(OVERRIDES_FILE, `${JSON.stringify(collections, null, 2)}\n`, "utf8");
+  } catch (err) {
+    // On Vercel the deployment bundle is read-only, so the overlay file can't
+    // be rewritten at runtime. The database (Turso) is the source of truth
+    // there; the overlay is only refreshed by local dev / build-time publish.
+    // Swallowing this keeps admin writes from 500-ing in production.
+    if (process.env.VERCEL) {
+      console.warn("[content-store] skipped overlay publish (read-only filesystem):", (err as Error).message);
+      return;
+    }
+    throw err;
+  }
 }

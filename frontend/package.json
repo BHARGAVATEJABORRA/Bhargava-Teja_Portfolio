@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@prisma/adapter-libsql": "^6.19.3",
     "@prisma/client": "^6.19.3",
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.2",

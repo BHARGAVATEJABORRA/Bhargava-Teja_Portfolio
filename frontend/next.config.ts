@@ -20,8 +20,18 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: process.cwd(),
   },
+  // The contact inbox lives at /admin/inbox; alias the paths people guess.
+  // (Redirects aren't supported on static export, hence the gate.)
+  ...(isStaticExport
+    ? {}
+    : {
+        redirects: async () => [
+          { source: "/admin/contact", destination: "/admin/inbox", permanent: false },
+          { source: "/admin/messages", destination: "/admin/inbox", permanent: false },
+        ],
+      }),
   // Ship the migration SQL with every serverless function so lib/db.ts can
-  // rebuild the ephemeral /tmp SQLite database on Vercel cold starts.
+  // bootstrap a fresh database (Turso or the /tmp fallback) at runtime.
   outputFileTracingIncludes: {
     "/**/*": ["./prisma/migrations/**/*"],
   },

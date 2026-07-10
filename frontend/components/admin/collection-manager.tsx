@@ -151,10 +151,18 @@ export function CollectionManager<TDto extends { id: string }>({
   const errorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Validation errors auto-dismiss after 5s (or on the next form edit below).
-  const showError = useCallback((message: string) => {
+  // Server/network failures stay visible until the user edits or retries, so
+  // a failed save can never look like a silent success.
+  const showError = useCallback((message: string, options?: { sticky?: boolean }) => {
     setError(message);
     if (errorTimer.current) clearTimeout(errorTimer.current);
-    errorTimer.current = setTimeout(() => setError(null), 5000);
+    if (!options?.sticky) {
+      errorTimer.current = setTimeout(() => setError(null), 5000);
+    }
+    // Make sure the banner is actually seen even on long forms.
+    requestAnimationFrame(() => {
+      document.querySelector('[role="alert"]')?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
   }, []);
 
   useEffect(() => () => {
@@ -221,14 +229,14 @@ export function CollectionManager<TDto extends { id: string }>({
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        showError(data.error ?? `Save failed (${res.status}).`);
+        showError(data.error ?? `Save failed (${res.status}).`, { sticky: res.status >= 500 });
         return;
       }
       setNotice(isCreate ? `New ${entityLabel} created and published.` : `${capitalize(entityLabel)} updated and published.`);
       setEditingId(null);
       await refresh();
     } catch (err) {
-      showError((err as Error).message);
+      showError(`Save failed: ${(err as Error).message}`, { sticky: true });
     } finally {
       setBusy(false);
     }
@@ -243,7 +251,7 @@ export function CollectionManager<TDto extends { id: string }>({
       const res = await fetch(`${endpoint}/${dto.id}`, { method: "DELETE" });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        showError(data.error ?? `Delete failed (${res.status}).`);
+        showError(data.error ?? `Delete failed (${res.status}).`, { sticky: res.status >= 500 });
         return;
       }
       setNotice(`${capitalize(entityLabel)} deleted and unpublished.`);
