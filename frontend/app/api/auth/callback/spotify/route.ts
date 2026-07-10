@@ -173,13 +173,31 @@ export async function GET(request: NextRequest) {
   const refreshToken = tokenResponse.refresh_token;
   const response = refreshToken
     ? await (async () => {
-        await upsertLocalEnvValue("SPOTIFY_REFRESH_TOKEN", refreshToken);
+        // Persisting to .env.local only works locally; on Vercel the
+        // filesystem is read-only, so fall through and show the token for
+        // manual entry into the dashboard env vars instead of crashing.
+        let saved = false;
+        if (!process.env.VERCEL) {
+          try {
+            await upsertLocalEnvValue("SPOTIFY_REFRESH_TOKEN", refreshToken);
+            saved = true;
+          } catch {
+            saved = false;
+          }
+        } else {
+          process.env.SPOTIFY_REFRESH_TOKEN = refreshToken;
+        }
 
         return htmlResponse(
         "Spotify Refresh Token",
-        `<h1>Spotify refresh token generated</h1>
+        saved
+          ? `<h1>Spotify refresh token generated</h1>
         <p>The token was saved to <code>frontend/.env.local</code> and loaded into the running dev server.</p>
-        <p>Keep this token private. The Spotify client secret was used only on the server during this exchange. You can now re-test <code>/api/spotify</code>.</p>`,
+        <p>Keep this token private. The Spotify client secret was used only on the server during this exchange. You can now re-test <code>/api/spotify</code>.</p>`
+          : `<h1>Spotify refresh token generated</h1>
+        <p>This deployment can't write config files, so copy the token below into the <strong>SPOTIFY_REFRESH_TOKEN</strong> environment variable (Vercel → Settings → Environment Variables), then redeploy.</p>
+        <code>${escapeHtml(refreshToken)}</code>
+        <p>Keep this token private. It is loaded for the current server instance already, so <code>/api/spotify</code> works until the next cold start.</p>`,
         );
       })()
     : htmlResponse(
