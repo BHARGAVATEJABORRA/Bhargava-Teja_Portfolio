@@ -100,7 +100,7 @@ export interface ArticleSummary {
   tagline?: string;
   /** Longer body paragraph shown when the card is the active/expanded one. */
   body?: string;
-  /** Cosmetic like count for the deck card (placeholder social proof). */
+  /** Legacy cosmetic like count — real likes now live in the Like table (/api/likes). */
   likes?: number;
   /** Accent color for the card image panel / gradient. */
   accent?: string;
@@ -538,7 +538,6 @@ const basePortfolioContent = {
       readTime: "8 min read",
       href: "#",
       isReal: false,
-      likes: 42,
       accent: "#fcbc1d",
       tags: ["AWS", "FinOps", "Cost Optimization"],
       premise: "Where cloud savings actually hide on a high-scale banking platform.",
@@ -556,7 +555,6 @@ const basePortfolioContent = {
       readTime: "7 min read",
       href: "#",
       isReal: false,
-      likes: 37,
       accent: "#6aa6ff",
       tags: ["CI/CD", "Jenkins", "AWS CodePipeline"],
       premise: "How automated gates made frequent banking deploys safer, not scarier.",
@@ -574,7 +572,6 @@ const basePortfolioContent = {
       readTime: "9 min read",
       href: "#",
       isReal: false,
-      likes: 51,
       accent: "#c084fc",
       tags: ["Disaster Recovery", "AWS", "Compliance"],
       premise: "Building disaster recovery you can prove, not just document.",
@@ -592,7 +589,6 @@ const basePortfolioContent = {
       readTime: "7 min read",
       href: "#",
       isReal: false,
-      likes: 29,
       accent: "#34d399",
       tags: ["Terraform", "IaC", "Multi-Cloud"],
       premise: "Standardizing multi-cloud environments before drift reaches prod.",
@@ -610,7 +606,6 @@ const basePortfolioContent = {
       readTime: "6 min read",
       href: "#",
       isReal: false,
-      likes: 33,
       accent: "#f97316",
       tags: ["Spring Security", "OAuth2", "JWT"],
       premise: "Making high-volume API authentication boringly reliable.",
@@ -628,7 +623,6 @@ const basePortfolioContent = {
       readTime: "6 min read",
       href: "#",
       isReal: false,
-      likes: 24,
       accent: "#38bdf8",
       tags: ["Serverless", "Lambda", "API Gateway"],
       premise: "When event-driven serverless beats an always-on fleet.",
@@ -646,7 +640,6 @@ const basePortfolioContent = {
       readTime: "7 min read",
       href: "#",
       isReal: false,
-      likes: 31,
       accent: "#60a5fa",
       tags: ["PostgreSQL", "DynamoDB", "Redis"],
       premise: "Cutting database load without rewriting the application.",
@@ -664,7 +657,6 @@ const basePortfolioContent = {
       readTime: "5 min read",
       href: "#",
       isReal: false,
-      likes: 28,
       accent: "#a78bfa",
       tags: ["CloudWatch", "Observability", "Alerting"],
       premise: "Designing monitoring around signal instead of noise.",

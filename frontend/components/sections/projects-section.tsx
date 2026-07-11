@@ -6,6 +6,7 @@ import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
 import { Container } from "@/components/ui/container";
 import { portfolioContent } from "@/content/portfolio-content";
+import { likeKey, useLikes } from "@/lib/use-likes";
 
 interface GithubProject {
   id: number;
@@ -17,7 +18,8 @@ interface GithubProject {
   stack: string[];
   accent: string;
   href: string;
-  likes: number;
+  /** Stable key for the real like system (/api/likes). */
+  likeId: string;
   imageUrl?: string;
   imageAlt?: string;
 }
@@ -25,13 +27,6 @@ interface GithubProject {
 // Card accents cycle through the section's established palette so DB-managed
 // projects keep the same visual rhythm as the original hand-tuned cards.
 const CARD_ACCENTS = ["#38bdf8", "#6aa6ff", "#c084fc", "#f59e0b", "#34d399"];
-
-/** Deterministic pseudo like-count so cards stay stable across renders/builds. */
-function seedLikes(title: string): number {
-  let hash = 0;
-  for (let i = 0; i < title.length; i += 1) hash = (hash * 31 + title.charCodeAt(i)) % 997;
-  return 12 + (hash % 39);
-}
 
 // Data source: portfolioContent.projects — static defaults overridden by the
 // admin CMS overlay (content/portfolio-overrides.json). See lib/content-store.ts.
@@ -45,7 +40,7 @@ const githubProjects: GithubProject[] = portfolioContent.projects.map((project, 
   stack: project.stack,
   accent: CARD_ACCENTS[index % CARD_ACCENTS.length],
   href: project.linkState === "configured" ? project.liveUrl ?? project.repoUrl ?? project.href : project.href,
-  likes: seedLikes(project.title),
+  likeId: likeKey(project.title),
   imageUrl: project.imageUrl,
   imageAlt: project.imageAlt,
 }));
@@ -62,14 +57,18 @@ function ProjectCard({
   project,
   index,
   slotRef,
+  liked,
+  likeCount,
+  onToggleLike,
 }: {
   project: GithubProject;
   index: number;
   slotRef?: Ref<HTMLDivElement>;
+  liked: boolean;
+  likeCount: number;
+  onToggleLike: () => void;
 }) {
   const accent = project.accent;
-  const [liked, setLiked] = useState(false);
-  const likeCount = project.likes + (liked ? 1 : 0);
 
   const stickyStyle: CSSProperties = {
     position: "sticky",
@@ -85,7 +84,7 @@ function ProjectCard({
       <article className="article-card project-card-flat group" style={{ ["--article-accent" as string]: accent }}>
         <button
           type="button"
-          onClick={() => setLiked((v) => !v)}
+          onClick={onToggleLike}
           aria-pressed={liked}
           aria-label={liked ? "Unlike project" : "Like project"}
           className="article-like"
@@ -153,6 +152,7 @@ function ProjectCard({
 export function ProjectsSection() {
   const lastCardRef = useRef<HTMLDivElement>(null);
   const [titleFading, setTitleFading] = useState(false);
+  const likes = useLikes("project");
 
   // Fade the sticky "My Projects" title once the last card starts dominating
   // the top of the viewport. Pure-CSS sticky can't handle this cleanly
@@ -212,6 +212,9 @@ export function ProjectsSection() {
               project={project}
               index={index}
               slotRef={index === lastIndex ? lastCardRef : undefined}
+              liked={likes.isLiked(project.likeId)}
+              likeCount={likes.count(project.likeId)}
+              onToggleLike={() => likes.toggle(project.likeId)}
             />
           ))}
           {/* Trailing spacer: small buffer so the last card + title don't

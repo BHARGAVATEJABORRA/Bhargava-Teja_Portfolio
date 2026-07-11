@@ -9,16 +9,27 @@ import { getActiveLenis } from "@/lib/smooth-scroll-instance";
 import { BorderGlowCard } from "@/components/ui/border-glow-card";
 import { portfolioContent } from "@/content/portfolio-content";
 import type { ArticleSummary } from "@/content/portfolio-content";
+import { useLikes } from "@/lib/use-likes";
 
-function ArticleCard({ article, index }: { article: ArticleSummary; index: number }) {
+function ArticleCard({
+  article,
+  index,
+  liked,
+  likeCount,
+  onToggleLike,
+}: {
+  article: ArticleSummary;
+  index: number;
+  liked: boolean;
+  likeCount: number;
+  onToggleLike: () => void;
+}) {
   // Blueprint look (ported from the original Projects cards), reworked to feel
   // more like a real engineering drawing sheet: a deep technical-blue panel
   // with an accent-tinted grid, a title-block header strip with the sheet
   // number, corner registration ticks, and an accent glow. Each article's own
   // accent tints the grid, header, corners, chips, and glow.
   const accent = article.accent ?? "#fcbc1d";
-  const [liked, setLiked] = useState(false);
-  const likeCount = (article.likes ?? 0) + (liked ? 1 : 0);
   const sheet = `ART-${String(index + 1).padStart(3, "0")}`;
 
   return (
@@ -69,7 +80,7 @@ function ArticleCard({ article, index }: { article: ArticleSummary; index: numbe
           {/* Like button — sits inside the header, no clipping. */}
           <button
             type="button"
-            onClick={() => setLiked((v) => !v)}
+            onClick={onToggleLike}
             aria-pressed={liked}
             aria-label={liked ? "Unlike article" : "Like article"}
             className="ml-3 inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 font-mono text-[11px] transition-colors"
@@ -141,6 +152,7 @@ function ArticleCard({ article, index }: { article: ArticleSummary; index: numbe
 
 export function BlogsSection() {
   const articles = portfolioContent.articles ?? [];
+  const likes = useLikes("article");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLDivElement>(null);
@@ -246,7 +258,14 @@ export function BlogsSection() {
             className="projects-gallery flex gap-6 pl-[max(1.5rem,calc(50vw-190px))] pr-[50vw] will-change-transform"
           >
             {articles.map((article, index) => (
-              <ArticleCard key={article.slug} article={article} index={index} />
+              <ArticleCard
+                key={article.slug}
+                article={article}
+                index={index}
+                liked={likes.isLiked(article.slug)}
+                likeCount={likes.count(article.slug)}
+                onToggleLike={() => likes.toggle(article.slug)}
+              />
             ))}
           </div>
         </div>

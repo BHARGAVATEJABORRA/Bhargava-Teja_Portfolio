@@ -194,7 +194,7 @@ export default async function AdminDashboardPage() {
   return (
     <AdminShell
       title="Admin dashboard"
-      description="Edits save to the content database and publish to the live site automatically."
+      description="Edits persist to the content database; public pages pick them up on the next deploy."
     >
       {!data.ok && (
         <div className="mb-6 rounded-xl border border-red-400/30 bg-red-500/20 px-4 py-3 text-sm font-medium text-red-300">

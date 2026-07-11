@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { LuEye, LuUsers, LuMessagesSquare, LuDownload, LuMail, LuActivity } from "react-icons/lu";
+import { LuEye, LuUsers, LuMessagesSquare, LuDownload, LuMail, LuActivity, LuThumbsUp } from "react-icons/lu";
 
 import type { DashboardInsights } from "@/lib/insights-store";
 
@@ -43,11 +43,12 @@ export function DashboardMetrics({ insights }: { insights: DashboardInsights }) 
     { icon: LuMessagesSquare, label: "AI conversations", value: insights.ai.conversations, sub: `${insights.ai.last7} in 7d`, accent: "text-purple-400" },
     { icon: LuDownload, label: "Resume downloads", value: insights.events.resumeDownloads, sub: `${insights.events.total} events total`, accent: "text-blue-400" },
     { icon: LuMail, label: "Contact messages", value: insights.contacts.total, sub: `${insights.contacts.unread} unread`, accent: "text-emerald-400" },
+    { icon: LuThumbsUp, label: "Likes", value: insights.likes.total, sub: `${insights.likes.projects} projects · ${insights.likes.articles} articles`, accent: "text-rose-400" },
   ];
 
   return (
     <section aria-label="Live metrics" className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {cards.map(({ icon: Icon, label, value, sub, accent }) => (
           <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur" style={GRID_BG}>
             <div className="flex items-center justify-between">

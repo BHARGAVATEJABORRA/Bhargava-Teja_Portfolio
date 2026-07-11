@@ -87,8 +87,24 @@ export interface DashboardInsights {
   events: { total: number; resumeDownloads: number };
   ai: { conversations: number; last7: number };
   contacts: { total: number; unread: number };
+  likes: { total: number; projects: number; articles: number };
   viewsByDay: { day: string; count: number }[]; // last 14 days, oldest→newest
   topEvents: { name: string; count: number }[];
+}
+
+/** Like tallies come from the lazily-created Like table (lib/likes-store.ts). */
+async function likeTotals(): Promise<{ total: number; projects: number; articles: number }> {
+  try {
+    const rows = await prisma.$queryRaw<{ entityType: string; c: number | bigint }[]>`
+      SELECT "entityType", COUNT(*) c FROM "Like" GROUP BY "entityType"`;
+    const byType = Object.fromEntries(rows.map((r) => [r.entityType, Number(r.c)]));
+    const projects = byType.project ?? 0;
+    const articles = byType.article ?? 0;
+    return { total: projects + articles, projects, articles };
+  } catch {
+    // Table doesn't exist until the first like is recorded — that's fine.
+    return { total: 0, projects: 0, articles: 0 };
+  }
 }
 
 function n(v: unknown): number {
@@ -105,11 +121,13 @@ export async function getDashboardInsights(): Promise<DashboardInsights> {
     events: { total: 0, resumeDownloads: 0 },
     ai: { conversations: 0, last7: 0 },
     contacts: { total: 0, unread: 0 },
+    likes: { total: 0, projects: 0, articles: 0 },
     viewsByDay: [],
     topEvents: [],
   };
 
   try {
+    const likes = await likeTotals();
     const [viewsTotal, views7, views30, uniq, uniq7, evTotal, resumeDl, aiTotal, ai7, cTotal, cUnread, byDayRows, topRows] =
       await Promise.all([
         prisma.$queryRaw`SELECT COUNT(*) c FROM "AnalyticsEvent" WHERE "type"='pageview'`,
@@ -138,6 +156,7 @@ export async function getDashboardInsights(): Promise<DashboardInsights> {
       events: { total: n((evTotal as unknown[])[0]), resumeDownloads: n((resumeDl as unknown[])[0]) },
       ai: { conversations: n((aiTotal as unknown[])[0]), last7: n((ai7 as unknown[])[0]) },
       contacts: { total: n((cTotal as unknown[])[0]), unread: n((cUnread as unknown[])[0]) },
+      likes,
       viewsByDay: (byDayRows as { day: string; c: number | bigint }[]).map((r) => ({ day: r.day, count: Number(r.c) })),
       topEvents: (topRows as { name: string; c: number | bigint }[]).map((r) => ({ name: r.name, count: Number(r.c) })),
     };
