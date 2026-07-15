@@ -28,6 +28,7 @@ import {
   LuUser,
 } from "react-icons/lu";
 
+import { uploadAdminFile } from "@/lib/admin-upload";
 import type { SiteConfigKey, SiteConfigStat } from "@/lib/site-config";
 
 type ConfigValue = string | boolean | string[] | SiteConfigStat[] | { label: string; url: string };
@@ -393,14 +394,8 @@ function FileField({
     setUploading(true);
     setMsg(null);
     try {
-      const body = new FormData();
-      body.append("file", file);
-      body.append("kind", field.uploadKind ?? "media");
-      body.append("label", field.label);
-      const res = await fetch("/api/admin/upload", { method: "POST", body });
-      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-      if (!res.ok || !data.url) throw new Error(data.error ?? `Upload failed (${res.status}).`);
-      onChange(data.url);
+      const url = await uploadAdminFile(file, field.uploadKind ?? "media", field.label);
+      onChange(url);
       setMsg({ kind: "ok", text: "Uploaded and published to the live site." });
     } catch (err) {
       setMsg({ kind: "err", text: (err as Error).message });

@@ -24,6 +24,7 @@
     "@simplewebauthn/browser": "^13.3.0",
     "@simplewebauthn/server": "^13.3.2",
     "@types/three": "^0.184.1",
+    "@vercel/blob": "^2.6.1",
     "cmdk": "^1.1.1",
     "cobe": "^0.6.5",
     "framer-motion": "^12.36.0",

@@ -31,7 +31,7 @@ const fields: FieldSpec[] = [
     key: "imageUrl",
     label: "Card image",
     kind: "image",
-    hint: "Recommended 1200×800 px (3:2 landscape), PNG/JPG/WebP under 1 MB. Leave empty to keep the accent-glow placeholder.",
+    hint: "Recommended 1200×800 px (3:2 landscape), PNG/JPG/WebP up to 10 MB. Leave empty to keep the accent-glow placeholder.",
   },
   { key: "imageAlt", label: "Image alt text", kind: "text", half: true, placeholder: "Short description of the image" },
 ];

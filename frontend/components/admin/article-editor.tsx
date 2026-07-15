@@ -12,6 +12,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LuCheck, LuCircleAlert, LuExternalLink, LuEye, LuPencil, LuPlus, LuTrash2, LuUpload, LuX } from "react-icons/lu";
 
+import { uploadAdminFile } from "@/lib/admin-upload";
+
 interface ArticleForm {
   id?: string;
   title: string;
@@ -100,14 +102,8 @@ export function ArticleEditor() {
     setOgUploading(true);
     setError(null);
     try {
-      const body = new FormData();
-      body.append("file", file);
-      body.append("kind", "media");
-      body.append("label", "Article OG image");
-      const res = await fetch("/api/admin/upload", { method: "POST", body });
-      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-      if (!res.ok || !data.url) throw new Error(data.error ?? `Upload failed (${res.status}).`);
-      set({ ogImage: data.url });
+      const url = await uploadAdminFile(file, "media", "Article OG image");
+      set({ ogImage: url });
     } catch (err) {
       setError((err as Error).message);
     } finally {

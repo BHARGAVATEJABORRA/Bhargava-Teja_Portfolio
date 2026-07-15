@@ -12,6 +12,8 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LuCheck, LuCircleAlert, LuImage, LuPencil, LuPlus, LuTrash2, LuUpload, LuX } from "react-icons/lu";
 
+import { uploadAdminFile } from "@/lib/admin-upload";
+
 export type FieldKind = "text" | "textarea" | "select" | "checkbox" | "number" | "csv" | "lines" | "metrics" | "image";
 
 export interface FieldSpec {
@@ -474,14 +476,7 @@ function ImageUploadField({
   const upload = async (file: File) => {
     setUploading(true);
     try {
-      const body = new FormData();
-      body.append("file", file);
-      body.append("kind", "image");
-      body.append("label", field.label);
-      const res = await fetch("/api/admin/upload", { method: "POST", body });
-      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
-      if (!res.ok || !data.url) throw new Error(data.error ?? `Upload failed (${res.status}).`);
-      onChange(data.url);
+      onChange(await uploadAdminFile(file, "image", field.label));
     } catch (err) {
       onError((err as Error).message);
     } finally {

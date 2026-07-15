@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { LuCopy, LuCheck, LuTrash2, LuUpload, LuFile } from "react-icons/lu";
 
+import { uploadAdminFile } from "@/lib/admin-upload";
+
 interface MediaItem {
   name: string;
   url: string;
@@ -48,15 +50,7 @@ export function MediaLibrary() {
     setError(null);
     try {
       for (const file of Array.from(files)) {
-        const body = new FormData();
-        body.append("file", file);
-        body.append("kind", "media");
-        body.append("label", file.name);
-        const res = await fetch("/api/admin/upload", { method: "POST", body });
-        if (!res.ok) {
-          const d = (await res.json().catch(() => ({}))) as { error?: string };
-          throw new Error(d.error ?? `Upload failed (${res.status}).`);
-        }
+        await uploadAdminFile(file, "media", file.name);
       }
       await load();
     } catch (err) {
@@ -76,10 +70,14 @@ export function MediaLibrary() {
     }
   };
 
-  const remove = async (name: string) => {
-    if (!window.confirm(`Delete "${name}"? References to it will break.`)) return;
-    setItems((rows) => rows.filter((r) => r.name !== name));
-    await fetch(`/api/admin/media?file=${encodeURIComponent(name)}`, { method: "DELETE" }).catch(() => void load());
+  const remove = async (item: MediaItem) => {
+    if (!window.confirm(`Delete "${item.name}"? References to it will break.`)) return;
+    setItems((rows) => rows.filter((r) => r.url !== item.url));
+    // Blob-hosted files are addressed by their absolute URL; dev files by name.
+    const query = item.url.startsWith("http")
+      ? `url=${encodeURIComponent(item.url)}`
+      : `file=${encodeURIComponent(item.name)}`;
+    await fetch(`/api/admin/media?${query}`, { method: "DELETE" }).catch(() => void load());
   };
 
   return (
@@ -129,7 +127,7 @@ export function MediaLibrary() {
                   {copied === m.url ? <LuCheck size={12} aria-hidden /> : <LuCopy size={12} aria-hidden />}
                   {copied === m.url ? "Copied" : "Copy URL"}
                 </button>
-                <button type="button" onClick={() => void remove(m.name)} aria-label={`Delete ${m.name}`} className="inline-flex min-h-8 items-center justify-center rounded-lg border border-red-400/30 px-2 text-red-300 transition hover:opacity-80">
+                <button type="button" onClick={() => void remove(m)} aria-label={`Delete ${m.name}`} className="inline-flex min-h-8 items-center justify-center rounded-lg border border-red-400/30 px-2 text-red-300 transition hover:opacity-80">
                   <LuTrash2 size={12} aria-hidden />
                 </button>
               </div>
