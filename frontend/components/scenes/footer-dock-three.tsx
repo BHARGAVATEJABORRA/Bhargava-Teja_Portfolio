@@ -12,9 +12,9 @@ if (typeof window !== "undefined") {
 // ---------------------------------------------------------------------------
 // Scroll-bound Three.js build of the footer dock ("night theme"). The dock and
 // water-reflection textures are drawn on shader planes so the scene stays
-// pixel-faithful at rest. The only light is two discrete warm pools, one under
-// each lamp, each dying out within a plank or two — the deck between the lamps
-// stays dark and the texture keeps its natural exposure. Scroll progress (GSAP
+// pixel-faithful at rest. Three bounded warm pools sit under the lamps while a
+// restrained cool sky fill keeps the unlit boards readable without flattening
+// the pier into a uniformly bright slab. Scroll progress (GSAP
 // ScrollTrigger, scrubbed) ignites the lamps as night settles. The reflection
 // plane mirrors the pools about the waterline and ripples them with a
 // time-based wobble.
@@ -25,7 +25,7 @@ if (typeof window !== "undefined") {
 // onto the pier's left arm and has none, so its pool is shader-only and reads
 // softer. Do NOT try to bake one in: that arm's planks sit near black, and
 // scaling them up amplifies the texture's compression noise into colour
-// speckle. The moon fill below is what brings that arm's grain out.
+// speckle. Its shader pool gets a modest local correction instead.
 // All three reflections are shader-driven (the reflection texture has only a
 // faint bulb).
 const LAMP_3: readonly [number, number] = [0.185, 0.866];
@@ -73,6 +73,7 @@ const FRAGMENT_SHADER = /* glsl */ `
   uniform float uLamp1On;
   uniform float uLamp2On;
   uniform float uLamp3On;
+  uniform float uReflection;
   uniform float uOpacity;
   varying vec2 vUv;
 
@@ -83,29 +84,31 @@ const FRAGMENT_SHADER = /* glsl */ `
     return length(d);
   }
 
+  // Inverse-square-inspired attenuation with a soft finite boundary. The
+  // radius is explicit, so no lamp can wash across the whole deck.
+  float lampFalloff(vec2 p, vec2 c, float radius) {
+    float normalizedDistance = radialDist(p, c) / radius;
+    float inverseSquare = 1.0 / (1.0 + 4.0 * normalizedDistance * normalizedDistance);
+    float boundary = 1.0 - smoothstep(0.68, 1.0, normalizedDistance);
+    return inverseSquare * boundary;
+  }
+
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
     // Lamp halos: gentle flicker once each lamp has ignited.
-    float flicker1 = 0.92 + 0.08 * sin(uTime * 6.3 + 1.7);
-    float flicker2 = 0.92 + 0.08 * sin(uTime * 5.1);
-    float flicker3 = 0.92 + 0.08 * sin(uTime * 5.7 + 3.1);
-    float bulb1 = exp(-radialDist(vUv, uLamp1) * 22.0) * uLamp1On * flicker1;
-    float bulb2 = exp(-radialDist(vUv, uLamp2) * 22.0) * uLamp2On * flicker2;
-    float bulb3 = exp(-radialDist(vUv, uLamp3) * 22.0) * uLamp3On * flicker3;
+    float flicker1 = 0.98 + 0.02 * sin(uTime * 6.3 + 1.7);
+    float flicker2 = 0.98 + 0.02 * sin(uTime * 5.1);
+    float flicker3 = 0.98 + 0.02 * sin(uTime * 5.7 + 3.1);
+    float bulb1 = lampFalloff(vUv, uLamp1, 0.105) * uLamp1On * flicker1;
+    float bulb2 = lampFalloff(vUv, uLamp2, 0.105) * uLamp2On * flicker2;
+    float bulb3 = lampFalloff(vUv, uLamp3, 0.105) * uLamp3On * flicker3;
 
-    // Soft light pool on the planks under each lamp. The falloff is wide on
-    // purpose: a tight one reads as a harsh spotlight rim rather than lamplight.
-    float pool1 = exp(-radialDist(vUv, uPool1) * 15.0) * uLamp1On * flicker1;
-    float pool2 = exp(-radialDist(vUv, uPool2) * 15.0) * uLamp2On * flicker2;
-    float pool3 = exp(-radialDist(vUv, uPool3) * 15.0) * uLamp3On * flicker3;
-
-    // Broad, dim warm wash: real lamplight spills far across the planks and
-    // dies out gradually, so the deck reads as one lit pier surface receding
-    // into the dark instead of three isolated spotlights on a black slab.
-    float wash1 = exp(-radialDist(vUv, uPool1) * 5.5) * uLamp1On;
-    float wash2 = exp(-radialDist(vUv, uPool2) * 5.5) * uLamp2On;
-    float wash3 = exp(-radialDist(vUv, uPool3) * 5.5) * uLamp3On;
+    // The direct pools have a fixed 0.20 texture-space radius. Their edge is
+    // deliberately soft, but reaches zero before the next lamp's pool begins.
+    float pool1 = lampFalloff(vUv, uPool1, 0.20) * uLamp1On * flicker1;
+    float pool2 = lampFalloff(vUv, uPool2, 0.20) * uLamp2On * flicker2;
+    float pool3 = lampFalloff(vUv, uPool3, 0.20) * uLamp3On * flicker3;
 
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
     vec3 moonCool = vec3(0.42, 0.56, 0.66);
@@ -117,34 +120,28 @@ const FRAGMENT_SHADER = /* glsl */ `
     // <colorspace_fragment> include at the end encodes back to sRGB — without
     // it the planks render ~4x too dark (only the additive light shows).
     float onDock = smoothstep(0.0, 0.15, tex.a);
-    float bulbBleed = (bulb1 + bulb2 + bulb3) * 0.6;
     float bulbSum = bulb1 + bulb2 + bulb3;
-    float poolSum = pool1 + pool2 + pool3;
-    float washSum = wash1 + wash2 + wash3;
+    float strongestPool = max(pool1, max(pool2, pool3));
+    float directReach = clamp(strongestPool + (pool1 + pool2 + pool3) * 0.10, 0.0, 1.0);
+    float reflectionScale = mix(1.0, 0.42, uReflection);
 
-    // Moon/aurora fill for the deck the lamps can't reach. It is a gain rather
-    // than a flat add: the planks here sit near black, and adding a constant
-    // would lift the plank gaps just as much and flatten the deck into milky
-    // grey. Scaling brings the wood grain up while keeping its contrast, and
-    // the small cool term tints it toward the night sky.
-    float lampReach = clamp(poolSum + washSum * 0.6, 0.0, 1.0);
-    float moonMask = (1.0 - lampReach) * onDock;
+    // A low moon/aurora exposure lift only where direct lamplight is absent.
+    // The gentle horizontal variation prevents a flat grey wash, while the
+    // strict ceiling keeps it visibly subordinate to the lamps.
+    float auroraVariation = 0.5 + 0.5 * sin(vUv.x * 5.2 + vUv.y * 1.7);
+    float skyMask = (1.0 - directReach * 0.82) * onDock * mix(1.0, 0.28, uReflection);
+    float skyExposure = 0.055 + auroraVariation * 0.025;
 
     vec3 col = tex.rgb;
-    col *= 1.0 + 1.9 * moonMask;
-    col += moonCool * 0.010 * moonMask;
+    col *= 1.0 + skyExposure * skyMask;
+    col += moonCool * (0.0022 + auroraVariation * 0.0010) * skyMask;
 
-    // The cloned left fixture sits over a much darker part of the source
-    // texture than the middle/right fixtures. Lift its wood grain before the
-    // warm add so the resulting pool matches the other two instead of looking
-    // like a bright bulb over an unlit deck. This correction is intentionally
-    // local to pool3; raising the shared pool would clip the baked-in pools.
-    col *= 1.0 + pool3 * 1.45 * onDock;
-    col += pool3 * lampWarm * 0.22 * onDock;
-
-    col += bulbSum * lampWarm * 0.26 * max(onDock, bulbBleed);
-    col += washSum * lampWarm * 0.04 * onDock;
-    col += poolSum * lampWarm * 0.18 * onDock;
+    // Preserve the wood grain under all three lamps. The left arm is darker in
+    // the source texture, so only that bounded pool receives a small extra
+    // gain/add. Reflection lighting is intentionally less energetic.
+    col *= 1.0 + (directReach * 0.18 + pool3 * 0.08) * onDock * reflectionScale;
+    col += lampWarm * (pool1 * 0.11 + pool2 * 0.11 + pool3 * 0.17) * onDock * reflectionScale;
+    col += bulbSum * lampWarm * 0.18 * max(onDock, bulbSum * 0.35) * reflectionScale;
 
     gl_FragColor = vec4(col, tex.a * uOpacity);
 
@@ -200,6 +197,7 @@ function makeUniforms(texture: THREE.Texture, mirrored: boolean) {
     uLamp1On: { value: 0 },
     uLamp2On: { value: 0 },
     uLamp3On: { value: 0 },
+    uReflection: { value: mirrored ? 1 : 0 },
     uOpacity: { value: mirrored ? 0.55 : 1 },
   };
 }
@@ -294,7 +292,7 @@ export function FooterDockThree() {
     const applyProgress = () => {
       // Night settles in: the lamps ignite in sequence as the band scrolls.
       // The texture keeps its natural exposure throughout — no global
-      // brightness lift, only the two discrete pools.
+      // brightness lift, only the three discrete pools.
       const lamp1On = smoothstep(0.18, 0.4, progress);
       const lamp2On = smoothstep(0.3, 0.52, progress);
       const lamp3On = smoothstep(0.12, 0.34, progress);
