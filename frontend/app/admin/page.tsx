@@ -13,6 +13,7 @@ import {
 import { AdminShell } from "@/components/admin/admin-shell";
 import { ChangeHistory } from "@/components/admin/change-history";
 import { DashboardMetrics } from "@/components/admin/dashboard-metrics";
+import { PasskeyManager } from "@/components/admin/passkey-manager";
 import { getSiteConfigLastUpdated, isSiteConfigConfigured } from "@/lib/content-store";
 import { prisma } from "@/lib/db";
 import { getDashboardInsights } from "@/lib/insights-store";
@@ -213,7 +214,7 @@ export default async function AdminDashboardPage() {
         </span>
         <span>ADMIN SYSTEM ONLINE</span>
         <span className="text-amber-400/50">·</span>
-        <span>PASSKEY VERIFIED</span>
+        <span>SESSION VERIFIED</span>
         <span className="text-amber-400/50">·</span>
         <span suppressHydrationWarning>{formatTimestamp(new Date()).toUpperCase()}</span>
       </div>
@@ -260,6 +261,11 @@ export default async function AdminDashboardPage() {
             </p>
           </div>
         ))}
+      </div>
+
+      {/* Passkey / Touch ID management */}
+      <div className="mt-6">
+        <PasskeyManager />
       </div>
 
       {/* Recent activity feed */}

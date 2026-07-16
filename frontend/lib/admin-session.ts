@@ -7,13 +7,28 @@
  * can't be forged without ADMIN_SESSION_SECRET.
  */
 
+// Dev-only fallback. NEVER used in production: getSecret() throws if
+// ADMIN_SESSION_SECRET is unset in a production/Vercel environment, so a
+// misconfigured deploy fails closed instead of signing sessions with a secret
+// that is public in this repo.
 const DEV_FALLBACK_SECRET = "dev-only-insecure-admin-secret-change-me";
 const DEFAULT_TTL_SECONDS = 60 * 60 * 8; // 8 hours
 
 export const ADMIN_SESSION_COOKIE = "admin_session";
 
+function isProductionRuntime(): boolean {
+  return process.env.NODE_ENV === "production" || Boolean(process.env.VERCEL);
+}
+
 function getSecret(): string {
-  return process.env.ADMIN_SESSION_SECRET?.trim() || DEV_FALLBACK_SECRET;
+  const secret = process.env.ADMIN_SESSION_SECRET?.trim();
+  if (secret) return secret;
+  if (isProductionRuntime()) {
+    throw new Error(
+      "ADMIN_SESSION_SECRET is not set. Refusing to sign/verify admin sessions with the public dev fallback in production.",
+    );
+  }
+  return DEV_FALLBACK_SECRET;
 }
 
 function b64urlEncode(bytes: Uint8Array): string {
@@ -63,9 +78,11 @@ export async function verifySessionToken(token: string | undefined | null): Prom
   if (parts.length !== 2) return false;
   const [payloadB64, sig] = parts;
 
-  const key = await importKey();
   let valid = false;
   try {
+    // importKey() (via getSecret()) throws if the secret is missing in
+    // production — fail closed by denying rather than 500-ing the request.
+    const key = await importKey();
     valid = await crypto.subtle.verify(
       "HMAC",
       key,

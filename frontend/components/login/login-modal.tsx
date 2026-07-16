@@ -4,11 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { LuX } from "react-icons/lu";
-import {
-  browserSupportsWebAuthn,
-  startAuthentication,
-  startRegistration,
-} from "@simplewebauthn/browser";
+import { browserSupportsWebAuthn, startAuthentication } from "@simplewebauthn/browser";
 
 import ReflectiveCard, { type ReflectiveAuthStatus } from "@/components/login/reflective-card/ReflectiveCard";
 
@@ -108,16 +104,18 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
         registered: boolean;
       };
 
-      if (registered) {
-        const optionsJSON = await postJSON("/api/auth/webauthn/authenticate/options");
-        const assertion = await startAuthentication({ optionsJSON });
-        await postJSON("/api/auth/webauthn/authenticate/verify", assertion);
-      } else {
-        setMessage("Set up Touch ID for this device…");
-        const optionsJSON = await postJSON("/api/auth/webauthn/register/options");
-        const attestation = await startRegistration({ optionsJSON });
-        await postJSON("/api/auth/webauthn/register/verify", attestation);
+      // No passkey is enrolled yet — registration is admin-only, so the passcode
+      // is the only way in. Enroll Touch ID from the dashboard once signed in.
+      if (!registered) {
+        setStatus("idle");
+        setShowPasscode(true);
+        setMessage("Sign in with your passcode — you can enable Touch ID from the dashboard afterward.");
+        return;
       }
+
+      const optionsJSON = await postJSON("/api/auth/webauthn/authenticate/options");
+      const assertion = await startAuthentication({ optionsJSON });
+      await postJSON("/api/auth/webauthn/authenticate/verify", assertion);
 
       goToAdmin();
     } catch (err) {

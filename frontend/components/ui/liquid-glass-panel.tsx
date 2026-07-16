@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
 } from "react";
@@ -137,12 +138,14 @@ export function LiquidGlassPanel({
     () => `liquid-panel-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`,
     [rawId],
   );
-  const [supportsUrlFilter, setSupportsUrlFilter] = useState(false);
+  // SSR-safe feature detection without a setState-in-effect: server renders
+  // `false`, the client resolves the real value on mount.
+  const supportsUrlFilter = useSyncExternalStore(
+    () => () => {},
+    () => supportsBackdropUrlFilter(),
+    () => false,
+  );
   const [bounds, setBounds] = useState({ width: 640, height: 320 });
-
-  useEffect(() => {
-    setSupportsUrlFilter(supportsBackdropUrlFilter());
-  }, []);
 
   useEffect(() => {
     const node = rootRef.current;

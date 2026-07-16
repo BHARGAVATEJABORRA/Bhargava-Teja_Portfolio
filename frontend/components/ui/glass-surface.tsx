@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef, useId } from 'react';
+import { useEffect, useRef, useId, useSyncExternalStore } from 'react';
 import './glass-surface.css';
 
 interface GlassSurfaceProps {
@@ -55,7 +55,32 @@ export default function GlassSurface({
   const redGradId = `red-grad-${uniqueId}`;
   const blueGradId = `blue-grad-${uniqueId}`;
 
-  const [svgSupported, setSvgSupported] = useState(false);
+  const supportsSVGFilters = () => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') {
+      return false;
+    }
+
+    const isWebkit = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
+    const isFirefox = /Firefox/.test(navigator.userAgent);
+
+    if (isWebkit || isFirefox) {
+      return false;
+    }
+
+    const div = document.createElement('div');
+    div.style.backdropFilter = `url(#${filterId})`;
+
+    return div.style.backdropFilter !== '';
+  };
+
+  // Feature-detect SVG backdrop filters. useSyncExternalStore keeps this
+  // SSR-safe (server renders `false`, client resolves the real value) without a
+  // setState-in-effect.
+  const svgSupported = useSyncExternalStore(
+    () => () => {},
+    () => supportsSVGFilters(),
+    () => false,
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const feImageRef = useRef<SVGFEImageElement>(null);
@@ -150,28 +175,6 @@ export default function GlassSurface({
   useEffect(() => {
     setTimeout(updateDisplacementMap, 0);
   }, [width, height]);
-
-  useEffect(() => {
-    setSvgSupported(supportsSVGFilters());
-  }, []);
-
-  const supportsSVGFilters = () => {
-    if (typeof window === 'undefined' || typeof document === 'undefined') {
-      return false;
-    }
-
-    const isWebkit = /Safari/.test(navigator.userAgent) && !/Chrome/.test(navigator.userAgent);
-    const isFirefox = /Firefox/.test(navigator.userAgent);
-
-    if (isWebkit || isFirefox) {
-      return false;
-    }
-
-    const div = document.createElement('div');
-    div.style.backdropFilter = `url(#${filterId})`;
-
-    return div.style.backdropFilter !== '';
-  };
 
   const containerStyle = {
     ...style,

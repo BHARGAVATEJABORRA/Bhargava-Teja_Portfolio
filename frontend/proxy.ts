@@ -22,5 +22,13 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*", "/api/admin/:path*"],
+  // Passkey *registration* is admin-gated here too (defense in depth alongside
+  // the requireAdmin() check inside the routes) so no one can enroll a passkey
+  // without an authenticated session. Authentication/status stay public.
+  matcher: [
+    "/admin",
+    "/admin/:path*",
+    "/api/admin/:path*",
+    "/api/auth/webauthn/register/:path*",
+  ],
 };

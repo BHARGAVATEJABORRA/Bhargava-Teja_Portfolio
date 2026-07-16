@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Transient build output from `next build --dist-dir tmp/...` used during
+    // verification — never source, must not pollute lint results.
+    "tmp/**",
   ]),
 ]);
 

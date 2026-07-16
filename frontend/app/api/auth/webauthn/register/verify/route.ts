@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { verifyRegistrationResponse } from "@simplewebauthn/server";
 import type { RegistrationResponseJSON } from "@simplewebauthn/server";
 
+import { requireAdmin } from "@/lib/admin-guard";
 import { ADMIN_SESSION_COOKIE, createSessionToken, sessionCookieOptions } from "@/lib/admin-session";
 import { getExpectedOrigin, getRpID } from "@/lib/webauthn-config";
 import { bytesToBase64url, saveCredential } from "@/lib/webauthn-store";
@@ -12,6 +13,11 @@ export const dynamic = "force-dynamic";
 const CHALLENGE_COOKIE = "webauthn_challenge";
 
 export async function POST(req: NextRequest) {
+  // Passkey enrollment is admin-only (see register/options). Belt-and-suspenders
+  // in case this route is ever reached without going through options first.
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   const expectedChallenge = req.cookies.get(CHALLENGE_COOKIE)?.value;
   if (!expectedChallenge) {
     return NextResponse.json({ verified: false, error: "Challenge expired. Try again." }, { status: 400 });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { recordChange } from "@/lib/change-log";
 import { createContactSubmission } from "@/lib/insights-store";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 interface ContactPayload {
   name?: unknown;
@@ -36,7 +37,6 @@ interface ContactSubmission {
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 3;
-const requestLog = new Map<string, number[]>();
 
 function getString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -77,35 +77,6 @@ function validatePayload(payload: ContactPayload): ContactValidationResult {
       website,
     },
   };
-}
-
-function getClientKey(request: Request): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const realIp = request.headers.get("x-real-ip");
-
-  if (forwarded) {
-    return forwarded.split(",")[0].trim();
-  }
-
-  if (realIp) {
-    return realIp.trim();
-  }
-
-  return "unknown";
-}
-
-function isRateLimited(clientKey: string, now = Date.now()): boolean {
-  const recentRequests = requestLog.get(clientKey) ?? [];
-  const validWindow = recentRequests.filter((timestamp) => now - timestamp < RATE_LIMIT_WINDOW_MS);
-
-  if (validWindow.length >= RATE_LIMIT_MAX_REQUESTS) {
-    requestLog.set(clientKey, validWindow);
-    return true;
-  }
-
-  validWindow.push(now);
-  requestLog.set(clientKey, validWindow);
-  return false;
 }
 
 function isLikelyBotSubmission(website: string): boolean {
@@ -183,7 +154,6 @@ export async function POST(request: Request) {
   }
 
   const { name, email, phone, topic, message, website } = validation.data;
-  const clientKey = getClientKey(request);
 
   if (isLikelyBotSubmission(website)) {
     return NextResponse.json(
@@ -195,7 +165,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (isRateLimited(clientKey)) {
+  const limit = await rateLimit(`contact:${clientIp(request)}`, {
+    limit: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (!limit.allowed) {
     return NextResponse.json(
       {
         ok: false,
@@ -204,7 +178,7 @@ export async function POST(request: Request) {
           message: "Too many requests. Please wait a minute before trying again.",
         },
       },
-      { status: 429 },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
     );
   }
 

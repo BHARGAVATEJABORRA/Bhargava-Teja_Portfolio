@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { generateRegistrationOptions } from "@simplewebauthn/server";
 import type { AuthenticatorTransportFuture } from "@simplewebauthn/server";
 
+import { requireAdmin } from "@/lib/admin-guard";
 import { ADMIN_USER_ID, ADMIN_USER_NAME, getRpID, rpName } from "@/lib/webauthn-config";
 import { getCredentials } from "@/lib/webauthn-store";
 
@@ -11,6 +12,12 @@ export const dynamic = "force-dynamic";
 const CHALLENGE_COOKIE = "webauthn_challenge";
 
 export async function POST() {
+  // Enrolling a passkey requires an already-authenticated admin session (you
+  // sign in with the passcode first). This is what prevents anyone else from
+  // registering their own passkey and taking over the admin panel.
+  const denied = await requireAdmin();
+  if (denied) return denied;
+
   const existing = await getCredentials();
 
   const options = await generateRegistrationOptions({
