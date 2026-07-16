@@ -50,6 +50,21 @@ const INJECTION_PATTERNS: RegExp[] = [
   /jailbreak|developer\s+mode/i,
 ];
 
+// Clearly-external topics — refused even if a broad word like "who"/"where"
+// also matches an on-topic pattern. This is the strict off-topic guard.
+const OFF_TOPIC_PATTERNS: RegExp[] = [
+  /super\s*bowl|world\s*cup|nba|nfl|cricket|football|soccer|match|tournament|who\s+won|final\s+score/i,
+  /weather|temperature|forecast|rain|climate/i,
+  /president|election|prime\s+minister|govern|politic|war\b/i,
+  /movie|film|actor|actress|celebrity|singer|song|lyrics|album|netflix/i,
+  /recipe|cook|food|restaurant|pizza|coffee/i,
+  /stock\s+price|crypto|bitcoin|ethereum|nasdaq|forex/i,
+  /capital\s+of|population\s+of|translate|meaning\s+of\s+life|how\s+old\s+is/i,
+  /write\s+(me|a|some)\s+(code|poem|essay|story|song)|solve\s+this|debug\s+my|tell\s+me\s+a\s+joke/i,
+  /\bmath\b|calculate|what\s+is\s+\d|\d\s*[+\-*/]\s*\d/i,
+  /latest\s+news|headline|current\s+events|today'?s\s+date|what\s+time/i,
+];
+
 // Signals that a question is about Bhargava / his portfolio.
 const ON_TOPIC_PATTERNS: RegExp[] = [
   /bhargav|borra/i,
@@ -65,6 +80,10 @@ const GREETING_PATTERN = /^(hi|hey|hello|yo|hiya|good (morning|afternoon|evening
 
 function looksLikeInjection(message: string): boolean {
   return INJECTION_PATTERNS.some((p) => p.test(message));
+}
+
+function looksOffTopic(message: string): boolean {
+  return OFF_TOPIC_PATTERNS.some((p) => p.test(message));
 }
 
 function isGreeting(message: string): boolean {
@@ -228,7 +247,7 @@ export async function POST(request: Request) {
 
   // Guardrail: refuse role-hijack/injection attempts and clearly off-topic
   // questions immediately — before spending any model tokens.
-  if (looksLikeInjection(message)) {
+  if (looksLikeInjection(message) || looksOffTopic(message)) {
     await recordAiConversation({ question: message, answer: OFF_TOPIC_REFUSAL, mode: "guardrail" });
     return NextResponse.json({ answer: OFF_TOPIC_REFUSAL, mode: "guardrail" });
   }
