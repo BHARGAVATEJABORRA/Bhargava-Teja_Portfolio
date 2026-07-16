@@ -1,105 +1,70 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
-import { gotoReady, layerDrift, sampleLayers, scrollToAndSettle } from "./helpers";
+import { gotoReady, scrollToAndSettle } from "./helpers";
 
-async function deckRange(page: import("@playwright/test").Page) {
+async function galleryRange(page: Page) {
   return page.evaluate(() => {
-    const deck = document.querySelector<HTMLElement>(".article-deck");
-    if (!deck) return null;
-    const rect = deck.getBoundingClientRect();
+    const track = document.querySelector<HTMLElement>("#blogs .projects-scroll-track");
+    const gallery = document.querySelector<HTMLElement>("#blogs .projects-gallery");
+    if (!track || !gallery) return null;
+    const rect = track.getBoundingClientRect();
     return {
       top: rect.top + window.scrollY,
       bottom: rect.bottom + window.scrollY,
-      cardCount: deck.querySelectorAll(".scroll-stack-card").length,
+      cardCount: gallery.children.length,
     };
   });
 }
 
-function scaleOf(transform: number[]): number {
-  // computed transform is matrix(a, ...) or matrix3d(m11, ...) — in both
-  // encodings the first number is the x scale.
-  return transform.length >= 6 ? transform[0] : 1;
+async function galleryX(page: Page) {
+  return page.locator("#blogs .projects-gallery").evaluate((gallery) => {
+    const transform = getComputedStyle(gallery).transform;
+    if (!transform || transform === "none") return 0;
+    const numbers = (transform.match(/-?\d+(?:\.\d+)?/g) ?? []).map(Number);
+    return numbers.length === 6 ? numbers[4] : numbers[12] ?? 0;
+  });
 }
 
-test.describe("§4 articles ScrollStack deck", () => {
-  test("cards scale down as they pin into the stack, tracking scroll 1:1", async ({ page }) => {
+test.describe("§4 articles horizontal gallery", () => {
+  test("gallery movement is monotonic and determined by vertical scroll", async ({ page }) => {
     await gotoReady(page);
 
-    const range = await deckRange(page);
+    const range = await galleryRange(page);
     expect(range).not.toBeNull();
     expect(range!.cardCount).toBeGreaterThanOrEqual(5);
 
-    const viewport = page.viewportSize()!;
-    const start = Math.max(0, range!.top - viewport.height * 0.5);
-    // ScrollStack releases the pin once its end sentinel crosses mid-viewport,
-    // so bottom - vh/2 is the "stack complete" scroll position.
-    const end = range!.bottom - viewport.height / 2;
-    const steps = 12;
-
-    const scaleHistory: number[][] = [];
-    for (let i = 0; i < steps; i += 1) {
-      const offset = Math.round(start + ((end - start) * i) / (steps - 1));
+    const end = range!.bottom - page.viewportSize()!.height;
+    const offsets = [range!.top, range!.top + (end - range!.top) * 0.5, end].map(Math.round);
+    const positions: number[] = [];
+    for (const offset of offsets) {
       await scrollToAndSettle(page, offset);
-      const sample = await sampleLayers(page);
-      scaleHistory.push(sample.cards.map((card) => scaleOf(card.transform)));
+      positions.push(await galleryX(page));
     }
 
-    const finalScales = scaleHistory[scaleHistory.length - 1];
+    expect(positions[0]).toBeCloseTo(0, 0);
+    expect(positions[1]).toBeLessThan(positions[0]);
+    expect(positions[2]).toBeLessThan(positions[1]);
 
-    // Every covered card (all but the last) must have shrunk below 1 by the
-    // time the stack completes, but never collapse past ~0.85.
-    for (let card = 0; card < range!.cardCount - 1; card += 1) {
-      expect.soft(finalScales[card], `card ${card} final scale`).toBeLessThan(0.995);
-      expect.soft(finalScales[card], `card ${card} final scale floor`).toBeGreaterThan(0.85);
-    }
-    // The last (topmost) card pins at full scale.
-    expect.soft(finalScales[range!.cardCount - 1], "last card stays unscaled").toBeGreaterThan(0.995);
-
-    // Deeper cards sit further back: scales must ascend toward the top card.
-    for (let card = 1; card < range!.cardCount; card += 1) {
-      expect
-        .soft(finalScales[card], `card ${card} sits above card ${card - 1}`)
-        .toBeGreaterThan(finalScales[card - 1]);
-    }
-
-    // Scales must fall monotonically with scroll — scroll-linked, not time-linked.
-    for (let card = 0; card < range!.cardCount - 1; card += 1) {
-      for (let i = 1; i < scaleHistory.length; i += 1) {
-        expect
-          .soft(scaleHistory[i][card], `card ${card} monotonic at step ${i}`)
-          .toBeLessThanOrEqual(scaleHistory[i - 1][card] + 0.005);
-      }
-    }
-
-    // Determinism: parked mid-deck, nothing may keep easing after scroll stops.
-    const mid = Math.round((start + end) / 2);
-    await scrollToAndSettle(page, mid);
-    const immediate = await sampleLayers(page);
+    await scrollToAndSettle(page, offsets[1]);
+    const replay = await galleryX(page);
     await page.waitForTimeout(650);
-    const later = await sampleLayers(page);
-    for (const { metric, value } of layerDrift(immediate, later)) {
-      if (!metric.startsWith("card-")) continue;
-      expect.soft(value, `post-stop drift of ${metric} mid-deck`).toBeLessThanOrEqual(0.02);
-    }
+    expect(await galleryX(page)).toBeCloseTo(replay, 1);
+    expect(replay).toBeCloseTo(positions[1], 1);
   });
 
-  test("reduced motion: cards render as a plain stacked list without transforms", async ({ page }) => {
+  test("reduced motion keeps every article and uses no time-based gallery animation", async ({ page }) => {
     await page.emulateMedia({ reducedMotion: "reduce" });
     await gotoReady(page);
 
-    const range = await deckRange(page);
+    const range = await galleryRange(page);
     expect(range).not.toBeNull();
+    await expect(page.locator("#blogs .projects-gallery > *")).toHaveCount(range!.cardCount);
 
-    const viewport = page.viewportSize()!;
-    await scrollToAndSettle(page, range!.bottom - viewport.height);
-    const transforms = await page.evaluate(() =>
-      [...document.querySelectorAll(".article-deck .scroll-stack-card")].map(
-        (card) => getComputedStyle(card).transform,
-      ),
-    );
-    expect(transforms.length).toBeGreaterThanOrEqual(5);
-    for (const transform of transforms) {
-      expect.soft(["none", "matrix(1, 0, 0, 1, 0, 0)"]).toContain(transform);
-    }
+    const timing = await page.locator("#blogs .projects-gallery").evaluate((gallery) => {
+      const style = getComputedStyle(gallery);
+      return { animation: style.animationName, transition: style.transitionDuration };
+    });
+    expect(timing.animation).toBe("none");
+    expect(parseFloat(timing.transition)).toBeLessThanOrEqual(0.001);
   });
 });

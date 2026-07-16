@@ -11,30 +11,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getLikeCounts, getVisitorLikes, setLike, type LikeEntityType } from "@/lib/likes-store";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const WINDOW_MS = 10_000;
 const MAX_PER_WINDOW = 30;
-const hits = new Map<string, number[]>();
-
-function limited(key: string): boolean {
-  const now = Date.now();
-  const recent = (hits.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= MAX_PER_WINDOW) {
-    hits.set(key, recent);
-    return true;
-  }
-  recent.push(now);
-  hits.set(key, recent);
-  return false;
-}
-
-function clientKey(req: NextRequest): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  return fwd ? fwd.split(",")[0].trim() : req.headers.get("x-real-ip")?.trim() || "unknown";
-}
 
 function parseType(value: unknown): LikeEntityType | null {
   return value === "project" || value === "article" ? value : null;
@@ -58,7 +41,16 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 }
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
-  if (limited(clientKey(req))) return NextResponse.json({ error: "Slow down." }, { status: 429 });
+  const limit = await rateLimit(`likes:${clientIp(req)}`, {
+    limit: MAX_PER_WINDOW,
+    windowMs: WINDOW_MS,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      { error: "Slow down." },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
 
   let body: Record<string, unknown>;
   try {

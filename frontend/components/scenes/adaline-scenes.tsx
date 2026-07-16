@@ -705,14 +705,17 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           <img src="/adaline-scenes/footer/footer-hills.webp" alt="" aria-hidden className="w-full object-cover" />
         </div>
 
-        {/* Dock + reflection: a 150vw image group centered on the scene and
-            seated low (top-3vw) so the pier deck rests at the hills' waterline,
-            leaving the lake between the hills and the deck open. Hills and dock
-            both scale in vw, so the offset composes identically at every width.
+        {/* Dock + reflection: a centered image group whose SIZE (width in vw)
+            sets how near the pier reads, and whose top offset seats it in the
+            lake. On phones it stays at 118vw so it retains the distant
+            perspective and can sit behind the footer copy without dominating
+            it. The larger intermediate widths fill the wider in-flow footer;
+            xl returns to the original 105vw composition. The matching nav
+            padding intentionally allows a small overlap with the name.
             The fade mask blends the foreground planks into the #050e11 base. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-1/2 top-[2vw] w-[105vw] -translate-x-1/2"
+          className="pointer-events-none absolute left-1/2 top-[10vw] w-[118vw] -translate-x-1/2 sm:w-[126vw] lg:w-[138vw] xl:top-[2vw] xl:w-[105vw]"
           style={{
             WebkitMaskImage:
               "linear-gradient(to bottom, black 0%, black 30%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.12) 72%, transparent 88%)",
@@ -743,7 +746,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         </div>
 
         <div className="footer-transparent-nav relative right-0 bottom-0 left-0 z-[100] px-6 pb-16 sm:px-8 lg:px-12 xl:absolute xl:pb-24">
-          <div className="mx-auto flex max-w-[120rem] flex-col pt-[30vw] pr-12 pb-6 md:flex-row md:flex-wrap md:justify-between xl:pt-0">
+          <div className="mx-auto flex max-w-[120rem] flex-col pt-[28vw] pr-12 pb-6 sm:pt-[30vw] md:flex-row md:flex-wrap md:justify-between lg:pt-[32vw] xl:pt-0">
             {footer}
           </div>
         </div>

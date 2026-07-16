@@ -34,6 +34,7 @@ export function FooterAurora() {
   return (
     <div
       aria-hidden="true"
+      data-ambient-aurora
       className="pointer-events-none absolute inset-x-0 bottom-[174px] h-[min(1570px,120vw)]"
       style={{ zIndex: 1, ...auroraMask }}
     >

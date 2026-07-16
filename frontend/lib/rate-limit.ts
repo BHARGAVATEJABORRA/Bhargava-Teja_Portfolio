@@ -107,7 +107,8 @@ async function failureState(bucket: string): Promise<{ failures: number; last: n
 
 /**
  * Is login currently locked? Checks a global bucket and a per-IP bucket; the
- * stricter of the two wins. Fails open on DB error.
+ * stricter of the two wins. Unlike public rate limits, login fails closed on
+ * DB errors so an outage cannot silently remove brute-force protection.
  */
 export async function loginLockStatus(ip: string): Promise<LockStatus> {
   try {
@@ -128,8 +129,8 @@ export async function loginLockStatus(ip: string): Promise<LockStatus> {
     }
     return worst;
   } catch (err) {
-    console.warn("[rate-limit] loginLockStatus failed (allowing):", err);
-    return { locked: false, retryAfterSeconds: 0, failures: 0 };
+    console.error("[rate-limit] loginLockStatus failed (denying):", err);
+    return { locked: true, retryAfterSeconds: 60, failures: 0 };
   }
 }
 

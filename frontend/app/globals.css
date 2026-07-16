@@ -2277,8 +2277,11 @@ a {
   }
 
   .ai-dock-launcher:hover .ai-dock-launcher-icon,
+  .ai-dock-launcher:focus-visible .ai-dock-launcher-icon,
   .ai-dock-launcher:hover .ai-dock-launcher-ring {
     animation: none;
+    transform: none;
+    transition: none;
   }
 }
 

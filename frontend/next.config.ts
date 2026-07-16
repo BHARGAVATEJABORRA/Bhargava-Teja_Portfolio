@@ -29,6 +29,17 @@ const nextConfig: NextConfig = {
           { source: "/admin/contact", destination: "/admin/inbox", permanent: false },
           { source: "/admin/messages", destination: "/admin/inbox", permanent: false },
         ],
+        headers: async () => [
+          {
+            source: "/:path*",
+            headers: [
+              { key: "X-Content-Type-Options", value: "nosniff" },
+              { key: "X-Frame-Options", value: "DENY" },
+              { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+              { key: "Permissions-Policy", value: "camera=(), geolocation=(), payment=(), usb=()" },
+            ],
+          },
+        ],
       }),
   // Ship the migration SQL with every serverless function so lib/db.ts can
   // bootstrap a fresh database (Turso or the /tmp fallback) at runtime.

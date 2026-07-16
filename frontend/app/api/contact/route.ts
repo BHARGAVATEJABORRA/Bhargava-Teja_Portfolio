@@ -53,17 +53,27 @@ function validatePayload(payload: ContactPayload): ContactValidationResult {
   if (!name || name.length < 2) {
     return { ok: false, message: "Please provide your name (at least 2 characters)." };
   }
+  if (name.length > 200) {
+    return { ok: false, message: "Please keep your name under 200 characters." };
+  }
 
-  if (!email || !email.includes("@")) {
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return { ok: false, message: "Please provide a valid email address." };
   }
 
-  if (phone && phone.length < 7) {
+  if (phone && (phone.length < 7 || phone.length > 40)) {
     return { ok: false, message: "Please provide a valid phone number or leave it blank." };
+  }
+
+  if (topic.length > 200) {
+    return { ok: false, message: "Please keep the topic under 200 characters." };
   }
 
   if (!message || message.length < 10) {
     return { ok: false, message: "Please provide a short message (at least 10 characters)." };
+  }
+  if (message.length > 5000) {
+    return { ok: false, message: "Please keep your message under 5,000 characters." };
   }
 
   return {

@@ -83,26 +83,11 @@ test.describe("§3.1 footer layers are a pure function of scroll", () => {
 });
 
 test.describe("§3.2 shooting stars", () => {
-  test("meteor trail is a gradient fading to transparent — no opaque sprite box", async ({ page }) => {
+  test("uses the current additive image layer without legacy CSS meteors", async ({ page }) => {
     await gotoReady(page);
-    const meteors = await page.evaluate(() =>
-      [...document.querySelectorAll(".adaline-meteor")].map((m) => {
-        const cs = getComputedStyle(m);
-        return {
-          backgroundImage: cs.backgroundImage,
-          backgroundColor: cs.backgroundColor,
-          // Tailwind preflight sets border-style: solid with width 0 globally;
-          // only a non-zero width would draw a visible box.
-          border: cs.borderWidth,
-        };
-      }),
-    );
-    expect(meteors.length).toBeGreaterThan(0);
-    for (const meteor of meteors) {
-      expect(meteor.backgroundImage).toContain("gradient");
-      expect(meteor.backgroundImage).not.toContain("url(");
-      expect(["rgba(0, 0, 0, 0)", "transparent"]).toContain(meteor.backgroundColor);
-      expect(meteor.border).toBe("0px");
-    }
+    await expect(page.locator(".adaline-meteor")).toHaveCount(0);
+    const layer = page.locator('[data-scroll-scene="meteors"]');
+    await expect(layer).toHaveCount(1);
+    expect(await layer.evaluate((element) => getComputedStyle(element).mixBlendMode)).toBe("plus-lighter");
   });
 });

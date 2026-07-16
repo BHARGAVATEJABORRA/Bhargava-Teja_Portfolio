@@ -133,7 +133,7 @@ function CertCard({ item }: { item: ExperienceItem }) {
 }
 
 export function ExperienceSection() {
-  const [activeTab, setActiveTab] = useState<ExperienceTab>("education");
+  const [activeTab, setActiveTab] = useState<ExperienceTab>("work");
   const items = portfolioContent.experience[activeTab];
 
   return (

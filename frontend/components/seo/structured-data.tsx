@@ -64,12 +64,14 @@ export function StructuredData() {
         }
       : null;
 
+  const json = (value: unknown) => JSON.stringify(value).replace(/</g, "\\u003c");
+
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(projectListSchema) }} />
-      {articleListSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleListSchema) }} /> : null}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(personSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(websiteSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(projectListSchema) }} />
+      {articleListSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(articleListSchema) }} /> : null}
     </>
   );
 }

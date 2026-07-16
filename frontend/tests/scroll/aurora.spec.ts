@@ -4,12 +4,11 @@ import { gotoReady } from "./helpers";
 
 const AURORA = ".adaline-footer-scene [data-ambient-aurora]";
 
-// §3.3 — the aurora is a static CSS glow anchored inside the footer's CTA
-// band (reference: adaline.ai footer). No canvas, no scroll dependency: the
-// only motion allowed is the slow opacity breath. Being absolutely
-// positioned inside the footer subtree, it cannot drift during scroll.
-test.describe("§3.3 footer aurora is a static ridgeline glow", () => {
-  test("aurora layer is scene-anchored with radial emerald gradients and only an opacity breath", async ({ page }) => {
+// §3.3 — the current aurora is a scene-anchored WebGL curtain. Its wrapper is
+// absolute inside the CTA band, while the shader clock supplies the slow
+// ambient motion independently of the scroll-linked footer layers.
+test.describe("§3.3 footer aurora is a scene-anchored WebGL curtain", () => {
+  test("aurora wrapper stays anchored and its canvas renders", async ({ page }) => {
     await gotoReady(page);
 
     const aurora = page.locator(AURORA);
@@ -17,32 +16,16 @@ test.describe("§3.3 footer aurora is a static ridgeline glow", () => {
 
     const computed = await aurora.evaluate((element) => {
       const style = getComputedStyle(element);
-      return {
-        position: style.position,
-        background: style.backgroundImage,
-        blend: style.mixBlendMode,
-        animationName: style.animationName,
-        animationDuration: style.animationDuration,
-        bottom: style.bottom,
-      };
+      return { position: style.position, bottom: style.bottom, mask: style.maskImage };
     });
 
-    // Anchored in the scene, not the viewport: absolute (inside the CTA
-    // band), pinned to its wrapper's bottom so the hills overlap its
-    // brightest edge.
     expect(computed.position).toBe("absolute");
-    expect(computed.bottom).toBe("0px");
+    expect(computed.bottom).toBe("174px");
+    expect(computed.mask).toContain("linear-gradient");
 
-    // Three overlapping radial gradients in the reference emerald.
-    const radialCount = (computed.background.match(/radial-gradient/g) ?? []).length;
-    expect(radialCount).toBe(3);
-    expect(computed.background).toContain("rgba(16, 185, 129");
-    expect(computed.blend).toBe("screen");
-
-    // The ONLY animation is the slow opacity breath (8–10s).
-    expect(computed.animationName).toBe("adaline-aurora-breath");
-    expect(parseFloat(computed.animationDuration)).toBeGreaterThanOrEqual(8);
-    expect(parseFloat(computed.animationDuration)).toBeLessThanOrEqual(10);
+    const canvas = aurora.locator("canvas");
+    await expect(canvas).toHaveCount(1);
+    await expect.poll(async () => Number(await canvas.getAttribute("data-aurora-time"))).toBeGreaterThan(0);
   });
 
   // 2026-07-07: the CSS keyframe meteors were replaced by adaline.ai's real

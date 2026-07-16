@@ -9,12 +9,23 @@ interface SectionShellProps {
   children: ReactNode;
   className?: string;
   animateOnView?: boolean;
+  /** Widen (or narrow) this section's container past the default max-w-6xl. */
+  containerMaxWidthClassName?: string;
 }
 
-export function SectionShell({ id, labelledBy, children, className = "", animateOnView = true }: SectionShellProps) {
+export function SectionShell({
+  id,
+  labelledBy,
+  children,
+  className = "",
+  animateOnView = true,
+  containerMaxWidthClassName,
+}: SectionShellProps) {
   return (
     <section id={id} aria-labelledby={labelledBy} className={`scroll-mt-28 flex min-h-svh items-center py-20 sm:py-24 ${className}`}>
-      <Container className="w-full">{animateOnView ? <SectionReveal>{children}</SectionReveal> : children}</Container>
+      <Container className="w-full" {...(containerMaxWidthClassName ? { maxWidthClassName: containerMaxWidthClassName } : {})}>
+        {animateOnView ? <SectionReveal>{children}</SectionReveal> : children}
+      </Container>
     </section>
   );
 }

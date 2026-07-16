@@ -42,10 +42,14 @@ test.describe("§5 AI companion dock", () => {
 
     const launcher = page.locator(".ai-dock-launcher");
     await launcher.hover();
-    const animation = await page
-      .locator(".ai-dock-launcher-icon")
-      .evaluate((el) => getComputedStyle(el).animationName);
-    expect(animation).toContain("ai-dock-spin");
+    await page.waitForTimeout(180);
+    const iconStyle = await page.locator(".ai-dock-launcher-icon").evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { transform: style.transform, transitionDuration: style.transitionDuration };
+    });
+    expect(iconStyle.transitionDuration).not.toBe("0s");
+    expect(iconStyle.transform).not.toBe("none");
+    expect(iconStyle.transform).not.toBe("matrix(1, 0, 0, 1, 0, 0)");
   });
 
   test("launcher does not spin under reduced motion", async ({ page }, testInfo) => {
@@ -55,9 +59,14 @@ test.describe("§5 AI companion dock", () => {
 
     const launcher = page.locator(".ai-dock-launcher");
     await launcher.hover();
-    const animation = await page
-      .locator(".ai-dock-launcher-icon")
-      .evaluate((el) => getComputedStyle(el).animationName);
-    expect(animation).toBe("none");
+    await page.waitForTimeout(180);
+    const iconStyle = await page.locator(".ai-dock-launcher-icon").evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { transform: style.transform, transitionDuration: style.transitionDuration };
+    });
+    expect(["none", "matrix(1, 0, 0, 1, 0, 0)"]).toContain(iconStyle.transform);
+    // Chromium serializes a zero-duration reduced-motion transition as a
+    // 10-microsecond floor rather than the literal string "0s".
+    expect(parseFloat(iconStyle.transitionDuration)).toBeLessThanOrEqual(0.001);
   });
 });

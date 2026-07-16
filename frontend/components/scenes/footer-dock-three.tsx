@@ -20,9 +20,14 @@ if (typeof window !== "undefined") {
 // time-based wobble.
 // ---------------------------------------------------------------------------
 
-// Lamp bulbs on the T-pier cross-bar: left / middle / right. LAMP_3 (left) is a
-// fixture cloned onto the pier's left arm in footer-dock.webp; its reflection is
-// shader-driven (the reflection texture has only a faint bulb, like LAMP_1/2).
+// Lamp bulbs on the T-pier cross-bar: left / middle / right. LAMP_1/2 have a
+// warm plank pool baked into footer-dock.webp; LAMP_3 (left) is a bulb cloned
+// onto the pier's left arm and has none, so its pool is shader-only and reads
+// softer. Do NOT try to bake one in: that arm's planks sit near black, and
+// scaling them up amplifies the texture's compression noise into colour
+// speckle. The moon fill below is what brings that arm's grain out.
+// All three reflections are shader-driven (the reflection texture has only a
+// faint bulb).
 const LAMP_3: readonly [number, number] = [0.185, 0.866];
 const LAMP_1: readonly [number, number] = [0.355, 0.866];
 const LAMP_2: readonly [number, number] = [0.575, 0.866];
@@ -89,32 +94,63 @@ const FRAGMENT_SHADER = /* glsl */ `
     float bulb2 = exp(-radialDist(vUv, uLamp2) * 22.0) * uLamp2On * flicker2;
     float bulb3 = exp(-radialDist(vUv, uLamp3) * 22.0) * uLamp3On * flicker3;
 
-    // Discrete light pool on the planks under each lamp — a tight falloff
-    // that dies out within ~1-2 plank widths, so the mid-deck between the
-    // lamps stays dark.
-    float pool1 = exp(-radialDist(vUv, uPool1) * 26.0) * uLamp1On * flicker1;
-    float pool2 = exp(-radialDist(vUv, uPool2) * 26.0) * uLamp2On * flicker2;
-    float pool3 = exp(-radialDist(vUv, uPool3) * 26.0) * uLamp3On * flicker3;
+    // Soft light pool on the planks under each lamp. The falloff is wide on
+    // purpose: a tight one reads as a harsh spotlight rim rather than lamplight.
+    float pool1 = exp(-radialDist(vUv, uPool1) * 15.0) * uLamp1On * flicker1;
+    float pool2 = exp(-radialDist(vUv, uPool2) * 15.0) * uLamp2On * flicker2;
+    float pool3 = exp(-radialDist(vUv, uPool3) * 15.0) * uLamp3On * flicker3;
 
     // Broad, dim warm wash: real lamplight spills far across the planks and
     // dies out gradually, so the deck reads as one lit pier surface receding
     // into the dark instead of three isolated spotlights on a black slab.
-    float wash1 = exp(-radialDist(vUv, uPool1) * 7.5) * uLamp1On;
-    float wash2 = exp(-radialDist(vUv, uPool2) * 7.5) * uLamp2On;
-    float wash3 = exp(-radialDist(vUv, uPool3) * 7.5) * uLamp3On;
+    float wash1 = exp(-radialDist(vUv, uPool1) * 5.5) * uLamp1On;
+    float wash2 = exp(-radialDist(vUv, uPool2) * 5.5) * uLamp2On;
+    float wash3 = exp(-radialDist(vUv, uPool3) * 5.5) * uLamp3On;
 
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
+    vec3 moonCool = vec3(0.42, 0.56, 0.66);
 
     // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
     // slightly past the dock so warm light pools onto the water below.
+    // NOTE: uMap is an sRGB texture, so texture2D() already returns LINEAR
+    // values and every term below is mixed in linear light. The
+    // <colorspace_fragment> include at the end encodes back to sRGB — without
+    // it the planks render ~4x too dark (only the additive light shows).
     float onDock = smoothstep(0.0, 0.15, tex.a);
     float bulbBleed = (bulb1 + bulb2 + bulb3) * 0.6;
+    float bulbSum = bulb1 + bulb2 + bulb3;
+    float poolSum = pool1 + pool2 + pool3;
+    float washSum = wash1 + wash2 + wash3;
+
+    // Moon/aurora fill for the deck the lamps can't reach. It is a gain rather
+    // than a flat add: the planks here sit near black, and adding a constant
+    // would lift the plank gaps just as much and flatten the deck into milky
+    // grey. Scaling brings the wood grain up while keeping its contrast, and
+    // the small cool term tints it toward the night sky.
+    float lampReach = clamp(poolSum + washSum * 0.6, 0.0, 1.0);
+    float moonMask = (1.0 - lampReach) * onDock;
+
     vec3 col = tex.rgb;
-    col += (bulb1 + bulb2 + bulb3) * lampWarm * 0.42 * max(onDock, bulbBleed);
-    col += (wash1 + wash2 + wash3) * lampWarm * 0.14 * onDock;
-    col += (pool1 + pool2 + pool3) * lampWarm * 0.5 * onDock;
+    col *= 1.0 + 1.9 * moonMask;
+    col += moonCool * 0.010 * moonMask;
+
+    // The cloned left fixture sits over a much darker part of the source
+    // texture than the middle/right fixtures. Lift its wood grain before the
+    // warm add so the resulting pool matches the other two instead of looking
+    // like a bright bulb over an unlit deck. This correction is intentionally
+    // local to pool3; raising the shared pool would clip the baked-in pools.
+    col *= 1.0 + pool3 * 1.45 * onDock;
+    col += pool3 * lampWarm * 0.22 * onDock;
+
+    col += bulbSum * lampWarm * 0.26 * max(onDock, bulbBleed);
+    col += washSum * lampWarm * 0.04 * onDock;
+    col += poolSum * lampWarm * 0.18 * onDock;
 
     gl_FragColor = vec4(col, tex.a * uOpacity);
+
+    // three defines linearToOutputTexel() for ShaderMaterial from
+    // renderer.outputColorSpace and resolves this include in custom shaders.
+    #include <colorspace_fragment>
   }
 `;
 

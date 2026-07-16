@@ -73,9 +73,15 @@ module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", process.env.ALLOWED_ORIGIN || "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
   res.setHeader("Cache-Control", "s-maxage=8, stale-while-revalidate=4");
+  res.setHeader("X-Content-Type-Options", "nosniff");
 
   if (req.method === "OPTIONS") {
     res.status(204).end();
+    return;
+  }
+  if (req.method !== "GET") {
+    res.setHeader("Allow", "GET, OPTIONS");
+    res.status(405).json({ error: "Method not allowed" });
     return;
   }
 
