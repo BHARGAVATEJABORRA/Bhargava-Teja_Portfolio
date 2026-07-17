@@ -84,33 +84,41 @@ const FRAGMENT_SHADER = /* glsl */ `
     return length(d);
   }
 
-  // Inverse-square-inspired attenuation with a soft finite boundary. The
-  // radius is explicit, so no lamp can wash across the whole deck.
-  float lampFalloff(vec2 p, vec2 c, float radius) {
-    float normalizedDistance = radialDist(p, c) / radius;
-    float inverseSquare = 1.0 / (1.0 + 4.0 * normalizedDistance * normalizedDistance);
-    float boundary = 1.0 - smoothstep(0.68, 1.0, normalizedDistance);
-    return inverseSquare * boundary;
+  // Exponential attenuation gives the lamps a bright center and a natural,
+  // unnoticeable tail. A hard outer radius reads as a painted rectangle when
+  // it is clipped by the dock alpha; this falloff never creates that edge.
+  float lampFalloff(vec2 p, vec2 c, float decay) {
+    return exp(-radialDist(p, c) * decay);
   }
 
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
     // Lamp halos: gentle flicker once each lamp has ignited.
-    float flicker1 = 0.98 + 0.02 * sin(uTime * 6.3 + 1.7);
-    float flicker2 = 0.98 + 0.02 * sin(uTime * 5.1);
-    float flicker3 = 0.98 + 0.02 * sin(uTime * 5.7 + 3.1);
-    float bulb1 = lampFalloff(vUv, uLamp1, 0.105) * uLamp1On * flicker1;
-    float bulb2 = lampFalloff(vUv, uLamp2, 0.105) * uLamp2On * flicker2;
-    float bulb3 = lampFalloff(vUv, uLamp3, 0.105) * uLamp3On * flicker3;
+    float flicker1 = 0.975 + 0.025 * sin(uTime * 6.3 + 1.7);
+    float flicker2 = 0.975 + 0.025 * sin(uTime * 5.1);
+    float flicker3 = 0.975 + 0.025 * sin(uTime * 5.7 + 3.1);
+    float bulb1 = lampFalloff(vUv, uLamp1, 22.0) * uLamp1On * flicker1;
+    float bulb2 = lampFalloff(vUv, uLamp2, 22.0) * uLamp2On * flicker2;
+    float bulb3 = lampFalloff(vUv, uLamp3, 22.0) * uLamp3On * flicker3;
 
-    // The direct pools have a fixed 0.20 texture-space radius. Their edge is
-    // deliberately soft, but reaches zero before the next lamp's pool begins.
-    float pool1 = lampFalloff(vUv, uPool1, 0.20) * uLamp1On * flicker1;
-    float pool2 = lampFalloff(vUv, uPool2, 0.20) * uLamp2On * flicker2;
-    float pool3 = lampFalloff(vUv, uPool3, 0.20) * uLamp3On * flicker3;
+    // Middle/right already contain painterly pools in the source texture. The
+    // shader only reinforces those shapes. The cloned left fixture needs its
+    // own two-stage pool: a narrow hot center plus a feather matching the
+    // original lamps, without illuminating the whole left arm.
+    float pool1 = lampFalloff(vUv, uPool1, 15.0) * uLamp1On * flicker1;
+    float pool2 = lampFalloff(vUv, uPool2, 15.0) * uLamp2On * flicker2;
+    float pool3 = lampFalloff(vUv, uPool3, 25.0) * uLamp3On * flicker3;
+    float pool3Core = lampFalloff(vUv, uPool3, 48.0) * uLamp3On * flicker3;
+
+    // Very low-energy spill connects each fixture to the surrounding wood.
+    // It is deliberately broad but too dim to turn the pier into a lit slab.
+    float wash1 = lampFalloff(vUv, uPool1, 6.5) * uLamp1On;
+    float wash2 = lampFalloff(vUv, uPool2, 6.5) * uLamp2On;
+    float wash3 = lampFalloff(vUv, uPool3, 9.0) * uLamp3On;
 
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
+    vec3 leftWarm = vec3(1.0, 0.60, 0.30);
     vec3 moonCool = vec3(0.42, 0.56, 0.66);
 
     // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
@@ -120,28 +128,35 @@ const FRAGMENT_SHADER = /* glsl */ `
     // <colorspace_fragment> include at the end encodes back to sRGB — without
     // it the planks render ~4x too dark (only the additive light shows).
     float onDock = smoothstep(0.0, 0.15, tex.a);
+    float woodLuma = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722));
+    float woodResponse = smoothstep(0.002, 0.045, woodLuma);
+    float leftLightable = onDock * mix(0.38, 1.0, woodResponse);
     float bulbSum = bulb1 + bulb2 + bulb3;
     float strongestPool = max(pool1, max(pool2, pool3));
-    float directReach = clamp(strongestPool + (pool1 + pool2 + pool3) * 0.10, 0.0, 1.0);
+    float washSum = wash1 + wash2 + wash3;
+    float directReach = clamp(strongestPool + washSum * 0.34, 0.0, 1.0);
     float reflectionScale = mix(1.0, 0.42, uReflection);
 
-    // A low moon/aurora exposure lift only where direct lamplight is absent.
-    // The gentle horizontal variation prevents a flat grey wash, while the
-    // strict ceiling keeps it visibly subordinate to the lamps.
+    // Moon/aurora fill exists only outside direct lamplight. It raises texture
+    // contrast rather than painting a constant colour over every plank, and a
+    // subtle horizontal drift prevents a flat grey exposure wash.
     float auroraVariation = 0.5 + 0.5 * sin(vUv.x * 5.2 + vUv.y * 1.7);
-    float skyMask = (1.0 - directReach * 0.82) * onDock * mix(1.0, 0.28, uReflection);
-    float skyExposure = 0.055 + auroraVariation * 0.025;
+    float skyMask = (1.0 - directReach) * onDock * mix(1.0, 0.24, uReflection);
+    float skyExposure = 0.020 + auroraVariation * 0.018;
 
     vec3 col = tex.rgb;
     col *= 1.0 + skyExposure * skyMask;
-    col += moonCool * (0.0022 + auroraVariation * 0.0010) * skyMask;
+    col += moonCool * (0.00045 + auroraVariation * 0.00025) * skyMask;
 
-    // Preserve the wood grain under all three lamps. The left arm is darker in
-    // the source texture, so only that bounded pool receives a small extra
-    // gain/add. Reflection lighting is intentionally less energetic.
-    col *= 1.0 + (directReach * 0.18 + pool3 * 0.08) * onDock * reflectionScale;
-    col += lampWarm * (pool1 * 0.11 + pool2 * 0.11 + pool3 * 0.17) * onDock * reflectionScale;
-    col += bulbSum * lampWarm * 0.18 * max(onDock, bulbSum * 0.35) * reflectionScale;
+    // Preserve the original middle/right pools. The left correction is local
+    // and texture-aware: gain reveals its darker wood grain, then the warm add
+    // supplies the missing illumination at the center.
+    col *= 1.0 + (pool1 * 0.025 + pool2 * 0.025) * onDock * reflectionScale;
+    col *= 1.0 + (pool3 * 0.12 + pool3Core * 0.35) * leftLightable * reflectionScale;
+    col += lampWarm * (pool1 * 0.035 + pool2 * 0.035) * onDock * reflectionScale;
+    col += leftWarm * (pool3 * 0.26 + pool3Core * 0.42) * leftLightable * reflectionScale;
+    col += lampWarm * washSum * 0.004 * onDock * reflectionScale;
+    col += bulbSum * lampWarm * 0.15 * max(onDock, bulbSum * 0.36) * reflectionScale;
 
     gl_FragColor = vec4(col, tex.a * uOpacity);
 
@@ -434,6 +449,14 @@ export function FooterDockThree() {
           className="absolute left-0 top-0 aspect-[2.5] w-full object-fill opacity-60"
         />
         <img src="/adaline-scenes/footer/footer-dock.webp" alt="" aria-hidden className="relative aspect-[2.5] w-full object-fill" />
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 mix-blend-screen"
+          style={{
+            background:
+              "radial-gradient(ellipse 5.5% 12% at 18.5% 79.5%, rgba(255, 155, 72, 0.24) 0%, rgba(255, 142, 52, 0.1) 38%, transparent 75%)",
+          }}
+        />
       </>
     );
   }

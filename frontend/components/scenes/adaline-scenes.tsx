@@ -737,10 +737,18 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
                 aria-hidden
                 className="relative aspect-[2.5] w-full object-fill"
               />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 mix-blend-screen"
+                style={{
+                  background:
+                    "radial-gradient(ellipse 5.5% 12% at 18.5% 79.5%, rgba(255, 155, 72, 0.24) 0%, rgba(255, 142, 52, 0.1) 38%, transparent 75%)",
+                }}
+              />
             </>
           ) : (
             // Three.js + GSAP ScrollTrigger night scene: same dock/reflection
-            // textures, plus scroll-driven lamp ignition (two discrete light pools).
+            // textures, plus scroll-driven ignition for all three lamp pools.
             <FooterDockThree />
           )}
         </div>
