@@ -1,8 +1,8 @@
-import { portfolioContent } from "@/content/portfolio-content";
+import { portfolioContent, type ProjectSummary } from "@/content/portfolio-content";
 import { getResolvedSocialLink, resolveRecruiterSafeLink } from "@/lib/profile-links";
 import { contentAvailability, siteConfig } from "@/lib/site";
 
-export function StructuredData() {
+export function StructuredData({ projects }: { projects: ProjectSummary[] }) {
   const socialProfiles = [getResolvedSocialLink("github"), getResolvedSocialLink("linkedin")]
     .filter((link) => link.isConfigured)
     .map((link) => link.href);
@@ -31,7 +31,7 @@ export function StructuredData() {
     "@context": "https://schema.org",
     "@type": "ItemList",
     name: "Portfolio Projects",
-    itemListElement: portfolioContent.projects.map((project, index) => {
+    itemListElement: projects.map((project, index) => {
       const link = resolveRecruiterSafeLink(project.href);
       const hasPublicLink = project.linkState === "configured" && link.isConfigured;
 

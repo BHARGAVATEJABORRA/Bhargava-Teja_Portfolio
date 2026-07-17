@@ -14,7 +14,7 @@ import { ExperienceSection } from "@/components/sections/experience-section";
 import { HeroSection, HeroSocialDock } from "@/components/sections/hero-section";
 import { ProjectsSection } from "@/components/sections/projects-section";
 import { SkillsSection } from "@/components/sections/skills-section";
-import { portfolioContent } from "@/content/portfolio-content";
+import { portfolioContent, type ProjectSummary } from "@/content/portfolio-content";
 
 // Canvas/WebGL scenes must never server-render: the SSR pass has no window or
 // WebGL, and a markup mismatch on hydration kills the scene silently in
@@ -28,7 +28,7 @@ const ContactFooterSection = dynamic(
   { ssr: false },
 );
 
-export function HomeShell() {
+export function HomeShell({ projects }: { projects: ProjectSummary[] }) {
   const features = portfolioContent.features;
   const [showContent, setShowContent] = useState(false);
   // The Three.js footer scene is the heaviest thing to mount. Deferring it a
@@ -79,7 +79,7 @@ export function HomeShell() {
               <AboutSection />
               {features.skills && <SkillsSection />}
               {features.experience && <ExperienceSection />}
-              {features.projects && <ProjectsSection />}
+              {features.projects && <ProjectsSection projects={projects} />}
               {features.articles && <BlogsSection />}
             </div>
 

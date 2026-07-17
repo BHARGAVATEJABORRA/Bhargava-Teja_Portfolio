@@ -1,11 +1,11 @@
 "use client";
 
 import type { CSSProperties, Ref } from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
 import { Container } from "@/components/ui/container";
-import { portfolioContent } from "@/content/portfolio-content";
+import type { ProjectSummary } from "@/content/portfolio-content";
 import { likeKey, useLikes } from "@/lib/use-likes";
 
 interface GithubProject {
@@ -28,22 +28,22 @@ interface GithubProject {
 // projects keep the same visual rhythm as the original hand-tuned cards.
 const CARD_ACCENTS = ["#38bdf8", "#6aa6ff", "#c084fc", "#f59e0b", "#34d399"];
 
-// Data source: portfolioContent.projects — static defaults overridden by the
-// admin CMS overlay (content/portfolio-overrides.json). See lib/content-store.ts.
-const githubProjects: GithubProject[] = portfolioContent.projects.map((project, index) => ({
-  id: index + 1,
-  title: project.title,
-  category: project.category,
-  timeframe: project.timeframe,
-  description: `${project.problem} ${project.approach}`,
-  tagline: project.outcome,
-  stack: project.stack,
-  accent: CARD_ACCENTS[index % CARD_ACCENTS.length],
-  href: project.linkState === "configured" ? project.liveUrl ?? project.repoUrl ?? project.href : project.href,
-  likeId: likeKey(project.title),
-  imageUrl: project.imageUrl,
-  imageAlt: project.imageAlt,
-}));
+function toGithubProjects(projects: ProjectSummary[]): GithubProject[] {
+  return projects.map((project, index) => ({
+    id: index + 1,
+    title: project.title,
+    category: project.category,
+    timeframe: project.timeframe,
+    description: `${project.problem} ${project.approach}`,
+    tagline: project.outcome,
+    stack: project.stack,
+    accent: CARD_ACCENTS[index % CARD_ACCENTS.length],
+    href: project.linkState === "configured" ? project.liveUrl ?? project.repoUrl ?? project.href : project.href,
+    likeId: likeKey(project.title),
+    imageUrl: project.imageUrl,
+    imageAlt: project.imageAlt,
+  }));
+}
 
 // Sticky stack tuning — mirrors kartavya-singh.com:
 // each card pins at (BASE + i*STEP) so previous cards peek above the next.
@@ -149,10 +149,11 @@ function ProjectCard({
   );
 }
 
-export function ProjectsSection() {
+export function ProjectsSection({ projects }: { projects: ProjectSummary[] }) {
   const lastCardRef = useRef<HTMLDivElement>(null);
   const [titleFading, setTitleFading] = useState(false);
   const likes = useLikes("project");
+  const githubProjects = useMemo(() => toGithubProjects(projects), [projects]);
 
   // Fade the sticky "My Projects" title once the last card starts dominating
   // the top of the viewport. Pure-CSS sticky can't handle this cleanly

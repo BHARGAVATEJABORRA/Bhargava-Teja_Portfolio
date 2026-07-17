@@ -403,9 +403,9 @@ export function HeroSection() {
             <button
               type="button"
               onClick={() => {
-                scrollToSection("control-center");
+                scrollToSection("about");
                 trackEvent("hero_primary_cta_click", {
-                  target: "#control-center",
+                  target: "#about",
                   label: "enter_portfolio",
                 });
               }}

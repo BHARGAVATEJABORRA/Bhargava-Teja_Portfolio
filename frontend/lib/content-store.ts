@@ -441,6 +441,21 @@ export async function getPublishedCollections(): Promise<{
   };
 }
 
+/**
+ * Runtime public projection for the project gallery.
+ *
+ * Production admin mutations persist to Turso, while Vercel's deployment
+ * filesystem cannot persist source-file changes. The home route therefore
+ * reads this projection on each request instead of relying on the build-time
+ * JSON snapshot.
+ */
+export async function getPublishedProjects(): Promise<ProjectSummary[]> {
+  const projects = await prisma.project.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+  return projects.map((row) => stripId(toProjectDto(row)));
+}
+
 export async function publishContentOverrides(): Promise<void> {
   const collections = await getPublishedCollections();
   try {
