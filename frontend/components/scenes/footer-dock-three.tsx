@@ -28,6 +28,10 @@ if (typeof window !== "undefined") {
 // three fixtures evenly spaced and gives the left lamp the same construction,
 // colour and light response as the two originals.
 const SOURCE_LEFT_LAMP_X = 0.185;
+// The baked right fixture in the source texture sits slightly to the right of
+// its shader glow coordinate. Use the visible fixture center when matching the
+// physical deck overhang, otherwise the left arm remains visibly too long.
+const SOURCE_RIGHT_LAMP_X = 0.595;
 const LAMP_3: readonly [number, number] = [0.135, 0.866];
 const LAMP_1: readonly [number, number] = [0.355, 0.866];
 const LAMP_2: readonly [number, number] = [0.575, 0.866];
@@ -105,7 +109,10 @@ const FRAGMENT_SHADER = /* glsl */ `
     float leftCapMask = (1.0 - smoothstep(0.102, 0.110, vUv.x)) * (1.0 - smoothstep(0.822, 0.830, vUv.y));
     float cleanCapSourceX = 0.205 + vUv.x;
     vec4 matchedLeftCap = texture2D(uMap, vec2(cleanCapSourceX, vUv.y));
-    vec4 rightEndSilhouette = texture2D(uMap, vec2(0.684 - vUv.x, vUv.y));
+    // Mirror around the midpoint of the two outer lamp centers, not the center
+    // of the full texture. That makes lamp-to-edge overhang identical on both
+    // sides as well as matching the right end's cut angle.
+    vec4 rightEndSilhouette = texture2D(uMap, vec2(${(LAMP_3[0] + SOURCE_RIGHT_LAMP_X).toFixed(3)} - vUv.x, vUv.y));
     matchedLeftCap.a = rightEndSilhouette.a;
     tex = mix(tex, matchedLeftCap, leftCapMask * directTexture);
 
