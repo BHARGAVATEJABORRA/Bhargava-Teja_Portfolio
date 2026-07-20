@@ -20,21 +20,21 @@ if (typeof window !== "undefined") {
 // time-based wobble.
 // ---------------------------------------------------------------------------
 
-// Lamp bulbs on the T-pier cross-bar: left / middle / right. LAMP_1/2 have a
-// warm plank pool baked into footer-dock.webp; LAMP_3 (left) is a bulb cloned
-// onto the pier's left arm and has none, so its pool is shader-only and reads
-// softer. Do NOT try to bake one in: that arm's planks sit near black, and
-// scaling them up amplifies the texture's compression noise into colour
-// speckle. Its shader pool gets a modest local correction instead.
-// All three reflections are shader-driven (the reflection texture has only a
-// faint bulb).
-const LAMP_3: readonly [number, number] = [0.185, 0.866];
+// Lamp bulbs on the T-pier cross-bar: left / middle / right. The source texture
+// contains its added left fixture at x=.185, too close to the middle lamp and
+// without the painterly plank light baked under the original fixtures. At
+// render time we replace that patch with an exact sample of the middle fixture
+// and its pool, positioned one matching interval to the left. This keeps all
+// three fixtures evenly spaced and gives the left lamp the same construction,
+// colour and light response as the two originals.
+const SOURCE_LEFT_LAMP_X = 0.185;
+const LAMP_3: readonly [number, number] = [0.135, 0.866];
 const LAMP_1: readonly [number, number] = [0.355, 0.866];
 const LAMP_2: readonly [number, number] = [0.575, 0.866];
 
 // Warm pools on the walkway planks directly beneath each bulb. The walkway
 // surface sits just below the lamp heads in the texture.
-const POOL_3: readonly [number, number] = [0.185, 0.795];
+const POOL_3: readonly [number, number] = [0.135, 0.795];
 const POOL_1: readonly [number, number] = [0.355, 0.795];
 const POOL_2: readonly [number, number] = [0.575, 0.795];
 
@@ -94,6 +94,24 @@ const FRAGMENT_SHADER = /* glsl */ `
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
+    // Move the added left fixture into the same spacing rhythm as the middle
+    // and right lamps. First restore the small source patch from neighboring
+    // left-arm planks, then copy the complete middle lamp/pool patch into its
+    // new position. The soft radial feather keeps plank seams invisible.
+    // Reflections skip this texture repair and use the moved uniforms below.
+    float directTexture = 1.0 - uReflection;
+    float oldFixture = 1.0 - smoothstep(
+      0.092,
+      0.125,
+      radialDist(vUv, vec2(${SOURCE_LEFT_LAMP_X.toFixed(3)}, 0.820))
+    );
+    vec4 repairedLeftArm = texture2D(uMap, vec2(vUv.x + 0.047, vUv.y));
+    tex = mix(tex, repairedLeftArm, oldFixture * directTexture);
+
+    float matchedLeftPatch = 1.0 - smoothstep(0.105, 0.145, radialDist(vUv, vec2(0.135, 0.820)));
+    vec4 middleLampPatch = texture2D(uMap, vec2(vUv.x + 0.220, vUv.y));
+    tex = mix(tex, middleLampPatch, matchedLeftPatch * directTexture);
+
     // Lamp halos: gentle flicker once each lamp has ignited.
     float flicker1 = 0.975 + 0.025 * sin(uTime * 6.3 + 1.7);
     float flicker2 = 0.975 + 0.025 * sin(uTime * 5.1);
@@ -102,23 +120,19 @@ const FRAGMENT_SHADER = /* glsl */ `
     float bulb2 = lampFalloff(vUv, uLamp2, 22.0) * uLamp2On * flicker2;
     float bulb3 = lampFalloff(vUv, uLamp3, 22.0) * uLamp3On * flicker3;
 
-    // Middle/right already contain painterly pools in the source texture. The
-    // shader only reinforces those shapes. The cloned left fixture needs its
-    // own two-stage pool: a narrow hot center plus a feather matching the
-    // original lamps, without illuminating the whole left arm.
+    // All three fixtures now share the same painterly source pool, so their
+    // shader reinforcement uses the same falloff and energy.
     float pool1 = lampFalloff(vUv, uPool1, 15.0) * uLamp1On * flicker1;
     float pool2 = lampFalloff(vUv, uPool2, 15.0) * uLamp2On * flicker2;
-    float pool3 = lampFalloff(vUv, uPool3, 25.0) * uLamp3On * flicker3;
-    float pool3Core = lampFalloff(vUv, uPool3, 48.0) * uLamp3On * flicker3;
+    float pool3 = lampFalloff(vUv, uPool3, 15.0) * uLamp3On * flicker3;
 
     // Very low-energy spill connects each fixture to the surrounding wood.
     // It is deliberately broad but too dim to turn the pier into a lit slab.
     float wash1 = lampFalloff(vUv, uPool1, 6.5) * uLamp1On;
     float wash2 = lampFalloff(vUv, uPool2, 6.5) * uLamp2On;
-    float wash3 = lampFalloff(vUv, uPool3, 9.0) * uLamp3On;
+    float wash3 = lampFalloff(vUv, uPool3, 6.5) * uLamp3On;
 
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
-    vec3 leftWarm = vec3(1.0, 0.60, 0.30);
     vec3 moonCool = vec3(0.42, 0.56, 0.66);
 
     // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
@@ -128,9 +142,6 @@ const FRAGMENT_SHADER = /* glsl */ `
     // <colorspace_fragment> include at the end encodes back to sRGB — without
     // it the planks render ~4x too dark (only the additive light shows).
     float onDock = smoothstep(0.0, 0.15, tex.a);
-    float woodLuma = dot(tex.rgb, vec3(0.2126, 0.7152, 0.0722));
-    float woodResponse = smoothstep(0.002, 0.045, woodLuma);
-    float leftLightable = onDock * mix(0.38, 1.0, woodResponse);
     float bulbSum = bulb1 + bulb2 + bulb3;
     float strongestPool = max(pool1, max(pool2, pool3));
     float washSum = wash1 + wash2 + wash3;
@@ -148,13 +159,9 @@ const FRAGMENT_SHADER = /* glsl */ `
     col *= 1.0 + skyExposure * skyMask;
     col += moonCool * (0.00045 + auroraVariation * 0.00025) * skyMask;
 
-    // Preserve the original middle/right pools. The left correction is local
-    // and texture-aware: gain reveals its darker wood grain, then the warm add
-    // supplies the missing illumination at the center.
-    col *= 1.0 + (pool1 * 0.025 + pool2 * 0.025) * onDock * reflectionScale;
-    col *= 1.0 + (pool3 * 0.12 + pool3Core * 0.35) * leftLightable * reflectionScale;
-    col += lampWarm * (pool1 * 0.035 + pool2 * 0.035) * onDock * reflectionScale;
-    col += leftWarm * (pool3 * 0.26 + pool3Core * 0.42) * leftLightable * reflectionScale;
+    // Preserve and reinforce the three matched painterly pools equally.
+    col *= 1.0 + (pool1 + pool2 + pool3) * 0.025 * onDock * reflectionScale;
+    col += lampWarm * (pool1 + pool2 + pool3) * 0.035 * onDock * reflectionScale;
     col += lampWarm * washSum * 0.004 * onDock * reflectionScale;
     col += bulbSum * lampWarm * 0.15 * max(onDock, bulbSum * 0.36) * reflectionScale;
 
@@ -310,7 +317,7 @@ export function FooterDockThree() {
       // brightness lift, only the three discrete pools.
       const lamp1On = smoothstep(0.18, 0.4, progress);
       const lamp2On = smoothstep(0.3, 0.52, progress);
-      const lamp3On = smoothstep(0.12, 0.34, progress);
+      const lamp3On = smoothstep(0.18, 0.4, progress);
 
       for (const material of [refs.dockMaterial, refs.reflectionMaterial]) {
         material.uniforms.uLamp1On.value = lamp1On;
@@ -454,7 +461,7 @@ export function FooterDockThree() {
           className="pointer-events-none absolute inset-0 mix-blend-screen"
           style={{
             background:
-              "radial-gradient(ellipse 5.5% 12% at 18.5% 79.5%, rgba(255, 155, 72, 0.24) 0%, rgba(255, 142, 52, 0.1) 38%, transparent 75%)",
+              "radial-gradient(ellipse 5.5% 12% at 13.5% 79.5%, rgba(255, 199, 133, 0.24) 0%, rgba(255, 199, 133, 0.1) 38%, transparent 75%)",
           }}
         />
       </>

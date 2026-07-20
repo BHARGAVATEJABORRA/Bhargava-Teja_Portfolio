@@ -742,7 +742,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
                 className="pointer-events-none absolute inset-0 mix-blend-screen"
                 style={{
                   background:
-                    "radial-gradient(ellipse 5.5% 12% at 18.5% 79.5%, rgba(255, 155, 72, 0.24) 0%, rgba(255, 142, 52, 0.1) 38%, transparent 75%)",
+                    "radial-gradient(ellipse 5.5% 12% at 13.5% 79.5%, rgba(255, 199, 133, 0.24) 0%, rgba(255, 199, 133, 0.1) 38%, transparent 75%)",
                 }}
               />
             </>

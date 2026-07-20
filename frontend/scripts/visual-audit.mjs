@@ -100,19 +100,20 @@ report.dockProgress = await page.evaluate(
 const dockShot = await page.screenshot();
 writeFileSync(`${OUT}dock.png`, dockShot);
 
-// Sample along the walkway: under lamp 1, mid-deck, under lamp 2 (plane is
+// Sample along the walkway: left / middle / right pools and the dark gaps (plane is
 // 200vw centred; uv_x -> screen_x = (-0.5 + 2 * uv_x) * vw).
 const dockRect = await page.evaluate(() => {
   const el = document.querySelector("[data-scroll-scene='dock-three']");
   if (!el) return null;
   const r = el.getBoundingClientRect();
-  return { top: r.top, height: r.height };
+  return { left: r.left, top: r.top, width: r.width, height: r.height };
 });
 report.dockRect = dockRect;
 if (dockRect) {
   const walkwayY = dockRect.top + dockRect.height * (1 - 0.795);
-  const xFor = (uv) => (-0.5 + 2 * uv) * 1440;
+  const xFor = (uv) => dockRect.left + dockRect.width * uv;
   report.dockWalkway = await samplePixels(dockShot, [
+    [xFor(0.135), walkwayY], // left lamp — must match the two original pools
     [xFor(0.355), walkwayY], // under lamp 1 — warm pool
     [xFor(0.465), walkwayY], // mid-deck — must stay dark
     [xFor(0.575), walkwayY], // under lamp 2 — warm pool
