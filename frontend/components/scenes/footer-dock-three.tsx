@@ -94,22 +94,34 @@ const FRAGMENT_SHADER = /* glsl */ `
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
+    // The source left arm starts with a perspective-slanted wedge. Rebuild only
+    // that short outer cap from a clean neighboring run of the same planks so
+    // the arm has level top/front edges and a crisp vertical end. The feather
+    // is confined to the inner join; the outer cut stays visually square.
+    float directTexture = 1.0 - uReflection;
+    float leftCapMask = smoothstep(0.050, 0.053, vUv.x) * (1.0 - smoothstep(0.102, 0.108, vUv.x));
+    float straightCapSourceX = 0.120 + (vUv.x - 0.050) * 0.91;
+    vec4 straightLeftCap = texture2D(uMap, vec2(straightCapSourceX, vUv.y));
+    tex = mix(tex, straightLeftCap, leftCapMask * directTexture);
+
     // Move the added left fixture into the same spacing rhythm as the middle
     // and right lamps. First restore the small source patch from neighboring
     // left-arm planks, then copy the complete middle lamp/pool patch into its
-    // new position. The soft radial feather keeps plank seams invisible.
-    // Reflections skip this texture repair and use the moved uniforms below.
-    float directTexture = 1.0 - uReflection;
+    // new position. On the deck itself we retain the repaired arm's alpha so
+    // neither radial patch can bend its silhouette; only the lamp pixels above
+    // the deck are allowed to supply their source alpha.
     float oldFixture = 1.0 - smoothstep(
       0.092,
       0.125,
       radialDist(vUv, vec2(${SOURCE_LEFT_LAMP_X.toFixed(3)}, 0.820))
     );
     vec4 repairedLeftArm = texture2D(uMap, vec2(vUv.x + 0.047, vUv.y));
+    repairedLeftArm.a = mix(repairedLeftArm.a, tex.a, 1.0 - smoothstep(0.825, 0.842, vUv.y));
     tex = mix(tex, repairedLeftArm, oldFixture * directTexture);
 
     float matchedLeftPatch = 1.0 - smoothstep(0.105, 0.145, radialDist(vUv, vec2(0.135, 0.820)));
     vec4 middleLampPatch = texture2D(uMap, vec2(vUv.x + 0.220, vUv.y));
+    middleLampPatch.a = mix(middleLampPatch.a, tex.a, 1.0 - smoothstep(0.825, 0.842, vUv.y));
     tex = mix(tex, middleLampPatch, matchedLeftPatch * directTexture);
 
     // Lamp halos: gentle flicker once each lamp has ignited.
