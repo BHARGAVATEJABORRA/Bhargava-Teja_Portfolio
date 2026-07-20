@@ -94,15 +94,17 @@ const FRAGMENT_SHADER = /* glsl */ `
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
-    // The source left arm starts with a perspective-slanted wedge. Rebuild only
-    // that short outer cap from a clean neighboring run of the same planks so
-    // the arm has level top/front edges and a crisp vertical end. The feather
-    // is confined to the inner join; the outer cut stays visually square.
+    // The source left arm has a much longer perspective wedge than the right.
+    // Rebuild its short outer cap from clean interior planks, but borrow the
+    // alpha silhouette from the right end. This gives both ends the same depth
+    // and angled cut without copying the right lamp or its baked light pool.
     float directTexture = 1.0 - uReflection;
-    float leftCapMask = smoothstep(0.050, 0.053, vUv.x) * (1.0 - smoothstep(0.102, 0.108, vUv.x));
-    float straightCapSourceX = 0.120 + (vUv.x - 0.050) * 0.91;
-    vec4 straightLeftCap = texture2D(uMap, vec2(straightCapSourceX, vUv.y));
-    tex = mix(tex, straightLeftCap, leftCapMask * directTexture);
+    float leftCapMask = (1.0 - smoothstep(0.102, 0.110, vUv.x)) * (1.0 - smoothstep(0.835, 0.850, vUv.y));
+    float cleanCapSourceX = 0.205 + vUv.x;
+    vec4 matchedLeftCap = texture2D(uMap, vec2(cleanCapSourceX, vUv.y));
+    vec4 rightEndSilhouette = texture2D(uMap, vec2(0.684 - vUv.x, vUv.y));
+    matchedLeftCap.a = rightEndSilhouette.a;
+    tex = mix(tex, matchedLeftCap, leftCapMask * directTexture);
 
     // Move the added left fixture into the same spacing rhythm as the middle
     // and right lamps. First restore the small source patch from neighboring
