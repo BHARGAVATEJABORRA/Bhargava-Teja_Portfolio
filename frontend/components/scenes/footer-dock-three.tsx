@@ -99,7 +99,10 @@ const FRAGMENT_SHADER = /* glsl */ `
     // alpha silhouette from the right end. This gives both ends the same depth
     // and angled cut without copying the right lamp or its baked light pool.
     float directTexture = 1.0 - uReflection;
-    float leftCapMask = (1.0 - smoothstep(0.102, 0.110, vUv.x)) * (1.0 - smoothstep(0.835, 0.850, vUv.y));
+    // Confine the mirrored silhouette to the deck surface and fascia. The
+    // right lamp stand begins just above this cutoff, so no fixture pixels can
+    // leak into the rebuilt edge while the inner join remains continuous.
+    float leftCapMask = (1.0 - smoothstep(0.102, 0.110, vUv.x)) * (1.0 - smoothstep(0.822, 0.830, vUv.y));
     float cleanCapSourceX = 0.205 + vUv.x;
     vec4 matchedLeftCap = texture2D(uMap, vec2(cleanCapSourceX, vUv.y));
     vec4 rightEndSilhouette = texture2D(uMap, vec2(0.684 - vUv.x, vUv.y));
