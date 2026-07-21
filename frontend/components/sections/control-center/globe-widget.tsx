@@ -1,12 +1,57 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import * as THREE from "three";
+import {
+  AdditiveBlending,
+  AmbientLight,
+  BackSide,
+  Color,
+  DirectionalLight,
+  DoubleSide,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  MeshPhongMaterial,
+  PerspectiveCamera,
+  RingGeometry,
+  Scene,
+  ShaderMaterial,
+  SphereGeometry,
+  SRGBColorSpace,
+  Texture,
+  TextureLoader,
+  Timer,
+  Vector3,
+  WebGLRenderer,
+} from "three";
 import { LuMapPin } from "react-icons/lu";
 
 import { portfolioContent } from "@/content/portfolio-content";
 
 import { ControlCenterPanel } from "./control-center-panel";
+
+const THREE = {
+  AdditiveBlending,
+  AmbientLight,
+  BackSide,
+  Color,
+  DirectionalLight,
+  DoubleSide,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  MeshPhongMaterial,
+  PerspectiveCamera,
+  RingGeometry,
+  Scene,
+  ShaderMaterial,
+  SphereGeometry,
+  SRGBColorSpace,
+  TextureLoader,
+  Timer,
+  Vector3,
+  WebGLRenderer,
+};
 
 /**
  * Realistic earth: NASA Blue Marble texture (blue oceans, green land) loaded
@@ -19,7 +64,7 @@ const AUTO_SPIN_SPEED = 0.0022;
 const GLOBE_TILT = 0.32;
 
 /** lat/lng (degrees) → position on a unit sphere that matches an equirectangular texture. */
-function latLngToVector3(lat: number, lng: number, radius = 1): THREE.Vector3 {
+function latLngToVector3(lat: number, lng: number, radius = 1): Vector3 {
   const phi = ((90 - lat) * Math.PI) / 180;
   const theta = ((lng + 180) * Math.PI) / 180;
   return new THREE.Vector3(
@@ -102,7 +147,7 @@ export function GlobeWidget({
     const camera = new THREE.PerspectiveCamera(42, 1, 0.1, 100);
     camera.position.z = 2.85;
 
-    let renderer: THREE.WebGLRenderer;
+    let renderer: WebGLRenderer;
     try {
       renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     } catch (error) {
@@ -178,7 +223,7 @@ export function GlobeWidget({
 
     const textureLoader = new THREE.TextureLoader();
     textureLoader.setCrossOrigin("anonymous");
-    let texture: THREE.Texture | null = null;
+    let texture: Texture | null = null;
     textureLoader.load(
       EARTH_TEXTURE_URL,
       (loaded) => {
@@ -215,25 +260,29 @@ export function GlobeWidget({
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(container);
 
-    const clock = new THREE.Clock();
-    const animate = () => {
+    const timer = new THREE.Timer();
+    timer.connect(document);
+    const animate = (timestamp: number) => {
       frame = window.requestAnimationFrame(animate);
+      timer.update(timestamp);
       if (pointerInteractingRef.current === null) {
         spin += AUTO_SPIN_SPEED;
       }
       globe.rotation.y = baseRotation + spin + dragDeltaRef.current / 200;
 
-      const pulse = 1 + 0.35 * Math.sin(clock.getElapsedTime() * 2.6);
+      const pulsePhase = Math.sin(timer.getElapsed() * 2.6);
+      const pulse = 1 + 0.35 * pulsePhase;
       markerRing.scale.setScalar(pulse);
-      markerRingMaterial.opacity = 0.75 - 0.35 * Math.sin(clock.getElapsedTime() * 2.6);
+      markerRingMaterial.opacity = 0.75 - 0.35 * pulsePhase;
 
       renderer.render(scene, camera);
     };
-    animate();
+    frame = window.requestAnimationFrame(animate);
 
     return () => {
       disposed = true;
       window.cancelAnimationFrame(frame);
+      timer.dispose();
       resizeObserver.disconnect();
       texture?.dispose();
       sphereGeometry.dispose();

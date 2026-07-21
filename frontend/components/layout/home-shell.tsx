@@ -3,17 +3,9 @@
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState } from "react";
 
-import { CommandPalette } from "@/components/layout/command-palette";
 import { SiteHeader } from "@/components/layout/site-header";
 import { EntranceCurtain } from "@/components/motion/entrance-curtain";
-import { AboutSection } from "@/components/sections/about-section";
-import { AiCompanionDock } from "@/components/sections/ai-companion-dock";
-import { BlogsSection } from "@/components/sections/blogs-section";
-import { ControlCenterSection } from "@/components/sections/control-center-section";
-import { ExperienceSection } from "@/components/sections/experience-section";
 import { HeroSection, HeroSocialDock } from "@/components/sections/hero-section";
-import { ProjectsSection } from "@/components/sections/projects-section";
-import { SkillsSection } from "@/components/sections/skills-section";
 import { portfolioContent, type ProjectSummary } from "@/content/portfolio-content";
 
 // Canvas/WebGL scenes must never server-render: the SSR pass has no window or
@@ -25,6 +17,43 @@ const TidesBackground = dynamic(
 );
 const ContactFooterSection = dynamic(
   () => import("@/components/sections/contact-footer-section").then((m) => m.ContactFooterSection),
+  { ssr: false },
+);
+
+// None of these modules are visible until the entrance curtain completes.
+// Keeping them out of the initial route chunk prevents the graphics-heavy
+// control center, project deck, articles, and floating tools from blocking the
+// first development compile or the hero's first paint.
+const ControlCenterSection = dynamic(
+  () => import("@/components/sections/control-center-section").then((m) => m.ControlCenterSection),
+  { ssr: false },
+);
+const AboutSection = dynamic(
+  () => import("@/components/sections/about-section").then((m) => m.AboutSection),
+  { ssr: false },
+);
+const SkillsSection = dynamic(
+  () => import("@/components/sections/skills-section").then((m) => m.SkillsSection),
+  { ssr: false },
+);
+const ExperienceSection = dynamic(
+  () => import("@/components/sections/experience-section").then((m) => m.ExperienceSection),
+  { ssr: false },
+);
+const ProjectsSection = dynamic(
+  () => import("@/components/sections/projects-section").then((m) => m.ProjectsSection),
+  { ssr: false },
+);
+const BlogsSection = dynamic(
+  () => import("@/components/sections/blogs-section").then((m) => m.BlogsSection),
+  { ssr: false },
+);
+const CommandPalette = dynamic(
+  () => import("@/components/layout/command-palette").then((m) => m.CommandPalette),
+  { ssr: false },
+);
+const AiCompanionDock = dynamic(
+  () => import("@/components/sections/ai-companion-dock").then((m) => m.AiCompanionDock),
   { ssr: false },
 );
 

@@ -705,7 +705,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           <img src="/adaline-scenes/footer/footer-hills.webp" alt="" aria-hidden className="w-full object-cover" />
         </div>
 
-        {/* Dock + reflection: a centered image group whose SIZE (width in vw)
+        {/* Dock: a centered image group whose SIZE (width in vw)
             sets how near the pier reads, and whose top offset seats it in the
             lake. On phones it stays at 118vw so it retains the distant
             perspective and can sit behind the footer copy without dominating
@@ -724,26 +724,15 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           }}
         >
           {shouldReduceMotion ? (
-            <>
-              <span
-                aria-hidden
-                data-dock-reflection="static"
-                className="pointer-events-none absolute inset-0 mix-blend-screen"
-                style={{
-                  background:
-                    "radial-gradient(ellipse 3.8% 18% at 23.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%), radial-gradient(ellipse 3.8% 18% at 35.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%), radial-gradient(ellipse 3.8% 18% at 57.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%)",
-                }}
-              />
-              <img
-                src="/adaline-scenes/footer/footer-dock.webp"
-                alt=""
-                aria-hidden
-                className="relative aspect-[2.5] w-full object-fill"
-              />
-            </>
+            <img
+              src="/adaline-scenes/footer/footer-dock.webp?v=5"
+              alt=""
+              aria-hidden
+              className="relative aspect-[3] w-full object-fill"
+            />
           ) : (
-            // Three.js + GSAP ScrollTrigger night scene: same dock/reflection
-            // textures, plus scroll-driven ignition for all three lamp pools.
+            // WebGL presents the completed artwork without rebuilding the dock
+            // or drawing detached procedural light shapes over its lamp pools.
             <FooterDockThree />
           )}
         </div>

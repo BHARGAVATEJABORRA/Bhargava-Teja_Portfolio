@@ -9,6 +9,12 @@ const isStaticExport = process.env.STATIC_EXPORT === "1";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? "";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Three.js exposes a large barrel file. Rewrite named imports to the
+    // modules actually used so development does not compile its full export
+    // graphs before the first page can respond.
+    optimizePackageImports: ["three"],
+  },
   ...(isStaticExport
     ? {
         output: "export" as const,

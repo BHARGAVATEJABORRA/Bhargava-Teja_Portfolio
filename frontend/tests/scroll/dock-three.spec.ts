@@ -50,8 +50,8 @@ test.describe("§6 Three.js dock night scene", () => {
     await gotoReady(page);
 
     await expect(page.locator('[data-scroll-scene="dock-three"]')).toHaveCount(0);
-    await expect(page.locator('img[src="/adaline-scenes/footer/footer-dock.webp"]')).toHaveCount(1);
-    await expect(page.locator('[data-dock-reflection="static"]')).toHaveCount(1);
+    await expect(page.locator('img[src^="/adaline-scenes/footer/footer-dock.webp"]')).toHaveCount(1);
+    await expect(page.locator('[data-dock-reflection="static"]')).toHaveCount(0);
     await expect(page.locator('img[src="/adaline-scenes/footer/footer-dock-reflection.webp"]')).toHaveCount(0);
   });
 });
