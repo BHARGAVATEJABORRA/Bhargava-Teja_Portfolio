@@ -700,34 +700,25 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           group; the nav sits at z-100 on xl. The dock is centered and lifted
           rather than anchored bottom-left, since the footer's proportions here
           left the bottom-left anchor detaching the pier. */}
-      <div className="relative z-[2] bg-[#07181b] xl:h-[40vw]">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse 62% 74% at 18% 12%, rgba(15, 70, 65, 0.34) 0%, transparent 68%), radial-gradient(ellipse 54% 68% at 82% 18%, rgba(12, 63, 62, 0.3) 0%, transparent 70%), repeating-linear-gradient(177deg, rgba(104, 153, 137, 0.035) 0px, rgba(104, 153, 137, 0.035) 1px, transparent 1px, transparent 9px), linear-gradient(180deg, #050e11 0%, #082126 30%, #0b292c 62%, #0a2326 100%)",
-          }}
-        />
+      <div className="relative z-[2] bg-[#050e11] xl:h-[40vw]">
         <div aria-hidden className="pointer-events-none absolute -top-[14vw] w-full">
           <img src="/adaline-scenes/footer/footer-hills.webp" alt="" aria-hidden className="w-full object-cover" />
         </div>
 
-        {/* Dock: a moderately close, left-of-center pier lowered into the lake.
-            Its restrained width keeps the lake readable while the
+        {/* Dock: a distant, left-of-center pier whose crossbar sits near the
+            shoreline. Its restrained width keeps the lake dominant while the
             completed three-lamp artwork retains its geometry, lighting, and
             native proportions. The matching nav padding intentionally allows
             a small overlap with the name.
-            The late fade keeps the foreground planks visible without ending
-            in a hard edge over the footer copy. */}
+            The fade mask blends the foreground planks into the #050e11 base. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-[43%] top-[13vw] w-[82vw] -translate-x-1/2 sm:left-[42%] sm:w-[76vw] lg:w-[70vw] xl:top-[7vw] xl:w-[64vw]"
+          className="pointer-events-none absolute left-[44%] top-[10vw] w-[70vw] -translate-x-1/2 sm:left-[43%] sm:w-[66vw] lg:left-[42%] lg:w-[60vw] xl:left-[40%] xl:top-[3vw] xl:w-[52vw]"
           style={{
             WebkitMaskImage:
-              "linear-gradient(to bottom, black 0%, black 55%, rgba(0,0,0,0.7) 72%, rgba(0,0,0,0.25) 90%, transparent 100%)",
+              "linear-gradient(to bottom, black 0%, black 30%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.12) 72%, transparent 88%)",
             maskImage:
-              "linear-gradient(to bottom, black 0%, black 55%, rgba(0,0,0,0.7) 72%, rgba(0,0,0,0.25) 90%, transparent 100%)",
+              "linear-gradient(to bottom, black 0%, black 30%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.12) 72%, transparent 88%)",
           }}
         >
           {shouldReduceMotion ? (
