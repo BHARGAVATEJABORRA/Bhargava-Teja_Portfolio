@@ -11,8 +11,9 @@ if (typeof window !== "undefined") {
 
 // ---------------------------------------------------------------------------
 // Scroll-bound Three.js build of the footer dock ("night theme"). The dock and
-// water-reflection textures are drawn on shader planes so the scene stays
-// pixel-faithful at rest. Three bounded warm pools sit under the lamps while a
+// texture and clean light-only water shimmers are drawn on shader planes so
+// the scene stays pixel-faithful at rest without duplicating dock geometry.
+// Three bounded warm pools sit under the lamps while a
 // restrained cool sky fill keeps the unlit boards readable without flattening
 // the pier into a uniformly bright slab. Scroll progress (GSAP
 // ScrollTrigger, scrubbed) ignites the lamps as night settles. The reflection
@@ -187,21 +188,29 @@ const FRAGMENT_SHADER = /* glsl */ `
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
     vec3 moonCool = vec3(0.42, 0.56, 0.66);
 
-    // The source reflection has no left-lamp shimmer. Build one only on the
-    // reflection material: wider than the deck halo, stretched vertically,
-    // gently displaced by the same water rhythm, and faded in from the water
-    // surface so it never reads as a hard mirrored circle.
-    float leftWaterDepth = max(${WATER_Y.toFixed(2)} - vUv.y, 0.0);
-    vec2 leftWaterDelta = vUv - uLamp3;
-    leftWaterDelta.x += sin(vUv.y * 92.0 + uTime * 1.35) * (0.0035 + leftWaterDepth * 0.006);
-    float leftWaterDistance = length(leftWaterDelta * vec2(2.15, 0.52));
-    float leftWaterSurface = smoothstep(-0.004, 0.014, ${WATER_Y.toFixed(2)} - vUv.y);
-    float leftWaterShimmer = 0.84 + 0.16 * sin(vUv.y * 185.0 - uTime * 1.1 + vUv.x * 24.0);
-    float leftWaterReflection =
-      exp(-leftWaterDistance * 12.0) *
-      leftWaterSurface *
-      leftWaterShimmer *
-      uLamp3On *
+    // Reflect light, not a second copy of the pier. The old reflection bitmap
+    // contains detached fascia strips and a partial upside-down bulb. These
+    // three vertically stretched shimmers stay centered beneath their lamps,
+    // share one falloff, and ripple only below the waterline.
+    float waterDepth = max(${WATER_Y.toFixed(2)} - vUv.y, 0.0);
+    float waterSurface = smoothstep(-0.004, 0.014, ${WATER_Y.toFixed(2)} - vUv.y);
+
+    vec2 waterDelta1 = vUv - uLamp1;
+    vec2 waterDelta2 = vUv - uLamp2;
+    vec2 waterDelta3 = vUv - uLamp3;
+    float waterRipple = 0.0035 + waterDepth * 0.006;
+    waterDelta1.x += sin(vUv.y * 92.0 + uTime * 1.35 + 0.8) * waterRipple;
+    waterDelta2.x += sin(vUv.y * 92.0 + uTime * 1.35 + 2.1) * waterRipple;
+    waterDelta3.x += sin(vUv.y * 92.0 + uTime * 1.35 + 3.4) * waterRipple;
+
+    float waterShimmer = 0.84 + 0.16 * sin(vUv.y * 185.0 - uTime * 1.1 + vUv.x * 24.0);
+    float waterReflection1 = exp(-length(waterDelta1 * vec2(2.15, 0.52)) * 12.0) * uLamp1On;
+    float waterReflection2 = exp(-length(waterDelta2 * vec2(2.15, 0.52)) * 12.0) * uLamp2On;
+    float waterReflection3 = exp(-length(waterDelta3 * vec2(2.15, 0.52)) * 12.0) * uLamp3On;
+    float waterReflection =
+      (waterReflection1 + waterReflection2 + waterReflection3) *
+      waterSurface *
+      waterShimmer *
       uReflection;
 
     // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
@@ -232,10 +241,10 @@ const FRAGMENT_SHADER = /* glsl */ `
     col *= 1.0 + (pool1 + pool2 + pool3) * 0.025 * onDock * reflectionScale;
     col += lampWarm * (pool1 + pool2 + pool3) * 0.035 * onDock * reflectionScale;
     col += lampWarm * washSum * 0.004 * onDock * reflectionScale;
-    col += bulbSum * lampWarm * 0.15 * max(onDock, bulbSum * 0.36) * reflectionScale;
-    col += lampWarm * leftWaterReflection * 0.34;
+    col += bulbSum * lampWarm * 0.15 * max(onDock, bulbSum * 0.36) * reflectionScale * directTexture;
+    col += lampWarm * waterReflection * 0.34;
 
-    float outputAlpha = max(tex.a * uOpacity, leftWaterReflection * 0.16);
+    float outputAlpha = max(tex.a * uOpacity, waterReflection * 0.16);
     gl_FragColor = vec4(col, outputAlpha);
 
     // three defines linearToOutputTexel() for ShaderMaterial from
@@ -244,16 +253,12 @@ const FRAGMENT_SHADER = /* glsl */ `
   }
 `;
 
-// Reflection variant: ripple the UV lookup and stretch/dim the glow.
+// Reflection variant: the legacy reflection bitmap contains detached pieces
+// of dock geometry. Start transparent and let the shared shader draw only the
+// three aligned water shimmers.
 const REFLECTION_FRAGMENT_SHADER = FRAGMENT_SHADER.replace(
   "vec4 tex = texture2D(uMap, vUv);",
-  /* glsl */ `
-    float depth = clamp((${WATER_Y.toFixed(2)} - vUv.y) * 2.2, 0.0, 1.0);
-    vec2 rippleUv = vUv;
-    rippleUv.x += sin(vUv.y * 90.0 + uTime * 1.35) * 0.0028 * depth;
-    rippleUv.y += sin(vUv.x * 70.0 - uTime * 0.9) * 0.0016 * depth;
-    vec4 tex = texture2D(uMap, rippleUv);
-  `,
+  "vec4 tex = vec4(0.0);",
 );
 
 function smoothstep(edge0: number, edge1: number, x: number) {
@@ -351,8 +356,6 @@ export function FooterDockThree() {
     };
 
     const dockTexture = loadTexture("/adaline-scenes/footer/footer-dock.webp?v=4");
-    const reflectionTexture = loadTexture("/adaline-scenes/footer/footer-dock-reflection.webp?v=2");
-
     const geometry = new THREE.PlaneGeometry(1, 1);
 
     const dockMaterial = new THREE.ShaderMaterial({
@@ -365,7 +368,7 @@ export function FooterDockThree() {
     const reflectionMaterial = new THREE.ShaderMaterial({
       vertexShader: VERTEX_SHADER,
       fragmentShader: REFLECTION_FRAGMENT_SHADER,
-      uniforms: makeUniforms(reflectionTexture, true),
+      uniforms: makeUniforms(dockTexture, true),
       transparent: true,
       depthWrite: false,
     });
@@ -498,7 +501,6 @@ export function FooterDockThree() {
       dockMaterial.dispose();
       reflectionMaterial.dispose();
       dockTexture.dispose();
-      reflectionTexture.dispose();
       renderer.dispose();
     };
     };
@@ -517,24 +519,20 @@ export function FooterDockThree() {
   if (!mounted) return null;
 
   if (webglFailed) {
-    // Static fallback: the original image stack this scene replaces.
+    // Static fallback: keep the corrected dock and synthesize the same three
+    // clean water shimmers without the broken legacy reflection bitmap.
     return (
       <>
-        <img
-          src="/adaline-scenes/footer/footer-dock-reflection.webp"
-          alt=""
-          aria-hidden
-          className="absolute left-0 top-0 aspect-[2.5] w-full object-fill opacity-60"
-        />
-        <img src="/adaline-scenes/footer/footer-dock.webp" alt="" aria-hidden className="relative aspect-[2.5] w-full object-fill" />
         <span
           aria-hidden
+          data-dock-reflection="static"
           className="pointer-events-none absolute inset-0 mix-blend-screen"
           style={{
             background:
-              "radial-gradient(ellipse 5.5% 12% at 13.5% 79.5%, rgba(255, 199, 133, 0.24) 0%, rgba(255, 199, 133, 0.1) 38%, transparent 75%)",
+              "radial-gradient(ellipse 3.8% 18% at 23.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%), radial-gradient(ellipse 3.8% 18% at 35.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%), radial-gradient(ellipse 3.8% 18% at 57.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%)",
           }}
         />
+        <img src="/adaline-scenes/footer/footer-dock.webp" alt="" aria-hidden className="relative aspect-[2.5] w-full object-fill" />
       </>
     );
   }

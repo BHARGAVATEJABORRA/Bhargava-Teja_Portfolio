@@ -725,25 +725,20 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         >
           {shouldReduceMotion ? (
             <>
-              <img
-                src="/adaline-scenes/footer/footer-dock-reflection.webp"
-                alt=""
+              <span
                 aria-hidden
-                className="absolute left-0 top-0 aspect-[2.5] w-full object-fill opacity-60"
+                data-dock-reflection="static"
+                className="pointer-events-none absolute inset-0 mix-blend-screen"
+                style={{
+                  background:
+                    "radial-gradient(ellipse 3.8% 18% at 23.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%), radial-gradient(ellipse 3.8% 18% at 35.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%), radial-gradient(ellipse 3.8% 18% at 57.5% 34.5%, rgba(255, 199, 133, 0.2) 0%, rgba(255, 199, 133, 0.08) 38%, transparent 76%)",
+                }}
               />
               <img
                 src="/adaline-scenes/footer/footer-dock.webp"
                 alt=""
                 aria-hidden
                 className="relative aspect-[2.5] w-full object-fill"
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-0 mix-blend-screen"
-                style={{
-                  background:
-                    "radial-gradient(ellipse 5.5% 12% at 13.5% 79.5%, rgba(255, 199, 133, 0.24) 0%, rgba(255, 199, 133, 0.1) 38%, transparent 75%)",
-                }}
               />
             </>
           ) : (
