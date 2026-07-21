@@ -713,7 +713,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
             The fade mask blends the foreground planks into the #050e11 base. */}
         <div
           aria-hidden
-          className="pointer-events-none absolute left-[44%] top-[10vw] w-[70vw] -translate-x-1/2 sm:left-[43%] sm:w-[66vw] lg:left-[42%] lg:w-[60vw] xl:left-[40%] xl:top-[3vw] xl:w-[52vw]"
+          className="pointer-events-none absolute left-[44%] top-[10vw] w-[70vw] -translate-x-1/2 sm:left-[43%] sm:w-[66vw] lg:left-[42%] lg:w-[60vw] xl:left-[40%] xl:top-[10vw] xl:w-[110vw]"
           style={{
             WebkitMaskImage:
               "linear-gradient(to bottom, black 0%, black 30%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.12) 72%, transparent 88%)",
@@ -723,7 +723,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         >
           {shouldReduceMotion ? (
             <img
-              src="/adaline-scenes/footer/footer-dock.webp?v=5"
+              src="/adaline-scenes/footer/footer-dock.webp?v=7"
               alt=""
               aria-hidden
               className="relative aspect-[3] w-full object-fill"
