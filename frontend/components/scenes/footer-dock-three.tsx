@@ -21,24 +21,18 @@ if (typeof window !== "undefined") {
 // ---------------------------------------------------------------------------
 
 // Lamp bulbs on the T-pier cross-bar: left / middle / right. The source texture
-// contains its added left fixture at x=.185, too close to the middle lamp and
-// without the painterly plank light baked under the original fixtures. At
-// render time we replace that patch with an exact sample of the middle fixture
-// and its pool, positioned one matching interval to the left. This keeps all
-// three fixtures evenly spaced and gives the left lamp the same construction,
-// colour and light response as the two originals.
-const SOURCE_LEFT_LAMP_X = 0.185;
-// The baked right fixture in the source texture sits slightly to the right of
-// its shader glow coordinate. Use the visible fixture center when matching the
-// physical deck overhang, otherwise the left arm remains visibly too long.
-const SOURCE_RIGHT_LAMP_X = 0.595;
-const LAMP_3: readonly [number, number] = [0.135, 0.866];
+// runs the left arm beyond the visible viewport. At render time that arm is
+// rebuilt from the center planks and shortened just enough to expose its full
+// fascia; the center and right fixture coordinates remain untouched.
+const LEFT_EDGE_X = 0.15;
+const LAMP_3: readonly [number, number] = [0.235, 0.866];
 const LAMP_1: readonly [number, number] = [0.355, 0.866];
 const LAMP_2: readonly [number, number] = [0.575, 0.866];
+const LEFT_SOURCE_SHIFT = LAMP_1[0] - LAMP_3[0];
 
 // Warm pools on the walkway planks directly beneath each bulb. The walkway
 // surface sits just below the lamp heads in the texture.
-const POOL_3: readonly [number, number] = [0.135, 0.795];
+const POOL_3: readonly [number, number] = [0.235, 0.795];
 const POOL_1: readonly [number, number] = [0.355, 0.795];
 const POOL_2: readonly [number, number] = [0.575, 0.795];
 
@@ -98,43 +92,77 @@ const FRAGMENT_SHADER = /* glsl */ `
   void main() {
     vec4 tex = texture2D(uMap, vUv);
 
-    // The source left arm has a much longer perspective wedge than the right.
-    // Rebuild its short outer cap from clean interior planks, but borrow the
-    // alpha silhouette from the right end. This gives both ends the same depth
-    // and angled cut without copying the right lamp or its baked light pool.
     float directTexture = 1.0 - uReflection;
-    // Confine the mirrored silhouette to the deck surface and fascia. The
-    // right lamp stand begins just above this cutoff, so no fixture pixels can
-    // leak into the rebuilt edge while the inner join remains continuous.
-    float leftCapMask = (1.0 - smoothstep(0.102, 0.110, vUv.x)) * (1.0 - smoothstep(0.822, 0.830, vUv.y));
-    float cleanCapSourceX = 0.205 + vUv.x;
-    vec4 matchedLeftCap = texture2D(uMap, vec2(cleanCapSourceX, vUv.y));
-    // Mirror around the midpoint of the two outer lamp centers, not the center
-    // of the full texture. That makes lamp-to-edge overhang identical on both
-    // sides as well as matching the right end's cut angle.
-    vec4 rightEndSilhouette = texture2D(uMap, vec2(${(LAMP_3[0] + SOURCE_RIGHT_LAMP_X).toFixed(3)} - vUv.x, vUv.y));
-    matchedLeftCap.a = rightEndSilhouette.a;
-    tex = mix(tex, matchedLeftCap, leftCapMask * directTexture);
 
-    // Move the added left fixture into the same spacing rhythm as the middle
-    // and right lamps. First restore the small source patch from neighboring
-    // left-arm planks, then copy the complete middle lamp/pool patch into its
-    // new position. On the deck itself we retain the repaired arm's alpha so
-    // neither radial patch can bend its silhouette; only the lamp pixels above
-    // the deck are allowed to supply their source alpha.
-    float oldFixture = 1.0 - smoothstep(
-      0.092,
-      0.125,
-      radialDist(vUv, vec2(${SOURCE_LEFT_LAMP_X.toFixed(3)}, 0.820))
+    // Rebuild the entire faulty left cross-bar from the fully opaque center
+    // run. A single translation preserves every board seam's angle and spacing
+    // and carries the complete middle fixture/pool onto the new left position.
+    // The inner feather ends before the protected center lamp.
+    vec2 leftSourceUv = vec2(vUv.x + ${LEFT_SOURCE_SHIFT.toFixed(3)}, vUv.y);
+    vec4 matchedLeftArm = texture2D(uMap, leftSourceUv);
+
+    // Normalize the fascia depth so the translated center walkway cannot pull
+    // a diagonal stem into the cross-bar. This is the exact construction used
+    // by the corrected right arm below.
+    vec4 matchedLeftFascia = matchedLeftArm;
+    matchedLeftFascia.a = smoothstep(0.650, 0.665, vUv.y);
+    float leftDeckSurface = smoothstep(0.695, 0.715, vUv.y);
+    matchedLeftArm = mix(matchedLeftFascia, matchedLeftArm, leftDeckSurface);
+
+    // A crisp vertical alpha cut exposes the full left fascia inside the
+    // viewport. Its .085 lamp overhang matches the corrected right edge.
+    matchedLeftArm.a *= smoothstep(${LEFT_EDGE_X.toFixed(3)}, ${(LEFT_EDGE_X + 0.003).toFixed(3)}, vUv.x);
+
+    float leftArmMask =
+      (1.0 - smoothstep(0.315, 0.335, vUv.x)) *
+      smoothstep(0.600, 0.650, vUv.y) *
+      directTexture;
+    tex = mix(tex, matchedLeftArm, leftArmMask);
+
+    // The painted source's right arm has three coupled defects: its baked lamp
+    // pool is clipped off-center, its board seams fan at inconsistent angles,
+    // and its outer cut is irregular. Rebuild only that cross-bar band from a
+    // translated run of the corrected left planks. Translation (rather than a
+    // mirror) preserves the good seam angle so the boards remain parallel and
+    // continuous through the center. Keep this off the reflection material so
+    // the existing water treatment remains unchanged.
+    // A .220 translation maps the fully opaque center run onto the right arm
+    // and places the middle fixture at .355 exactly on the right center .575.
+    vec2 rightSourceUv = vec2(vUv.x - 0.220, vUv.y);
+    vec4 matchedRightArm = texture2D(uMap, rightSourceUv);
+
+    // The repaired source now contains its real left fixture at .235. Under
+    // the right-arm translation that fixture would be sampled again at .455,
+    // creating a fourth lamp. Preserve the original, already-correct inner
+    // cross-bar around that translated pool while continuing to rebuild the
+    // faulty outer-right planks and edge.
+    float translatedLeftLamp = 1.0 - smoothstep(
+      0.190,
+      0.225,
+      radialDist(vUv, vec2(${(LAMP_3[0] + 0.220).toFixed(3)}, ${POOL_3[1].toFixed(3)}))
     );
-    vec4 repairedLeftArm = texture2D(uMap, vec2(vUv.x + 0.047, vUv.y));
-    repairedLeftArm.a = mix(repairedLeftArm.a, tex.a, 1.0 - smoothstep(0.825, 0.842, vUv.y));
-    tex = mix(tex, repairedLeftArm, oldFixture * directTexture);
+    matchedRightArm = mix(matchedRightArm, tex, translatedLeftLamp);
 
-    float matchedLeftPatch = 1.0 - smoothstep(0.105, 0.145, radialDist(vUv, vec2(0.135, 0.820)));
-    vec4 middleLampPatch = texture2D(uMap, vec2(vUv.x + 0.220, vUv.y));
-    middleLampPatch.a = mix(middleLampPatch.a, tex.a, 1.0 - smoothstep(0.825, 0.842, vUv.y));
-    tex = mix(tex, middleLampPatch, matchedLeftPatch * directTexture);
+    // Keep the translated wood colour on the fascia, but normalize its alpha
+    // to the cross-bar depth. The source run crosses the center walkway below
+    // the surface; retaining that source alpha would pull a false downward
+    // wedge into the right arm.
+    vec4 matchedRightFascia = matchedRightArm;
+    matchedRightFascia.a = smoothstep(0.650, 0.665, vUv.y);
+    float deckSurface = smoothstep(0.695, 0.715, vUv.y);
+    matchedRightArm = mix(matchedRightFascia, matchedRightArm, deckSurface);
+
+    // Cut every layer of the reconstructed arm at one vertical coordinate.
+    // The overhang from the right lamp matches the corrected left end, while
+    // the narrow antialiased transition keeps the termination crisp.
+    matchedRightArm.a *= 1.0 - smoothstep(0.657, 0.660, vUv.x);
+
+    // Feather only the inner join; the outer cut above remains a straight line.
+    float rightArmMask =
+      smoothstep(0.425, 0.445, vUv.x) *
+      smoothstep(0.600, 0.650, vUv.y) *
+      directTexture;
+    tex = mix(tex, matchedRightArm, rightArmMask);
 
     // Lamp halos: gentle flicker once each lamp has ignited.
     float flicker1 = 0.975 + 0.025 * sin(uTime * 6.3 + 1.7);
@@ -158,6 +186,23 @@ const FRAGMENT_SHADER = /* glsl */ `
 
     vec3 lampWarm = vec3(1.0, 0.78, 0.52);
     vec3 moonCool = vec3(0.42, 0.56, 0.66);
+
+    // The source reflection has no left-lamp shimmer. Build one only on the
+    // reflection material: wider than the deck halo, stretched vertically,
+    // gently displaced by the same water rhythm, and faded in from the water
+    // surface so it never reads as a hard mirrored circle.
+    float leftWaterDepth = max(${WATER_Y.toFixed(2)} - vUv.y, 0.0);
+    vec2 leftWaterDelta = vUv - uLamp3;
+    leftWaterDelta.x += sin(vUv.y * 92.0 + uTime * 1.35) * (0.0035 + leftWaterDepth * 0.006);
+    float leftWaterDistance = length(leftWaterDelta * vec2(2.15, 0.52));
+    float leftWaterSurface = smoothstep(-0.004, 0.014, ${WATER_Y.toFixed(2)} - vUv.y);
+    float leftWaterShimmer = 0.84 + 0.16 * sin(vUv.y * 185.0 - uTime * 1.1 + vUv.x * 24.0);
+    float leftWaterReflection =
+      exp(-leftWaterDistance * 12.0) *
+      leftWaterSurface *
+      leftWaterShimmer *
+      uLamp3On *
+      uReflection;
 
     // Pools hug the dock planks (soft alpha edge); the bulb halos may bleed
     // slightly past the dock so warm light pools onto the water below.
@@ -188,8 +233,10 @@ const FRAGMENT_SHADER = /* glsl */ `
     col += lampWarm * (pool1 + pool2 + pool3) * 0.035 * onDock * reflectionScale;
     col += lampWarm * washSum * 0.004 * onDock * reflectionScale;
     col += bulbSum * lampWarm * 0.15 * max(onDock, bulbSum * 0.36) * reflectionScale;
+    col += lampWarm * leftWaterReflection * 0.34;
 
-    gl_FragColor = vec4(col, tex.a * uOpacity);
+    float outputAlpha = max(tex.a * uOpacity, leftWaterReflection * 0.16);
+    gl_FragColor = vec4(col, outputAlpha);
 
     // three defines linearToOutputTexel() for ShaderMaterial from
     // renderer.outputColorSpace and resolves this include in custom shaders.
@@ -303,7 +350,7 @@ export function FooterDockThree() {
       return texture;
     };
 
-    const dockTexture = loadTexture("/adaline-scenes/footer/footer-dock.webp?v=3");
+    const dockTexture = loadTexture("/adaline-scenes/footer/footer-dock.webp?v=4");
     const reflectionTexture = loadTexture("/adaline-scenes/footer/footer-dock-reflection.webp?v=2");
 
     const geometry = new THREE.PlaneGeometry(1, 1);
