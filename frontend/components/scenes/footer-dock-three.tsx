@@ -20,7 +20,7 @@ if (typeof window !== "undefined") {
 }
 
 const DOCK_ASPECT = 3;
-const DOCK_ASSET = "/adaline-scenes/footer/footer-dock.webp?v=8";
+const DOCK_ASSET = "/adaline-scenes/footer/footer-dock.webp?v=10";
 
 const subscribeNoop = () => () => {};
 const getClientSnapshot = () => true;

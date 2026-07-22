@@ -723,7 +723,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         >
           {shouldReduceMotion ? (
             <img
-              src="/adaline-scenes/footer/footer-dock.webp?v=8"
+              src="/adaline-scenes/footer/footer-dock.webp?v=10"
               alt=""
               aria-hidden
               className="relative aspect-[3] w-full object-fill"
