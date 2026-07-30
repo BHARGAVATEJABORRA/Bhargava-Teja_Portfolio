@@ -456,6 +456,26 @@ export async function getPublishedProjects(): Promise<ProjectSummary[]> {
   return projects.map((row) => stripId(toProjectDto(row)));
 }
 
+/**
+ * Runtime public projection for the articles collection.
+ *
+ * Articles used to be read solely from the build-time JSON overlay. That made
+ * an edit made in Admin appear only after the next deployment on Vercel. The
+ * database is the production source of truth, so public article surfaces read
+ * it per request in the same way as the project gallery.
+ */
+export async function getPublishedArticles(): Promise<ArticleSummary[]> {
+  const articles = await prisma.article.findMany({
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+  return articles.map((row) => stripId(toArticleDto(row)));
+}
+
+export async function getPublishedArticleBySlug(slug: string): Promise<ArticleSummary | null> {
+  const article = await prisma.article.findUnique({ where: { slug } });
+  return article ? stripId(toArticleDto(article)) : null;
+}
+
 export async function publishContentOverrides(): Promise<void> {
   const collections = await getPublishedCollections();
   try {

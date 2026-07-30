@@ -1,8 +1,8 @@
-import { portfolioContent, type ProjectSummary } from "@/content/portfolio-content";
+import { portfolioContent, type ArticleSummary, type ProjectSummary } from "@/content/portfolio-content";
 import { getResolvedSocialLink, resolveRecruiterSafeLink } from "@/lib/profile-links";
-import { contentAvailability, siteConfig } from "@/lib/site";
+import { siteConfig } from "@/lib/site";
 
-export function StructuredData({ projects }: { projects: ProjectSummary[] }) {
+export function StructuredData({ projects, articles }: { projects: ProjectSummary[]; articles: ArticleSummary[] }) {
   const socialProfiles = [getResolvedSocialLink("github"), getResolvedSocialLink("linkedin")]
     .filter((link) => link.isConfigured)
     .map((link) => link.href);
@@ -45,11 +45,11 @@ export function StructuredData({ projects }: { projects: ProjectSummary[] }) {
     }),
   };
 
-  const publishedArticles = portfolioContent.articles.filter(
+  const publishedArticles = articles.filter(
     (article) => article.isReal === true && (article.href.startsWith("/") || /^https?:\/\//.test(article.href)),
   );
   const articleListSchema =
-    contentAvailability.hasRealArticles && publishedArticles.length > 0
+    publishedArticles.length > 0
       ? {
           "@context": "https://schema.org",
           "@type": "ItemList",

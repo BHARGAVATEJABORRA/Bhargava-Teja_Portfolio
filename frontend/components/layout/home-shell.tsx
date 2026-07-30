@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SiteHeader } from "@/components/layout/site-header";
 import { EntranceCurtain } from "@/components/motion/entrance-curtain";
 import { HeroSection, HeroSocialDock } from "@/components/sections/hero-section";
-import { portfolioContent, type ProjectSummary } from "@/content/portfolio-content";
+import { portfolioContent, type ArticleSummary, type ProjectSummary } from "@/content/portfolio-content";
 
 // Canvas/WebGL scenes must never server-render: the SSR pass has no window or
 // WebGL, and a markup mismatch on hydration kills the scene silently in
@@ -57,7 +57,13 @@ const AiCompanionDock = dynamic(
   { ssr: false },
 );
 
-export function HomeShell({ projects }: { projects: ProjectSummary[] }) {
+export function HomeShell({
+  projects,
+  articles,
+}: {
+  projects: ProjectSummary[];
+  articles: ArticleSummary[];
+}) {
   const features = portfolioContent.features;
   const [tidesReady, setTidesReady] = useState(false);
   const [bootReady, setBootReady] = useState(false);
@@ -194,7 +200,7 @@ export function HomeShell({ projects }: { projects: ProjectSummary[] }) {
               {features.skills && <SkillsSection />}
               {features.experience && <ExperienceSection />}
               {features.projects && <ProjectsSection projects={projects} />}
-              {features.articles && <BlogsSection />}
+              {features.articles && <BlogsSection articles={articles} />}
             </div>
 
             {showFooter ? <ContactFooterSection /> : null}

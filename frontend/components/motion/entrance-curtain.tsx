@@ -8,7 +8,11 @@ interface EntranceCurtainProps {
   ready: boolean;
 }
 
-const greetings = ["Hello", "नमस्ते", "నమస్కారం"];
+const greetings = [
+  { word: "Hello", note: "a calm beginning", accent: "#F0D9A0" },
+  { word: "నమస్తే", note: "with warmth", accent: "#D4E3FF" },
+  { word: "నమస్కారం", note: "from Bhargava", accent: "#E5C9FF" },
+];
 
 export function EntranceCurtain({ onDone, ready }: EntranceCurtainProps) {
   const shouldReduceMotion = useReducedMotion();
@@ -119,16 +123,36 @@ export function EntranceCurtain({ onDone, ready }: EntranceCurtainProps) {
         >
           <div className="flex flex-col items-center gap-5 text-center">
             <motion.p
-              key={greetings[wordIndex]}
+              key={greetings[wordIndex].word}
               initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
               exit={shouldReduceMotion ? undefined : { opacity: 0, y: -14 }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
-              className="text-4xl font-semibold tracking-tight sm:text-5xl"
-              style={{ color: "#F0D9A0", textShadow: "0 2px 30px rgba(231,180,80,0.35)" }}
+              className="relative px-5 pb-4 text-[clamp(3.2rem,10vw,6.8rem)] leading-none"
+              style={{
+                color: greetings[wordIndex].accent,
+                fontFamily: '"Snell Roundhand", "Apple Chancery", "Segoe Script", cursive',
+                fontWeight: 500,
+                letterSpacing: "-0.065em",
+                textShadow: "0 2px 30px rgba(231,180,80,0.28)",
+              }}
             >
-              {greetings[wordIndex]}
+              {greetings[wordIndex].word}
+              <span
+                aria-hidden
+                className="absolute bottom-0 left-[12%] h-px w-[78%] origin-left rounded-full"
+                style={{ background: `linear-gradient(90deg, transparent, ${greetings[wordIndex].accent}, transparent)` }}
+              />
             </motion.p>
+            <motion.span
+              key={`${greetings[wordIndex].word}-note`}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+              animate={{ opacity: 0.72, y: 0 }}
+              transition={{ delay: 0.08, duration: 0.28 }}
+              className="font-mono text-[0.58rem] uppercase tracking-[0.38em] text-white/70"
+            >
+              {greetings[wordIndex].note}
+            </motion.span>
           </div>
         </motion.div>
       ) : null}

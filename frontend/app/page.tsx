@@ -2,7 +2,7 @@ import { HashScroll } from "@/components/layout/hash-scroll";
 import { HomeShell } from "@/components/layout/home-shell";
 import { StructuredData } from "@/components/seo/structured-data";
 import { portfolioContent } from "@/content/portfolio-content";
-import { getPublishedProjects } from "@/lib/content-store";
+import { getPublishedArticles, getPublishedProjects } from "@/lib/content-store";
 
 // Public project data is database-backed and may be changed outside an admin
 // API request (imports, scripts, or direct Turso maintenance). Keep this route
@@ -12,8 +12,11 @@ export const revalidate = 0;
 
 export default async function Home() {
   let projects = portfolioContent.projects;
+  let articles = portfolioContent.articles;
   try {
-    projects = await getPublishedProjects();
+    const [liveProjects, liveArticles] = await Promise.all([getPublishedProjects(), getPublishedArticles()]);
+    projects = liveProjects;
+    articles = liveArticles;
   } catch (error) {
     // Keep the portfolio available during a transient database outage; the
     // bundled snapshot is deliberately a fallback, never the production CMS
@@ -23,9 +26,9 @@ export default async function Home() {
 
   return (
     <>
-      <StructuredData projects={projects} />
+      <StructuredData projects={projects} articles={articles} />
       <HashScroll />
-      <HomeShell projects={projects} />
+      <HomeShell projects={projects} articles={articles} />
     </>
   );
 }

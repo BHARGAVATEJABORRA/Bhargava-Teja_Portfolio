@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
 import { BorderGlowCard } from "@/components/ui/border-glow-card";
-import { portfolioContent } from "@/content/portfolio-content";
 import type { ArticleSummary } from "@/content/portfolio-content";
 import { requestScrollRuntimeUpdate, subscribeToScrollRead, subscribeToScrollWrite } from "@/lib/scroll-runtime";
 import { useLikes } from "@/lib/use-likes";
@@ -149,8 +148,7 @@ function ArticleCard({
   );
 }
 
-export function BlogsSection() {
-  const articles = portfolioContent.articles ?? [];
+export function BlogsSection({ articles }: { articles: ArticleSummary[] }) {
   const likes = useLikes("article");
 
   const containerRef = useRef<HTMLDivElement>(null);

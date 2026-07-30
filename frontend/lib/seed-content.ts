@@ -101,6 +101,7 @@ export async function seedArticles(prisma: PrismaClient): Promise<string> {
       body: a.body ?? null,
       likes: a.likes ?? null,
       accent: a.accent ?? null,
+      ogImage: a.ogImage ?? null,
       tags: JSON.stringify(a.tags ?? []),
       sortOrder: i,
     })),

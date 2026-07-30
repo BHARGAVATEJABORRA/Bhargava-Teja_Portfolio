@@ -4,17 +4,32 @@ import { LuClock, LuCalendar } from "react-icons/lu";
 
 import { BackToArticles } from "@/components/articles/back-to-articles";
 
-import { portfolioContent } from "@/content/portfolio-content";
+import { portfolioContent, type ArticleSummary } from "@/content/portfolio-content";
+import { getPublishedArticleBySlug, getPublishedArticles } from "@/lib/content-store";
 import { siteConfig } from "@/lib/site";
 
-const articles = portfolioContent.articles ?? [];
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-function getArticle(slug: string) {
-  return articles.find((a) => a.slug === slug);
+async function getArticles(): Promise<ArticleSummary[]> {
+  try {
+    return await getPublishedArticles();
+  } catch (error) {
+    // The committed overlay keeps existing articles readable during a
+    // transient database outage, while normal requests stay live from Turso.
+    console.error("[articles] failed to load live articles; using bundled fallback:", error);
+    return portfolioContent.articles ?? [];
+  }
 }
 
-export function generateStaticParams() {
-  return articles.map((a) => ({ slug: a.slug }));
+async function getArticle(slug: string): Promise<ArticleSummary | undefined> {
+  try {
+    const article = await getPublishedArticleBySlug(slug);
+    return article ?? undefined;
+  } catch (error) {
+    console.error("[articles] failed to load live article; using bundled fallback:", error);
+    return portfolioContent.articles?.find((article) => article.slug === slug);
+  }
 }
 
 export async function generateMetadata({
@@ -23,7 +38,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const article = getArticle(slug);
+  const article = await getArticle(slug);
   if (!article) return { title: "Article not found" };
   const ogImage = article.ogImage || siteConfig.ogImage;
   const url = `/articles/${slug}`;
@@ -54,7 +69,7 @@ export default async function ArticlePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const article = getArticle(slug);
+  const [article, articles] = await Promise.all([getArticle(slug), getArticles()]);
   if (!article) notFound();
 
   const accent = article.accent ?? "#fcbc1d";
@@ -133,6 +148,19 @@ export default async function ArticlePage({
             </div>
           ) : null}
         </div>
+
+        {article.ogImage ? (
+          <figure
+            className="mt-8 overflow-hidden rounded-2xl border p-1.5"
+            style={{ borderColor: `${accent}40`, background: `${accent}0d` }}
+          >
+            <img
+              src={article.ogImage}
+              alt={`Cover illustration for ${article.title}`}
+              className="aspect-[1200/630] w-full rounded-xl object-cover"
+            />
+          </figure>
+        ) : null}
 
         {/* Body */}
         <div className="mt-10 space-y-6 text-[1.02rem] leading-[1.8] text-white/80">
