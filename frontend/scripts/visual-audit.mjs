@@ -1,5 +1,5 @@
 // Ad-hoc visual audit of the three footer defects against the LIVE dev server
-// (localhost:3000). Drives scroll with real wheel events through Lenis and
+// (localhost:3000). Drives scroll with real wheel events and
 // samples rendered pixels from screenshots. Not part of the CI gate.
 //
 //   node scripts/visual-audit.mjs
@@ -26,7 +26,7 @@ await page.waitForTimeout(1200);
 
 const maxScroll = await page.evaluate(() => document.documentElement.scrollHeight - window.innerHeight);
 
-// Real wheel events so Lenis drives the scroll exactly like a user.
+// Real wheel events so native scrolling matches real user input.
 async function wheelTo(target) {
   await page.mouse.move(720, 450);
   for (let i = 0; i < 400; i += 1) {
@@ -36,7 +36,7 @@ async function wheelTo(target) {
     await page.mouse.wheel(0, Math.max(-1500, Math.min(1500, delta)));
     await page.waitForTimeout(60);
   }
-  // Let Lenis finish easing.
+  // Let native smooth scrolling finish.
   await page.waitForTimeout(900);
   return page.evaluate(() => window.scrollY);
 }

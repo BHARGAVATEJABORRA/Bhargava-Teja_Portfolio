@@ -85,20 +85,13 @@ export async function gotoReady(page: Page): Promise<void> {
   }
   await page.waitForSelector("#main-content", { timeout: 30_000 });
   await page.waitForSelector(".adaline-footer-scene", { timeout: 30_000 });
-  // Give lazy layout (images, Lenis resize timers) a beat to settle.
+  // Give lazy layout and image decoding a beat to settle.
   await page.waitForTimeout(800);
 }
 
-/** Jump the shared scroll source to `y` and wait until scroll position is stable. */
+/** Jump native scroll to `y` and wait until scroll position is stable. */
 export async function scrollToAndSettle(page: Page, y: number): Promise<void> {
-  await page.evaluate(async (target) => {
-    const lenis = (window as unknown as { __portfolioLenis?: { scrollTo: (t: number, o?: object) => void } }).__portfolioLenis;
-    if (lenis) {
-      lenis.scrollTo(target, { immediate: true, force: true });
-    } else {
-      window.scrollTo(0, target);
-    }
-  }, y);
+  await page.evaluate((target) => window.scrollTo(0, target), y);
   // Wait until window.scrollY stops changing (3 stable rAF frames), then flush
   // a couple more frames so framer-motion's frame loop applies its transforms.
   await page.evaluate(

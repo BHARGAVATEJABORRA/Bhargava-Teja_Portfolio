@@ -6,6 +6,8 @@ import { SPOTIFY_ENDPOINT, type SpotifyData } from "@/lib/spotify-types";
 
 import { ControlCenterPanel } from "./control-center-panel";
 
+const SPOTIFY_REFRESH_INTERVAL_MS = 2 * 60_000;
+
 const fetcher = async (url: string): Promise<SpotifyData> => {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) throw new Error(`Spotify endpoint ${response.status}`);
@@ -19,7 +21,7 @@ const fetcher = async (url: string): Promise<SpotifyData> => {
 
 export function SpotifyWidget() {
   const { data, error } = useSWR(SPOTIFY_ENDPOINT, fetcher, {
-    refreshInterval: 10_000,
+    refreshInterval: SPOTIFY_REFRESH_INTERVAL_MS,
     revalidateOnFocus: true,
   });
 

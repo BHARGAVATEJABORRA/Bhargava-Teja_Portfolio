@@ -24,6 +24,7 @@ import {
   BLOB_UPLOAD_PREFIX,
   IMAGE_TYPES,
   MAX_UPLOAD_BYTES,
+  RESUME_BLOB_PATH,
   UPLOAD_KINDS,
   type UploadKind,
 } from "@/lib/upload-config";
@@ -61,7 +62,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
         const kind = parseKind(clientPayload);
-        if (kind !== "resume" && !pathname.startsWith(BLOB_UPLOAD_PREFIX)) {
+        const isValidResumePath = kind === "resume" && pathname === RESUME_BLOB_PATH;
+        const isValidMediaPath =
+          kind !== "resume" &&
+          pathname.startsWith(BLOB_UPLOAD_PREFIX) &&
+          /^[a-z0-9][a-z0-9-]{0,47}(?:\.[a-z0-9]{1,10})?$/i.test(pathname.slice(BLOB_UPLOAD_PREFIX.length));
+        if (!isValidResumePath && !isValidMediaPath) {
           throw new Error(`Uploads must live under ${BLOB_UPLOAD_PREFIX}`);
         }
         return {
@@ -70,7 +76,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               ? ["application/pdf"]
               : kind === "image"
                 ? [...IMAGE_TYPES]
-                : ["image/*", "video/*", "application/pdf"],
+                : [...IMAGE_TYPES, "video/*", "application/pdf"],
           maximumSizeInBytes: MAX_UPLOAD_BYTES[kind],
           addRandomSuffix: true,
           tokenPayload: clientPayload ?? "",

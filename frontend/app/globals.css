@@ -876,6 +876,7 @@ a {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  contain: paint;
   border-radius: var(--liquid-radius, 32px);
   border: none;
   background: hsl(0 0% 100% / var(--liquid-frost, 0));

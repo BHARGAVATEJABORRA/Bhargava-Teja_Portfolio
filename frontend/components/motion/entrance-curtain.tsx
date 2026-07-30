@@ -5,13 +5,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 interface EntranceCurtainProps {
   onDone: () => void;
+  ready: boolean;
 }
 
 const greetings = ["Hello", "नमस्ते", "నమస్కారం"];
 
-export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
+export function EntranceCurtain({ onDone, ready }: EntranceCurtainProps) {
   const shouldReduceMotion = useReducedMotion();
   const [wordIndex, setWordIndex] = useState(0);
+  const [sequenceComplete, setSequenceComplete] = useState(false);
   // Start visible so the curtain is present in the initial SSR HTML and paints
   // instantly on reload — otherwise the dark body/hero flashes through before
   // hydration runs the effect that would set isVisible=true.
@@ -34,6 +36,12 @@ export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
   }, []);
 
   useEffect(() => {
+    if (!ready || !sequenceComplete) return;
+    const frame = window.requestAnimationFrame(completeEntrance);
+    return () => window.cancelAnimationFrame(frame);
+  }, [completeEntrance, ready, sequenceComplete]);
+
+  useEffect(() => {
     if (shouldReduceMotion === null) {
       return;
     }
@@ -44,7 +52,10 @@ export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
     const resetFrame = window.requestAnimationFrame(() => {
       setWordIndex(0);
       setIsVisible(true);
+      setSequenceComplete(false);
     });
+    // Asset or worker failure must never trap the visitor behind the curtain.
+    const safetyTimeout = window.setTimeout(completeEntrance, 4500);
 
     const keyListener = () => {
       completeEntrance();
@@ -53,10 +64,11 @@ export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
     window.addEventListener("keydown", keyListener);
 
     if (isReducedMotion) {
-      const timeout = window.setTimeout(completeEntrance, 360);
+      const timeout = window.setTimeout(() => setSequenceComplete(true), 360);
 
       return () => {
         window.cancelAnimationFrame(resetFrame);
+        window.clearTimeout(safetyTimeout);
         window.removeEventListener("keydown", keyListener);
         window.clearTimeout(timeout);
       };
@@ -74,11 +86,12 @@ export function EntranceCurtain({ onDone }: EntranceCurtainProps) {
       }
 
       window.clearInterval(interval);
-      endTimeout = window.setTimeout(completeEntrance, 280);
+      endTimeout = window.setTimeout(() => setSequenceComplete(true), 280);
     }, 340);
 
     return () => {
       window.cancelAnimationFrame(resetFrame);
+      window.clearTimeout(safetyTimeout);
       window.removeEventListener("keydown", keyListener);
       window.clearInterval(interval);
 

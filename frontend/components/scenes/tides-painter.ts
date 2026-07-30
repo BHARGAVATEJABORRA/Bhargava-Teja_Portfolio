@@ -281,7 +281,7 @@ export interface TidesFrame {
  * the live loop uses Math.random exactly like the pen.
  */
 export function drawTides(
-  context: CanvasRenderingContext2D,
+  context: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
   width: number,
   height: number,
   world: TidesWorld,

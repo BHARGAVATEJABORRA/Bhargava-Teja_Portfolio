@@ -108,11 +108,13 @@ const fragmentShader = `
 export type AuroraProps = HTMLAttributes<HTMLDivElement>;
 
 export function Aurora({ className, ...rest }: AuroraProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    const wrapper = wrapperRef.current;
     const canvas = canvasRef.current;
-    if (!canvas || prefersReducedMotion()) {
+    if (!wrapper || !canvas || prefersReducedMotion()) {
       return;
     }
 
@@ -202,17 +204,19 @@ export function Aurora({ className, ...rest }: AuroraProps) {
     applySize();
     renderFrame();
 
-    // Plain rAF gated by tab visibility. Simpler and steadier here than an
-    // IntersectionObserver, which sometimes left the canvas stuck on frame one.
+    // The aurora is a footer-only decoration. It must never consume frames
+    // while the footer is distant or the tab is hidden.
     let rafId = 0;
     let running = false;
+    let nearViewport = false;
 
     const loop = () => {
+      if (!running) return;
       rafId = window.requestAnimationFrame(loop);
       renderFrame();
     };
     const startLoop = () => {
-      if (!running) {
+      if (nearViewport && !document.hidden && !running) {
         running = true;
         rafId = window.requestAnimationFrame(loop);
       }
@@ -229,11 +233,20 @@ export function Aurora({ className, ...rest }: AuroraProps) {
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
-    startLoop();
+    const visibilityObserver = new IntersectionObserver(
+      ([entry]) => {
+        nearViewport = entry.isIntersecting;
+        if (nearViewport) startLoop();
+        else stopLoop();
+      },
+      { rootMargin: "1200px 0px" },
+    );
+    visibilityObserver.observe(wrapper);
 
     return () => {
       stopLoop();
       document.removeEventListener("visibilitychange", handleVisibility);
+      visibilityObserver.disconnect();
       if (resizeFrame !== null) {
         cancelAnimationFrame(resizeFrame);
       }
@@ -249,7 +262,7 @@ export function Aurora({ className, ...rest }: AuroraProps) {
 
   // A caller-supplied className replaces the default positioning outright.
   return (
-    <div className={className ?? "relative w-full"} {...rest}>
+    <div ref={wrapperRef} className={className ?? "relative w-full"} {...rest}>
       <canvas ref={canvasRef} className="h-full w-full mix-blend-screen blur-[6px]" />
     </div>
   );

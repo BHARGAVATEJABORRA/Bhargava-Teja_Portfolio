@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SiteHeader } from "@/components/layout/site-header";
 import { EntranceCurtain } from "@/components/motion/entrance-curtain";
@@ -59,14 +59,99 @@ const AiCompanionDock = dynamic(
 
 export function HomeShell({ projects }: { projects: ProjectSummary[] }) {
   const features = portfolioContent.features;
+  const [tidesReady, setTidesReady] = useState(false);
+  const [bootReady, setBootReady] = useState(false);
   const [showContent, setShowContent] = useState(false);
   // The Three.js footer scene is the heaviest thing to mount. Deferring it a
   // couple of frames after the rest of the content paints keeps the greeting →
   // hero reveal from freezing while all that WebGL initialises in one tick.
   const [showFooter, setShowFooter] = useState(false);
+  const idleImagesRef = useRef<HTMLImageElement[]>([]);
   const handleEntranceDone = useCallback(() => {
     setShowContent(true);
   }, []);
+
+  // The greeting is a real boot boundary: wait for fonts, any above-the-fold
+  // images, the first Tides paint, and two committed browser frames. Individual
+  // failures are tolerated; EntranceCurtain owns the hard maximum timeout.
+  useEffect(() => {
+    if (!tidesReady) return;
+    let cancelled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+
+    const imageReadiness = Array.from(document.querySelectorAll<HTMLImageElement>("#hero img")).map(
+      async (image) => {
+        if (!image.complete) {
+          await new Promise<void>((resolve) => {
+            image.addEventListener("load", () => resolve(), { once: true });
+            image.addEventListener("error", () => resolve(), { once: true });
+          });
+        }
+        await image.decode?.().catch(() => undefined);
+      },
+    );
+    const fontReadiness = document.fonts?.ready?.catch(() => undefined) ?? Promise.resolve();
+
+    void Promise.allSettled([fontReadiness, ...imageReadiness]).then(() => {
+      if (cancelled) return;
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => {
+          if (!cancelled) setBootReady(true);
+        });
+      });
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+    };
+  }, [tidesReady]);
+
+  // Once the first screen is interactive, use idle time to fetch distant
+  // footer code and imagery. Importing/decoding does not mount or start any
+  // scene; the footer's viewport lifecycle remains the activation boundary.
+  useEffect(() => {
+    if (!showContent) return;
+    let cancelled = false;
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+    let idleHandle = 0;
+
+    const preloadDistantResources = () => {
+      if (cancelled) return;
+      void Promise.allSettled([
+        import("@/components/scenes/ambient-aurora"),
+        import("@/components/scenes/footer-meteors"),
+        import("@/components/scenes/footer-stars"),
+        import("@/components/scenes/footer-dock-three"),
+      ]);
+      idleImagesRef.current = [
+        "/adaline-scenes/footer/footer-stars.png",
+        "/adaline-scenes/footer/footer-hills.webp",
+        "/adaline-scenes/footer/footer-dock.webp?v=10",
+      ].map((src) => {
+        const image = new Image();
+        image.decoding = "async";
+        image.src = src;
+        void image.decode?.().catch(() => undefined);
+        return image;
+      });
+    };
+
+    if ("requestIdleCallback" in window) {
+      idleHandle = window.requestIdleCallback(preloadDistantResources, { timeout: 1500 });
+    } else {
+      fallbackTimer = globalThis.setTimeout(preloadDistantResources, 300);
+    }
+
+    return () => {
+      cancelled = true;
+      if (idleHandle) window.cancelIdleCallback(idleHandle);
+      if (fallbackTimer) globalThis.clearTimeout(fallbackTimer);
+      idleImagesRef.current = [];
+    };
+  }, [showContent]);
 
   useEffect(() => {
     if (!showContent) return;
@@ -82,14 +167,14 @@ export function HomeShell({ projects }: { projects: ProjectSummary[] }) {
 
   return (
     <>
-      <EntranceCurtain onDone={handleEntranceDone} />
+      <EntranceCurtain onDone={handleEntranceDone} ready={bootReady} />
 
       {/* The aurora lives inside the footer scene: see FooterAurora mounted in
           the CTA band of AdalineFooterScene. */}
 
       <SiteHeader />
 
-      <TidesBackground />
+      <TidesBackground onReady={() => setTidesReady(true)} />
 
       <main id="main-content">
         {/* Hero copy sits over the backdrop. Rendered immediately so it is

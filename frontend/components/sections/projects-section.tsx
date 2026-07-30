@@ -1,11 +1,16 @@
 "use client";
 
 import type { CSSProperties, Ref } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
 import { Container } from "@/components/ui/container";
 import type { ProjectSummary } from "@/content/portfolio-content";
+import {
+  requestScrollRuntimeUpdate,
+  subscribeToScrollRead,
+  subscribeToScrollWrite,
+} from "@/lib/scroll-runtime";
 import { likeKey, useLikes } from "@/lib/use-likes";
 
 interface GithubProject {
@@ -150,8 +155,9 @@ function ProjectCard({
 }
 
 export function ProjectsSection({ projects }: { projects: ProjectSummary[] }) {
+  const stackRef = useRef<HTMLDivElement>(null);
   const lastCardRef = useRef<HTMLDivElement>(null);
-  const [titleFading, setTitleFading] = useState(false);
+  const titleRef = useRef<HTMLDivElement>(null);
   const likes = useLikes("project");
   const githubProjects = useMemo(() => toGithubProjects(projects), [projects]);
 
@@ -161,26 +167,53 @@ export function ProjectsSection({ projects }: { projects: ProjectSummary[] }) {
   // release point, so it lingers over the released card (see screenshot).
   useEffect(() => {
     const el = lastCardRef.current;
-    if (!el) return;
-    let raf = 0;
+    const stack = stackRef.current;
+    const title = titleRef.current;
+    if (!el || !stack || !title) return;
+
+    let needsMeasurement = true;
+    let fadeCutoff = Number.POSITIVE_INFINITY;
+    let pendingFade = false;
+    let appliedFade = false;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
     const measure = () => {
-      raf = 0;
-      const rect = el.getBoundingClientRect();
-      // Title pin is around y=88; hide it once the last card's top has moved
-      // above ~y=200 (i.e. it's occupying the title's area).
-      setTitleFading(rect.top < 200);
+      const stackTop = stack.getBoundingClientRect().top + window.scrollY;
+      // Match the old sticky release condition (last-card rect.top < 200)
+      // from stable layout geometry instead of forcing a rect read every tick.
+      fadeCutoff = stackTop + stack.scrollHeight - el.offsetHeight - 200;
+      needsMeasurement = false;
     };
-    const onScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(measure);
-    };
-    measure();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+
+    const resizeObserver = new ResizeObserver(() => {
+      needsMeasurement = true;
+      requestScrollRuntimeUpdate();
+    });
+    resizeObserver.observe(stack);
+    resizeObserver.observe(el);
+
+    const unsubscribeRead = subscribeToScrollRead((snapshot) => {
+      if (snapshot.width !== width || snapshot.height !== height) {
+        width = snapshot.width;
+        height = snapshot.height;
+        needsMeasurement = true;
+      }
+      if (needsMeasurement) measure();
+      pendingFade = snapshot.y > fadeCutoff;
+    });
+    const unsubscribeWrite = subscribeToScrollWrite(() => {
+      if (pendingFade === appliedFade) return;
+      appliedFade = pendingFade;
+      title.classList.toggle("projects-header-sticky--fade", appliedFade);
+    });
+    requestScrollRuntimeUpdate();
+
     return () => {
-      if (raf) cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
+      resizeObserver.disconnect();
+      unsubscribeRead();
+      unsubscribeWrite();
+      title.classList.remove("projects-header-sticky--fade");
     };
   }, []);
 
@@ -193,13 +226,11 @@ export function ProjectsSection({ projects }: { projects: ProjectSummary[] }) {
       className="relative scroll-mt-28 pb-32 pt-20 sm:pt-24"
     >
       <Container className="w-full">
-        <div className="project-stack">
+        <div ref={stackRef} className="project-stack">
           {/* Sticky title lives INSIDE the stack so its containing block is
               the same as the cards. It fades out when the last card is
               taking over the viewport (see effect above). */}
-          <div
-            className={`projects-header-sticky${titleFading ? " projects-header-sticky--fade" : ""}`}
-          >
+          <div ref={titleRef} className="projects-header-sticky">
             <h2
               id="projects-title"
               className="text-center text-4xl font-bold tracking-tight text-[var(--color-ink)] sm:text-5xl"

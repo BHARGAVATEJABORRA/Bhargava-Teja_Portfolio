@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { LuX } from "react-icons/lu";
-import { browserSupportsWebAuthn, startAuthentication } from "@simplewebauthn/browser";
+import { browserSupportsWebAuthn, startAuthentication, WebAuthnAbortService } from "@simplewebauthn/browser";
 
 import ReflectiveCard, { type ReflectiveAuthStatus } from "@/components/login/reflective-card/ReflectiveCard";
 
@@ -34,7 +34,32 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
   const [message, setMessage] = useState<string>("Waiting for Touch ID…");
   const [showPasscode, setShowPasscode] = useState(false);
   const [passcode, setPasscode] = useState("");
+  const [clientReady, setClientReady] = useState(false);
   const autoStartedRef = useRef(false);
+  const authenticationInFlightRef = useRef(false);
+  // A monotonically increasing token means an async ceremony that was
+  // cancelled, closed, or replaced can never overwrite the newer UI state.
+  const authenticationAttemptRef = useRef(0);
+  const openRef = useRef(open);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    setClientReady(true);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    openRef.current = open;
+    if (!open) {
+      authenticationAttemptRef.current += 1;
+      WebAuthnAbortService.cancelCeremony();
+      autoStartedRef.current = false;
+      authenticationInFlightRef.current = false;
+    }
+  }, [open]);
 
   const goToAdmin = useCallback(() => {
     setStatus("success");
@@ -46,14 +71,28 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
   }, [router, redirectTo]);
 
   const close = useCallback(() => {
-    if (status === "authenticating") return;
+    authenticationAttemptRef.current += 1;
+    WebAuthnAbortService.cancelCeremony();
+    authenticationInFlightRef.current = false;
     // Reset transient state on close so the next open starts clean.
     setStatus("idle");
     setMessage("Waiting for Touch ID…");
     setShowPasscode(false);
     setPasscode("");
     onClose();
-  }, [status, onClose]);
+  }, [onClose]);
+
+  const showPasscodeFallback = useCallback(() => {
+    // The browser's authentication sheet is deliberately cancelled before the
+    // passcode input appears. Without this, a pending automatic Touch ID
+    // request can keep the fallback visually available but unusable.
+    authenticationAttemptRef.current += 1;
+    WebAuthnAbortService.cancelCeremony();
+    authenticationInFlightRef.current = false;
+    setStatus("idle");
+    setShowPasscode(true);
+    setMessage("Sign in with your passcode instead.");
+  }, []);
 
   const submitPasscode = useCallback(
     async (event: React.FormEvent) => {
@@ -88,11 +127,18 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
   }, [open, close]);
 
   const handleFingerprint = useCallback(async () => {
-    if (status === "authenticating") return;
+    if (status === "authenticating" || authenticationInFlightRef.current) return;
+    authenticationInFlightRef.current = true;
+    const attempt = ++authenticationAttemptRef.current;
+    const isCurrentAttempt = () =>
+      attempt === authenticationAttemptRef.current && openRef.current && mountedRef.current;
 
     if (!browserSupportsWebAuthn()) {
-      setStatus("error");
-      setMessage("This browser doesn't support passkeys.");
+      if (!isCurrentAttempt()) return;
+      setStatus("idle");
+      setShowPasscode(true);
+      setMessage("This browser doesn't support passkeys. Sign in with your passcode.");
+      authenticationInFlightRef.current = false;
       return;
     }
 
@@ -100,9 +146,12 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
     setMessage("Waiting for Touch ID…");
 
     try {
-      const { registered } = (await fetch("/api/auth/webauthn/status").then((r) => r.json())) as {
+      const statusResponse = await fetch("/api/auth/webauthn/status", { cache: "no-store" });
+      if (!statusResponse.ok) throw new Error("Could not check passkey availability.");
+      const { registered } = (await statusResponse.json()) as {
         registered: boolean;
       };
+      if (!isCurrentAttempt()) return;
 
       // No passkey is enrolled yet — registration is admin-only, so the passcode
       // is the only way in. Enroll Touch ID from the dashboard once signed in.
@@ -114,11 +163,15 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
       }
 
       const optionsJSON = await postJSON("/api/auth/webauthn/authenticate/options");
+      if (!isCurrentAttempt()) return;
       const assertion = await startAuthentication({ optionsJSON });
+      if (!isCurrentAttempt()) return;
       await postJSON("/api/auth/webauthn/authenticate/verify", assertion);
+      if (!isCurrentAttempt()) return;
 
       goToAdmin();
     } catch (err) {
+      if (!isCurrentAttempt()) return;
       const name = (err as { name?: string })?.name;
       const friendly =
         name === "NotAllowedError"
@@ -126,6 +179,8 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
           : (err as Error)?.message || "Authentication failed.";
       setStatus("error");
       setMessage(friendly);
+    } finally {
+      if (isCurrentAttempt()) authenticationInFlightRef.current = false;
     }
   }, [status, goToAdmin]);
 
@@ -139,13 +194,19 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
     }
     if (autoStartedRef.current) return;
     autoStartedRef.current = true;
-    const timer = window.setTimeout(() => {
-      void handleFingerprint();
+    // Do not clear this tiny handoff timer during React Strict Mode's
+    // development-only effect replay. The refs keep it inert after a genuine
+    // close or unmount, while ensuring one automatic passkey attempt survives.
+    window.setTimeout(() => {
+      if (openRef.current && mountedRef.current) {
+        void handleFingerprint();
+      }
     }, 50);
-    return () => window.clearTimeout(timer);
   }, [open, handleFingerprint]);
 
-  if (!open || typeof document === "undefined") return null;
+  // Match the server's empty portal slot on the first client render. Rendering
+  // a portal immediately on /login otherwise creates a hydration mismatch.
+  if (!open || !clientReady || typeof document === "undefined") return null;
 
   // Portal to <body> so the fixed overlay isn't trapped by the header's CSS transform.
   return createPortal(
@@ -203,7 +264,7 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
         ) : (
           <button
             type="button"
-            onClick={() => setShowPasscode(true)}
+            onClick={showPasscodeFallback}
             className="text-xs font-semibold uppercase tracking-[0.16em] text-white/70 underline underline-offset-4 transition hover:text-white"
           >
             Use a passcode instead
@@ -213,8 +274,7 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
         <button
           type="button"
           onClick={close}
-          disabled={status === "authenticating"}
-          className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/85 backdrop-blur transition hover:bg-white/20 disabled:opacity-50"
+          className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/85 backdrop-blur transition hover:bg-white/20"
         >
           <LuX size={14} aria-hidden />
           Cancel

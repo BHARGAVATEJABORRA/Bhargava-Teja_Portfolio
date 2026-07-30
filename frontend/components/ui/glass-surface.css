@@ -4,6 +4,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  contain: paint;
   transition: opacity 0.26s ease-out;
 }
 

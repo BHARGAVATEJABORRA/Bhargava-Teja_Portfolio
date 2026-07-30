@@ -47,8 +47,8 @@ export function FooterMeteors() {
     let running = false;
 
     const step = () => {
-      rafId = window.requestAnimationFrame(step);
       if (meteors.length === 0) {
+        running = false;
         return;
       }
       const now = performance.now();
@@ -66,10 +66,15 @@ export function FooterMeteors() {
         meteor.element.style.transform = `translate(${x}px, ${y}px) rotate(34deg)`;
         meteor.element.style.opacity = String(opacity);
       }
+      if (meteors.length > 0 && running) {
+        rafId = window.requestAnimationFrame(step);
+      } else {
+        running = false;
+      }
     };
 
     const startLoop = () => {
-      if (!running) {
+      if (visible && !document.hidden && meteors.length > 0 && !running) {
         running = true;
         rafId = window.requestAnimationFrame(step);
       }
@@ -86,7 +91,6 @@ export function FooterMeteors() {
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
-    startLoop();
 
     const clearMeteors = () => {
       for (const meteor of meteors) {
@@ -115,6 +119,7 @@ export function FooterMeteors() {
         initialY: 0,
         initialTime: performance.now(),
       });
+      startLoop();
       spawnTimer = setTimeout(spawn, 5000 + 5000 * Math.random());
     };
 
@@ -138,6 +143,7 @@ export function FooterMeteors() {
           spawnTimer = null;
         }
         clearMeteors();
+        stopLoop();
       }
     }, { rootMargin: "200px" });
     observer.observe(layer);

@@ -31,7 +31,7 @@ for (let i = 0; i < 20; i += 1) {
 }
 await page.waitForSelector("#main-content", { timeout: 30_000 });
 await page.waitForSelector(".adaline-footer-scene", { timeout: 30_000 });
-await page.waitForTimeout(1500); // lazy images / Lenis resize timers
+await page.waitForTimeout(1500); // lazy images and canvas painters
 
 const { maxScroll, blogsTop, blogsBottom } = await page.evaluate(() => {
   const r = document.querySelector("#blogs").getBoundingClientRect();
@@ -53,7 +53,7 @@ async function yForBandProgress(p) {
   }, p);
 }
 
-// Real wheel events so Lenis drives the scroll exactly as a user's trackpad would.
+// Real wheel events so native scrolling matches a user's trackpad input.
 async function wheelTo(target) {
   await page.mouse.move(720, 450);
   for (let guard = 0; guard < 400; guard += 1) {
@@ -63,7 +63,7 @@ async function wheelTo(target) {
     await page.mouse.wheel(0, Math.max(-1500, Math.min(1500, delta)));
     await page.waitForTimeout(50);
   }
-  // Let Lenis easing + the canvas painters flush to a stable state.
+  // Let native smooth scrolling and canvas painters flush to a stable state.
   await page.evaluate(
     () =>
       new Promise((resolve) => {

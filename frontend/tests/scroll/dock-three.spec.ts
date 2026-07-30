@@ -6,6 +6,8 @@ test.describe("§6 Three.js dock night scene", () => {
   test("glow progress is a pure function of scroll and completes at page end", async ({ page }) => {
     await gotoReady(page);
 
+    await page.locator("#contact").scrollIntoViewIfNeeded();
+
     const dock = page.locator('[data-scroll-scene="dock-three"]');
     await expect(dock).toHaveCount(1);
     await expect(dock.locator("canvas")).toHaveCount(1);

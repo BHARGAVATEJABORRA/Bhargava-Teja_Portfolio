@@ -13,7 +13,7 @@
 // through). A scroll-graded veil keeps mid-page copy readable without flattening
 // the day. (The footer owns the clouds; this layer stays clean sky + water.)
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
 
 import {
@@ -23,7 +23,7 @@ import {
   mulberry32,
 } from "@/components/scenes/tides-painter";
 import { clamp01, smoothStep } from "@/components/scenes/footer-sky-painter";
-import { subscribeToScroll } from "@/lib/scroll-progress";
+import { subscribeToScrollRead, subscribeToScrollWrite } from "@/lib/scroll-runtime";
 
 // Day runs SUNRISE (t = 0.14, sun on the horizon) → SUNSET (t = 1). The arc
 // completes by 82% of the page so the last stretch holds sunset for the footer
@@ -46,28 +46,120 @@ function veilOpacityFor(progress: number) {
   return 0.46 * rampIn * relaxOut;
 }
 
-export function TidesBackground() {
+export function TidesBackground({ onReady }: { onReady?: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const veilRef = useRef<HTMLDivElement | null>(null);
   const progressRef = useRef(0);
+  const workerRef = useRef<Worker | null>(null);
+  const onReadyRef = useRef(onReady);
+  const hasSignaledReadyRef = useRef(false);
+  const [workerDisabled, setWorkerDisabled] = useState(false);
   const reduceMotion = useReducedMotion();
 
-  // Global scroll progress — identical source to AmbientAurora.
   useEffect(() => {
-    const update = () => {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      progressRef.current = maxScroll > 0 ? clamp01(window.scrollY / maxScroll) : 0;
+    onReadyRef.current = onReady;
+  }, [onReady]);
+
+  const signalReady = useCallback(() => {
+    if (hasSignaledReadyRef.current) return;
+    hasSignaledReadyRef.current = true;
+    onReadyRef.current?.();
+  }, []);
+
+  // Global scroll progress is a single read from the application scheduler.
+  useEffect(() => {
+    const update = ({ y, maxY }: { y: number; maxY: number }) => {
+      const next = maxY > 0 ? clamp01(y / maxY) : 0;
+      if (next !== progressRef.current) {
+        progressRef.current = next;
+        workerRef.current?.postMessage({ type: "update", progress: next });
+      }
     };
-    update();
-    return subscribeToScroll(update);
+    return subscribeToScrollRead(update);
+  }, []);
+
+  useEffect(() => {
+    return subscribeToScrollWrite(() => {
+      if (veilRef.current) veilRef.current.style.opacity = veilOpacityFor(progressRef.current).toFixed(3);
+    });
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d", { alpha: false });
-    if (!canvas || !context) {
+    if (!canvas) {
       return;
     }
+
+    // Move the always-visible, full-viewport simulation off the main thread
+    // where the browser supports OffscreenCanvas. Safari/mobile safely retain
+    // the exact same main-thread painter below.
+    const supportsWorkerCanvas =
+      typeof Worker !== "undefined" &&
+      typeof OffscreenCanvas !== "undefined" &&
+      !workerDisabled &&
+      "transferControlToOffscreen" in canvas;
+    if (supportsWorkerCanvas) {
+      let candidateWorker: Worker | null = null;
+      try {
+        const worker = new Worker(new URL("./tides-worker.ts", import.meta.url));
+        candidateWorker = worker;
+        const offscreen = canvas.transferControlToOffscreen();
+        workerRef.current = worker;
+        const onWorkerMessage = (event: MessageEvent<{ type?: string }>) => {
+          if (event.data?.type === "ready") signalReady();
+          if (event.data?.type === "error") setWorkerDisabled(true);
+        };
+        const onWorkerError = () => setWorkerDisabled(true);
+        worker.addEventListener("message", onWorkerMessage);
+        worker.addEventListener("error", onWorkerError);
+        const readyTimeout = window.setTimeout(() => {
+          if (!hasSignaledReadyRef.current) setWorkerDisabled(true);
+        }, 2000);
+        worker.postMessage(
+          {
+            type: "init",
+            canvas: offscreen,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            dpr: window.devicePixelRatio || 1,
+            progress: progressRef.current,
+            reduceMotion,
+          },
+          [offscreen],
+        );
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        const unsubscribeResize = subscribeToScrollRead((snapshot) => {
+          if (snapshot.width === width && snapshot.height === height) return;
+          width = snapshot.width;
+          height = snapshot.height;
+          worker.postMessage({ type: "resize", width, height, dpr: window.devicePixelRatio || 1 });
+        });
+        const visibility = () => worker.postMessage({ type: "visibility", hidden: document.hidden });
+        document.addEventListener("visibilitychange", visibility);
+        return () => {
+          unsubscribeResize();
+          document.removeEventListener("visibilitychange", visibility);
+          window.clearTimeout(readyTimeout);
+          worker.removeEventListener("message", onWorkerMessage);
+          worker.removeEventListener("error", onWorkerError);
+          worker.postMessage({ type: "destroy" });
+          worker.terminate();
+          if (workerRef.current === worker) workerRef.current = null;
+        };
+      } catch {
+        // A transferred canvas can never be reclaimed by the main thread.
+        // This also occurs when React development Strict Mode replays the
+        // effect against the same DOM node. Replace it before falling back.
+        candidateWorker?.terminate();
+        if (workerRef.current === candidateWorker) workerRef.current = null;
+        const fallbackTimer = window.setTimeout(() => setWorkerDisabled(true), 0);
+        return () => window.clearTimeout(fallbackTimer);
+      }
+    }
+
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) return;
 
     const random = reduceMotion ? mulberry32(0x7d1e5) : Math.random;
     const world = createTidesWorld(random);
@@ -97,7 +189,14 @@ export function TidesBackground() {
     };
 
     resize();
-    window.addEventListener("resize", resize);
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const unsubscribeResize = subscribeToScrollRead((snapshot) => {
+      if (snapshot.width === width && snapshot.height === height) return;
+      width = snapshot.width;
+      height = snapshot.height;
+      resize();
+    });
 
     if (reduceMotion) {
       const paintStill = () => {
@@ -106,16 +205,18 @@ export function TidesBackground() {
         applyScrollLinked();
       };
       paintStill();
-      const unsubscribe = subscribeToScroll(paintStill);
+      signalReady();
+      const unsubscribe = subscribeToScrollWrite(paintStill);
       return () => {
         unsubscribe();
-        window.removeEventListener("resize", resize);
+        unsubscribeResize();
       };
     }
 
     let raf = 0;
     let last = performance.now();
     const FRAME_MS = 1000 / 60;
+    let firstFramePainted = false;
 
     const tick = (now: number) => {
       const elapsed = Math.min(now - last, 64);
@@ -133,21 +234,39 @@ export function TidesBackground() {
         },
         random,
       );
+      if (!firstFramePainted) {
+        firstFramePainted = true;
+        signalReady();
+      }
       applyScrollLinked();
       raf = requestAnimationFrame(tick);
     };
+    const visibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+      } else {
+        last = performance.now();
+        raf = requestAnimationFrame(tick);
+      }
+    };
+    document.addEventListener("visibilitychange", visibility);
     raf = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
+      unsubscribeResize();
+      document.removeEventListener("visibilitychange", visibility);
     };
-  }, [reduceMotion]);
+  }, [reduceMotion, signalReady, workerDisabled]);
 
   return (
     <>
       <div aria-hidden data-tides-background className="pointer-events-none fixed inset-0" style={{ zIndex: -1 }}>
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+        <canvas
+          key={workerDisabled ? "main-thread" : "worker"}
+          ref={canvasRef}
+          className="absolute inset-0 h-full w-full"
+        />
 
         {/* Readability veil — scroll-graded so the hero sunrise and the sunset
             stay vivid while mid-page content keeps its contrast. */}
