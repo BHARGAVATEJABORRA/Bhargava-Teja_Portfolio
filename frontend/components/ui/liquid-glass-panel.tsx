@@ -1,16 +1,18 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   type HTMLAttributes,
   useId,
   useMemo,
   useRef,
-  useState,
   useSyncExternalStore,
   type CSSProperties,
   type ReactNode,
 } from "react";
+
+import { getGlassDisplacementImage } from "@/lib/glass-displacement-map";
 
 type LiquidGlassTag = "article" | "aside" | "div" | "form" | "nav" | "section";
 
@@ -63,42 +65,6 @@ function supportsBackdropUrlFilter() {
  * gradient → near-zero Y displacement) only gentle horizontal refraction
  * fires, which avoids the corner-cross "sparkle" pattern entirely.
  */
-function buildDisplacementImage(
-  width: number,
-  height: number,
-  radius: number,
-  border: number,
-  lightness: number,
-  alpha: number,
-  blur: number,
-) {
-  const w = Math.max(64, Math.round(width));
-  const h = Math.max(64, Math.round(height));
-  const r = Math.max(0, radius);
-  const edge = Math.min(w, h) * (border * 0.5);
-  const innerW = Math.max(1, w - edge * 2);
-  const innerH = Math.max(1, h - edge * 2);
-
-  const svg = `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <linearGradient id="r" x1="100%" y1="0%" x2="0%" y2="0%">
-      <stop offset="0%" stop-color="#000"/>
-      <stop offset="100%" stop-color="red"/>
-    </linearGradient>
-    <linearGradient id="b" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#000"/>
-      <stop offset="100%" stop-color="blue"/>
-    </linearGradient>
-  </defs>
-  <rect x="0" y="0" width="${w}" height="${h}" fill="black"/>
-  <rect x="0" y="0" width="${w}" height="${h}" rx="${r}" fill="url(#r)"/>
-  <rect x="0" y="0" width="${w}" height="${h}" rx="${r}" fill="url(#b)" style="mix-blend-mode:difference"/>
-  <rect x="${edge}" y="${edge}" width="${innerW}" height="${innerH}" rx="${r}" fill="hsl(0 0% ${lightness}% / ${alpha})" style="filter:blur(${blur}px)"/>
-</svg>`;
-
-  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
-}
-
 export function LiquidGlassPanel({
   as = "div",
   children,
@@ -133,6 +99,8 @@ export function LiquidGlassPanel({
   void _displacement; void _chroma; void _mapBlur; void _mapBorder; void _mapInset;
 
   const rootRef = useRef<HTMLElement | null>(null);
+  const feImageRef = useRef<SVGFEImageElement | null>(null);
+  const boundsRef = useRef({ width: 640, height: 320 });
   const rawId = useId();
   const filterId = useMemo(
     () => `liquid-panel-${rawId.replace(/[^a-zA-Z0-9_-]/g, "")}`,
@@ -145,28 +113,64 @@ export function LiquidGlassPanel({
     () => supportsBackdropUrlFilter(),
     () => false,
   );
-  const [bounds, setBounds] = useState({ width: 640, height: 320 });
+  const initialDisplacementImage = useMemo(
+    () =>
+      getGlassDisplacementImage({
+        width: 640,
+        height: 320,
+        radius,
+        border,
+        lightness,
+        alpha,
+        blur,
+        blendMode: "difference",
+        transparentGradientStart: false,
+      }),
+    [alpha, blur, border, lightness, radius],
+  );
+
+  const updateDisplacementImage = useCallback((width: number, height: number) => {
+    boundsRef.current = { width, height };
+    feImageRef.current?.setAttribute(
+      "href",
+      getGlassDisplacementImage({
+        width,
+        height,
+        radius,
+        border,
+        lightness,
+        alpha,
+        blur,
+        blendMode: "difference",
+        transparentGradientStart: false,
+      }),
+    );
+  }, [alpha, blur, border, lightness, radius]);
 
   useEffect(() => {
     const node = rootRef.current;
     if (!node || typeof ResizeObserver === "undefined") return;
+    let frame = 0;
+    let nextWidth = boundsRef.current.width;
+    let nextHeight = boundsRef.current.height;
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
-      const w = Math.max(1, Math.round(entry.contentRect.width));
-      const h = Math.max(1, Math.round(entry.contentRect.height));
-      setBounds((current) =>
-        current.width === w && current.height === h ? current : { width: w, height: h },
-      );
+      nextWidth = entry.contentRect.width;
+      nextHeight = entry.contentRect.height;
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        updateDisplacementImage(nextWidth, nextHeight);
+      });
     });
     observer.observe(node);
-    return () => observer.disconnect();
-  }, []);
-
-  const displacementImage = useMemo(
-    () => buildDisplacementImage(bounds.width, bounds.height, radius, border, lightness, alpha, blur),
-    [bounds.width, bounds.height, radius, border, lightness, alpha, blur],
-  );
+    updateDisplacementImage(node.clientWidth || 640, node.clientHeight || 320);
+    return () => {
+      observer.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [updateDisplacementImage]);
 
   // Backdrop filter: just url() + saturate(). No brightness/contrast/blur —
   // those would frost the glass and obscure the refraction.
@@ -200,7 +204,8 @@ export function LiquidGlassPanel({
             colorInterpolationFilters="sRGB"
           >
             <feImage
-              href={displacementImage}
+              ref={feImageRef}
+              href={initialDisplacementImage}
               x="0"
               y="0"
               width="100%"

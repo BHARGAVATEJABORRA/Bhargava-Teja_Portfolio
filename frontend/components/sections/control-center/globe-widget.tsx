@@ -108,6 +108,7 @@ export function GlobeWidget({
   const [hasRenderError, setHasRenderError] = useState(false);
   const [ready, setReady] = useState(false);
   const [nearViewport, setNearViewport] = useState(false);
+  const [documentVisible, setDocumentVisible] = useState(true);
   const [markerLat, markerLng] = markerLocation;
 
   // Auto-spin baseline plus drag offset accumulated from pointer interaction.
@@ -150,7 +151,14 @@ export function GlobeWidget({
   }, []);
 
   useEffect(() => {
-    if (!nearViewport) return;
+    const updateVisibility = () => setDocumentVisible(!document.hidden);
+    updateVisibility();
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => document.removeEventListener("visibilitychange", updateVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (!nearViewport || !documentVisible) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -215,10 +223,9 @@ export function GlobeWidget({
     markerGroup.lookAt(markerPosition.clone().multiplyScalar(2));
     globe.add(markerGroup);
 
-    const markerDot = new THREE.Mesh(
-      new THREE.SphereGeometry(0.02, 16, 16),
-      new THREE.MeshBasicMaterial({ color: 0x4ade80 }),
-    );
+    const markerDotGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+    const markerDotMaterial = new THREE.MeshBasicMaterial({ color: 0x4ade80 });
+    const markerDot = new THREE.Mesh(markerDotGeometry, markerDotMaterial);
     markerGroup.add(markerDot);
 
     const markerRingMaterial = new THREE.MeshBasicMaterial({
@@ -228,7 +235,8 @@ export function GlobeWidget({
       side: THREE.DoubleSide,
       depthWrite: false,
     });
-    const markerRing = new THREE.Mesh(new THREE.RingGeometry(0.032, 0.044, 32), markerRingMaterial);
+    const markerRingGeometry = new THREE.RingGeometry(0.032, 0.044, 32);
+    const markerRing = new THREE.Mesh(markerRingGeometry, markerRingMaterial);
     markerGroup.add(markerRing);
 
     // Start with the marker's longitude facing the camera.
@@ -303,11 +311,14 @@ export function GlobeWidget({
       sphereMaterial.dispose();
       atmosphereGeometry.dispose();
       atmosphereMaterial.dispose();
+      markerDotGeometry.dispose();
+      markerDotMaterial.dispose();
+      markerRingGeometry.dispose();
       markerRingMaterial.dispose();
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [markerLat, markerLng, nearViewport]);
+  }, [documentVisible, markerLat, markerLng, nearViewport]);
 
   return (
     <ControlCenterPanel radius={32} className="flex h-full min-h-[16rem] flex-col p-4 sm:p-5">
@@ -319,7 +330,7 @@ export function GlobeWidget({
       {/* min-h-0 keeps this flex item inside the panel even though the sphere
           is taller than the row — otherwise the pill anchored to its bottom
           edge lands below the panel and is clipped away. */}
-      <div className="relative mx-auto mt-2 flex min-h-0 flex-1 items-end justify-center">
+      <div className="relative mx-auto mt-2 flex min-h-0 w-full flex-1 items-end justify-center">
         <div className="pointer-events-none absolute inset-x-[16%] bottom-4 top-[24%] rounded-full bg-[radial-gradient(circle_at_center,rgba(56,132,196,0.2),transparent_62%)] blur-3xl" />
         <div ref={viewportRef} className="relative aspect-square w-full max-w-[15rem] translate-y-8 select-none sm:max-w-[17rem] sm:translate-y-9">
           {hasRenderError ? (

@@ -2,8 +2,20 @@
 
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
-import { subscribeToScrollRead } from "@/lib/scroll-runtime";
+import {
+  requestScrollRuntimeUpdate,
+  subscribeToScrollRead,
+  subscribeToScrollWrite,
+  type ScrollSnapshot,
+} from "@/lib/scroll-runtime";
 import "./ScrollStack.css";
+
+type CardTransform = {
+  translateY: number;
+  scale: number;
+  rotation: number;
+  blur: number;
+};
 
 export const ScrollStackItem = ({
   children,
@@ -47,10 +59,11 @@ const ScrollStack = ({
   const naturalTopsRef = useRef<number[]>([]);
   const endTopRef = useRef<number>(0);
 
-  const lastTransformsRef = useRef(
-    new Map<number, { translateY: number; scale: number; rotation: number; blur: number }>(),
-  );
-  const isUpdatingRef = useRef(false);
+  const lastTransformsRef = useRef(new Map<number, CardTransform>());
+  const pendingTransformsRef = useRef<CardTransform[]>([]);
+  const pendingStackInViewRef = useRef(false);
+  const needsMeasurementRef = useRef(true);
+  const needsTransformResetRef = useRef(false);
   const stackCompletedRef = useRef(false);
   const prefersReducedMotionRef = useRef(false);
 
@@ -64,43 +77,39 @@ const ScrollStack = ({
     return (v - start) / (end - start);
   }, []);
 
-  // Reset transforms → force reflow → snapshot positions into refs.
+  // offsetTop is layout geometry, so it is not affected by the transforms
+  // applied during the preceding write phase. This lets us remeasure without
+  // clearing styles or forcing a synchronous reflow.
   const measureNaturalPositions = useCallback(() => {
     const cards = cardsRef.current;
     const container = containerRef.current;
     if (!cards.length || !container) return;
 
-    // Clear all applied transforms so getBoundingClientRect reads natural flow positions.
-    cards.forEach((card) => {
-      card.style.transform = "none";
-      card.style.filter = "";
-    });
-    lastTransformsRef.current.clear();
-
-    // Force the browser to commit the style changes before we measure.
-    void container.offsetHeight;
-
+    const containerTop = container.getBoundingClientRect().top + window.scrollY;
     const scrollY = window.scrollY;
-    naturalTopsRef.current = cards.map((c) => c.getBoundingClientRect().top + scrollY);
+    naturalTopsRef.current = cards.map((card) => containerTop + card.offsetTop);
 
     const endEl = container.querySelector<HTMLElement>(".scroll-stack-end");
-    endTopRef.current = endEl ? endEl.getBoundingClientRect().top + scrollY : 0;
+    endTopRef.current = endEl ? containerTop + endEl.offsetTop : scrollY;
   }, []);
 
-  const updateCardTransforms = useCallback(() => {
+  const calculateCardTransforms = useCallback((snapshot: ScrollSnapshot) => {
     const cards = cardsRef.current;
-    if (prefersReducedMotionRef.current) return;
-    if (!cards.length || isUpdatingRef.current || !naturalTopsRef.current.length) return;
-    isUpdatingRef.current = true;
+    if (prefersReducedMotionRef.current || !cards.length || !naturalTopsRef.current.length) {
+      pendingTransformsRef.current = [];
+      pendingStackInViewRef.current = false;
+      return;
+    }
 
-    const scrollTop = window.scrollY;
-    const vh = window.innerHeight;
+    const scrollTop = snapshot.y;
+    const vh = snapshot.height;
     const stackPx = parsePercentage(stackPosition, vh);
     const scaleEndPx = parsePercentage(scaleEndPosition, vh);
     const endTop = endTopRef.current;
     const pinEnd = endTop - vh / 2;
+    let finalCardInView = false;
 
-    cards.forEach((card, i) => {
+    pendingTransformsRef.current = cards.map((_, i) => {
       const cardTop = naturalTopsRef.current[i];
       const pinStart = cardTop - stackPx - itemStackDistance * i;
       const triggerEnd = cardTop - scaleEndPx;
@@ -126,38 +135,20 @@ const ScrollStack = ({
         translateY = pinEnd - cardTop + stackPx + itemStackDistance * i;
       }
 
-      const t = {
+      const transform = {
         translateY: Math.round(translateY * 100) / 100,
         scale: Math.round(scale * 1000) / 1000,
         rotation: Math.round(rotation * 100) / 100,
         blur: Math.round(blur * 100) / 100,
       };
 
-      const last = lastTransformsRef.current.get(i);
-      if (
-        !last ||
-        Math.abs(last.translateY - t.translateY) > 0.1 ||
-        Math.abs(last.scale - t.scale) > 0.001 ||
-        Math.abs(last.rotation - t.rotation) > 0.1 ||
-        Math.abs(last.blur - t.blur) > 0.1
-      ) {
-        card.style.transform = `translate3d(0, ${t.translateY}px, 0) scale(${t.scale}) rotate(${t.rotation}deg)`;
-        card.style.filter = t.blur > 0 ? `blur(${t.blur}px)` : "";
-        lastTransformsRef.current.set(i, t);
-      }
-
       if (i === cards.length - 1) {
-        const inView = scrollTop >= pinStart && scrollTop <= pinEnd;
-        if (inView && !stackCompletedRef.current) {
-          stackCompletedRef.current = true;
-          onStackComplete?.();
-        } else if (!inView && stackCompletedRef.current) {
-          stackCompletedRef.current = false;
-        }
+        finalCardInView = scrollTop >= pinStart && scrollTop <= pinEnd;
       }
-    });
 
-    isUpdatingRef.current = false;
+      return transform;
+    });
+    pendingStackInViewRef.current = finalCardInView;
   }, [
     itemScale,
     itemStackDistance,
@@ -166,10 +157,38 @@ const ScrollStack = ({
     baseScale,
     rotationAmount,
     blurAmount,
-    onStackComplete,
     calculateProgress,
     parsePercentage,
   ]);
+
+  const applyCardTransforms = useCallback(() => {
+    const cards = cardsRef.current;
+
+    pendingTransformsRef.current.forEach((transform, i) => {
+      const card = cards[i];
+      if (!card) return;
+      const last = lastTransformsRef.current.get(i);
+      if (
+        !last ||
+        Math.abs(last.translateY - transform.translateY) > 0.1 ||
+        Math.abs(last.scale - transform.scale) > 0.001 ||
+        Math.abs(last.rotation - transform.rotation) > 0.1 ||
+        Math.abs(last.blur - transform.blur) > 0.1
+      ) {
+        card.style.transform = `translate3d(0, ${transform.translateY}px, 0) scale(${transform.scale}) rotate(${transform.rotation}deg)`;
+        card.style.filter = transform.blur > 0 ? `blur(${transform.blur}px)` : "";
+        lastTransformsRef.current.set(i, transform);
+      }
+    });
+
+    const inView = pendingStackInViewRef.current;
+    if (inView && !stackCompletedRef.current) {
+      stackCompletedRef.current = true;
+      onStackComplete?.();
+    } else if (!inView && stackCompletedRef.current) {
+      stackCompletedRef.current = false;
+    }
+  }, [onStackComplete]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -185,50 +204,81 @@ const ScrollStack = ({
       card.style.transformOrigin = "top center";
     });
 
-    const remeasureAndUpdate = () => {
-      measureNaturalPositions();
-      updateCardTransforms();
+    const requestRemeasure = () => {
+      needsMeasurementRef.current = true;
+      requestScrollRuntimeUpdate();
     };
 
     // Reduced motion: cards stay a plain in-flow list — no pinning, no scale,
-    // no blur. measureNaturalPositions already resets transforms to "none".
+    // no blur. The next write phase resets transforms to "none".
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     prefersReducedMotionRef.current = media.matches;
     const onMediaChange = () => {
       prefersReducedMotionRef.current = media.matches;
-      remeasureAndUpdate();
+      needsTransformResetRef.current = true;
+      requestRemeasure();
     };
     media.addEventListener("change", onMediaChange);
 
     let width = window.innerWidth;
     let height = window.innerHeight;
-    const unsubscribeScroll = subscribeToScrollRead((snapshot) => {
+    const unsubscribeRead = subscribeToScrollRead((snapshot) => {
       if (snapshot.width !== width || snapshot.height !== height) {
         width = snapshot.width;
         height = snapshot.height;
-        remeasureAndUpdate();
-      } else {
-        updateCardTransforms();
+        needsMeasurementRef.current = true;
       }
+
+      if (needsMeasurementRef.current) {
+        measureNaturalPositions();
+        needsMeasurementRef.current = false;
+      }
+
+      calculateCardTransforms(snapshot);
+    });
+    const unsubscribeWrite = subscribeToScrollWrite(() => {
+      if (needsTransformResetRef.current) {
+        cards.forEach((card) => {
+          card.style.transform = "none";
+          card.style.filter = "";
+        });
+        lastTransformsRef.current.clear();
+        pendingTransformsRef.current = [];
+        pendingStackInViewRef.current = false;
+        needsTransformResetRef.current = false;
+      }
+
+      applyCardTransforms();
     });
 
-    // Remeasure as fonts / images settle; each call resets transforms then re-snapshots.
-    const timeouts = [50, 250, 700, 1400].map((d) => window.setTimeout(remeasureAndUpdate, d));
+    // Remeasure as fonts / images settle; offsetTop remains transform-free.
+    const timeouts = [50, 250, 700, 1400].map((d) => window.setTimeout(requestRemeasure, d));
 
-    remeasureAndUpdate();
+    requestRemeasure();
 
     return () => {
       media.removeEventListener("change", onMediaChange);
-      unsubscribeScroll();
+      unsubscribeRead();
+      unsubscribeWrite();
       timeouts.forEach(clearTimeout);
+      cards.forEach((card) => {
+        card.style.removeProperty("margin-bottom");
+        card.style.removeProperty("will-change");
+        card.style.removeProperty("transform-origin");
+        card.style.removeProperty("transform");
+        card.style.removeProperty("filter");
+      });
       stackCompletedRef.current = false;
       cardsRef.current = [];
       naturalTopsRef.current = [];
       endTopRef.current = 0;
+      pendingTransformsRef.current = [];
+      pendingStackInViewRef.current = false;
+      needsMeasurementRef.current = true;
+      needsTransformResetRef.current = false;
       cache.clear();
-      isUpdatingRef.current = false;
     };
-  }, [itemDistance, measureNaturalPositions, updateCardTransforms]);
+  }, [applyCardTransforms, calculateCardTransforms, itemDistance, measureNaturalPositions]);
 
   return (
     <div className={`scroll-stack-container ${className}`.trim()} ref={containerRef}>

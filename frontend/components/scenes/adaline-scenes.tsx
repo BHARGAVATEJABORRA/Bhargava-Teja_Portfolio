@@ -496,6 +496,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
   const starsRef = useRef<HTMLDivElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
   const [nearViewport, setNearViewport] = useState(false);
+  const [documentVisible, setDocumentVisible] = useState(true);
   // Render only after mount: the sky/cloud canvases and the fixed-position
   // layers depend on window metrics that don't exist during SSR/prerender.
   // useSyncExternalStore: false on the server snapshot, true on the client.
@@ -516,13 +517,22 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
     return () => observer.disconnect();
   }, [mounted]);
 
+  useEffect(() => {
+    const updateVisibility = () => setDocumentVisible(!document.hidden);
+    updateVisibility();
+    document.addEventListener("visibilitychange", updateVisibility);
+    return () => document.removeEventListener("visibilitychange", updateVisibility);
+  }, []);
+
+  const sceneActive = nearViewport && documentVisible;
+
   // Native scroll is the single clock for the whole sequence, and every layer
   // below is a pure function of that position,
   // repainted only on scroll/resize rather than from a second spring/rAF clock.
   // The sky and the sunset cloud streaks are hand-painted on canvases and
   // recolored per scroll, so the streaks always catch the current light.
   useEffect(() => {
-    if (!mounted) return;
+    if (!mounted || !sceneActive) return;
     const band = bandRef.current;
     const skyCanvas = skyCanvasRef.current;
     const cloudsCanvas = cloudsCanvasRef.current;
@@ -611,7 +621,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
       cloudImage.removeEventListener("load", paint);
       unsubscribe();
     };
-  }, [mounted]);
+  }, [mounted, sceneActive]);
 
   if (!mounted) return null;
 
@@ -623,12 +633,14 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           hard edge. The dark base returns on the CTA and dock bands only. */}
 
       {/* Fixed sunset -> night sky behind everything, hand-painted per scroll. */}
-      <canvas
-        ref={skyCanvasRef}
-        aria-hidden
-        data-scroll-scene="sky-gradient"
-        className="pointer-events-none fixed inset-0 h-full w-full"
-      />
+      {sceneActive ? (
+        <canvas
+          ref={skyCanvasRef}
+          aria-hidden
+          data-scroll-scene="sky-gradient"
+          className="pointer-events-none fixed inset-0 h-full w-full"
+        />
+      ) : null}
 
       {/* Tall scroll zone: only the cloud band + stars move through it. */}
       <div ref={bandRef} data-scroll-scene="sky-band" className="relative -mb-[80vh] h-[200vw] min-h-[300vh]">
@@ -636,57 +648,63 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
             gradient masked by the plate's alpha), not a static CSS mask. The
             wrapper drifts slowly sideways so the entry reads as passing
             clouds, not a cut. */}
-        <div aria-hidden className="adaline-footer-clouds-drift pointer-events-none absolute inset-0">
-          <canvas
-            ref={cloudsCanvasRef}
-            data-scroll-scene="clouds"
-            className="h-full w-full object-cover object-top"
-          />
-        </div>
+        {sceneActive ? (
+          <div aria-hidden className="adaline-footer-clouds-drift pointer-events-none absolute inset-0">
+            <canvas
+              ref={cloudsCanvasRef}
+              data-scroll-scene="clouds"
+              className="h-full w-full object-cover object-top"
+            />
+          </div>
+        ) : null}
         {/* Drifting cloud puffs riding the warm dusk zone at the top of the
             band only (never over the CTA, hills or water). The wrapper clips
             and edge-masks them so each cloud fades in/out at the edges. */}
-        <div aria-hidden data-scroll-scene="drift-clouds" className="adaline-drift-clouds pointer-events-none absolute inset-x-0 top-0 h-[110vh]">
-          {DRIFT_CLOUDS.map((cloud, cloudIndex) => (
-            <div
-              key={`drift-cloud-${cloudIndex}`}
-              className="adaline-drift-cloud"
-              style={
-                {
-                  top: cloud.top,
-                  width: cloud.width,
-                  height: cloud.height,
-                  opacity: cloud.opacity,
-                  "--cloud-duration": cloud.duration,
-                  "--cloud-delay": cloud.delay,
-                } as CSSProperties
-              }
-            >
-              {cloud.puffs.map((puff, puffIndex) => (
-                <span
-                  key={`drift-cloud-${cloudIndex}-puff-${puffIndex}`}
-                  className="adaline-drift-cloud-puff"
-                  style={{
-                    left: puff.left,
-                    top: puff.top,
-                    width: puff.width,
-                    height: puff.height,
-                    filter: `blur(${puff.blur})`,
-                    background: `radial-gradient(50% 50% at 50% 50%, rgba(255, 240, 228, ${puff.alpha}) 0%, rgba(255, 240, 228, ${puff.alpha * 0.5}) 55%, rgba(255, 240, 228, 0) 100%)`,
-                  }}
-                />
-              ))}
-            </div>
-          ))}
-        </div>
+        {sceneActive ? (
+          <div aria-hidden data-scroll-scene="drift-clouds" className="adaline-drift-clouds pointer-events-none absolute inset-x-0 top-0 h-[110vh]">
+            {DRIFT_CLOUDS.map((cloud, cloudIndex) => (
+              <div
+                key={`drift-cloud-${cloudIndex}`}
+                className="adaline-drift-cloud"
+                style={
+                  {
+                    top: cloud.top,
+                    width: cloud.width,
+                    height: cloud.height,
+                    opacity: cloud.opacity,
+                    "--cloud-duration": cloud.duration,
+                    "--cloud-delay": cloud.delay,
+                  } as CSSProperties
+                }
+              >
+                {cloud.puffs.map((puff, puffIndex) => (
+                  <span
+                    key={`drift-cloud-${cloudIndex}-puff-${puffIndex}`}
+                    className="adaline-drift-cloud-puff"
+                    style={{
+                      left: puff.left,
+                      top: puff.top,
+                      width: puff.width,
+                      height: puff.height,
+                      filter: `blur(${puff.blur})`,
+                      background: `radial-gradient(50% 50% at 50% 50%, rgba(255, 240, 228, ${puff.alpha}) 0%, rgba(255, 240, 228, ${puff.alpha * 0.5}) 55%, rgba(255, 240, 228, 0) 100%)`,
+                    }}
+                  />
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : null}
         {/* Repeating starfield that rises with the scroll. */}
-        <div
-          ref={starsRef}
-          aria-hidden
-          data-scroll-scene="stars"
-          style={{ opacity: 0 }}
-          className="adaline-footer-stars pointer-events-none absolute inset-0 -bottom-[30rem]"
-        />
+        {sceneActive ? (
+          <div
+            ref={starsRef}
+            aria-hidden
+            data-scroll-scene="stars"
+            style={{ opacity: 0 }}
+            className="adaline-footer-stars pointer-events-none absolute inset-0 -bottom-[30rem]"
+          />
+        ) : null}
       </div>
 
       {/* CTA band: foreground contact card. The aurora is anchored inside this
@@ -694,11 +712,11 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           band below paints over its lower edge — the glow rises from behind the
           ridgeline. */}
       <div data-scroll-scene="cta-band" className="relative flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-[#050e11] to-100%">
-        {nearViewport ? <FooterStars /> : null}
-        {nearViewport ? <FooterAurora /> : null}
+        {sceneActive ? <FooterStars /> : null}
+        {sceneActive ? <FooterAurora /> : null}
         {/* Meteor layer (footer-meteors.tsx): JS spawns streak <img>s into it
             every 5-10s and flies them down-left. */}
-        {nearViewport ? <FooterMeteors /> : null}
+        {sceneActive ? <FooterMeteors /> : null}
 
         {/* The collapsed "Contact me" pill sits low in the band and its panel
             opens downward (over the hills/lake), so it stays on-screen even at
@@ -738,7 +756,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
               "linear-gradient(to bottom, black 0%, black 30%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.12) 72%, transparent 88%)",
           }}
         >
-          {shouldReduceMotion || !nearViewport ? (
+          {shouldReduceMotion || !sceneActive ? (
             <img
               src="/adaline-scenes/footer/footer-dock.webp?v=10"
               alt=""

@@ -94,6 +94,10 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
   if (message.type === "init") {
     canvas = message.canvas;
     context = canvas.getContext("2d", { alpha: false });
+    if (!context) {
+      self.postMessage({ type: "error" });
+      return;
+    }
     progress = message.progress;
     reduceMotion = message.reduceMotion;
     world = createTidesWorld(reduceMotion ? mulberry32(0x7d1e5) : Math.random);

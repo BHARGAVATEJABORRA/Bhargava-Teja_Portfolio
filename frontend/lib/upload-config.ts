@@ -29,7 +29,7 @@ export const IMAGE_TYPES = new Set([
 export function isAllowedUploadType(kind: UploadKind, type: string): boolean {
   if (kind === "resume") return type === "application/pdf";
   if (kind === "image") return IMAGE_TYPES.has(type);
-  return type === "application/pdf" || type.startsWith("image/") || type.startsWith("video/");
+  return type === "application/pdf" || IMAGE_TYPES.has(type) || type.startsWith("video/");
 }
 
 /** Blob pathname prefix for media-library assets (mirrors /public/uploads). */

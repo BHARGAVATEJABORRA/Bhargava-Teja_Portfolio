@@ -163,9 +163,12 @@ export function SiteHeader() {
           href="/#hero"
           onClick={(event) => {
             event.preventDefault();
-            // act as a refresh button
-            window.location.reload();
             trackEvent("header_nav_click", { target: "/#hero", source: "brand_refresh" });
+            // Keep the brand as a true refresh, but give that refresh an
+            // explicit destination. HashScroll removes the temporary hash and
+            // corrects the position after the home layout settles.
+            window.history.replaceState(window.history.state, "", "/#hero");
+            window.location.reload();
           }}
           className="inline-flex h-10 shrink-0 items-center px-1 text-sm font-semibold tracking-tight text-[var(--color-ink)]"
         >

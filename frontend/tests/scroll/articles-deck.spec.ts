@@ -31,7 +31,10 @@ test.describe("§4 articles horizontal gallery", () => {
 
     const range = await galleryRange(page);
     expect(range).not.toBeNull();
-    expect(range!.cardCount).toBeGreaterThanOrEqual(5);
+    // Content is admin-managed; the gallery needs at least two cards to prove
+    // scroll-linked movement, but its visual behavior must not depend on a
+    // hard-coded editorial count.
+    expect(range!.cardCount).toBeGreaterThanOrEqual(2);
 
     const end = range!.bottom - page.viewportSize()!.height;
     const offsets = [range!.top, range!.top + (end - range!.top) * 0.5, end].map(Math.round);

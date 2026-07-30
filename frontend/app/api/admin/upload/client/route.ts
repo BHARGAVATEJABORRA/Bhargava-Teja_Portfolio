@@ -76,7 +76,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               ? ["application/pdf"]
               : kind === "image"
                 ? [...IMAGE_TYPES]
-                : ["image/*", "video/*", "application/pdf"],
+                : [...IMAGE_TYPES, "video/*", "application/pdf"],
           maximumSizeInBytes: MAX_UPLOAD_BYTES[kind],
           addRandomSuffix: true,
           tokenPayload: clientPayload ?? "",

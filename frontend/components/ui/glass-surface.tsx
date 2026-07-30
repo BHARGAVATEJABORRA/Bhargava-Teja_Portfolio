@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useId, useSyncExternalStore } from 'react';
+import { getGlassDisplacementImage } from '@/lib/glass-displacement-map';
 import './glass-surface.css';
 
 interface GlassSurfaceProps {
@@ -52,8 +53,6 @@ export default function GlassSurface({
 }: GlassSurfaceProps) {
   const uniqueId = useId().replace(/:/g, '-');
   const filterId = `glass-filter-${uniqueId}`;
-  const redGradId = `red-grad-${uniqueId}`;
-  const blueGradId = `blue-grad-${uniqueId}`;
 
   const supportsSVGFilters = () => {
     if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -89,37 +88,27 @@ export default function GlassSurface({
   const blueChannelRef = useRef<SVGFEDisplacementMapElement>(null);
   const gaussianBlurRef = useRef<SVGFEGaussianBlurElement>(null);
 
-  const generateDisplacementMap = useCallback(() => {
-    const rect = containerRef.current?.getBoundingClientRect();
-    const actualWidth = rect?.width || 400;
-    const actualHeight = rect?.height || 200;
-    const edgeSize = Math.min(actualWidth, actualHeight) * (borderWidth * 0.5);
+  const generateDisplacementMap = useCallback((measuredWidth?: number, measuredHeight?: number) => {
+    const rect =
+      measuredWidth === undefined || measuredHeight === undefined
+        ? containerRef.current?.getBoundingClientRect()
+        : null;
+    return getGlassDisplacementImage({
+      width: measuredWidth ?? rect?.width ?? 400,
+      height: measuredHeight ?? rect?.height ?? 200,
+      radius: borderRadius,
+      border: borderWidth,
+      lightness: brightness,
+      alpha: opacity,
+      blur,
+      blendMode: mixBlendMode,
+      transparentGradientStart: true,
+    });
+  }, [blur, borderRadius, borderWidth, brightness, mixBlendMode, opacity]);
 
-    const svgContent = `
-      <svg viewBox="0 0 ${actualWidth} ${actualHeight}" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-          <linearGradient id="${redGradId}" x1="100%" y1="0%" x2="0%" y2="0%">
-            <stop offset="0%" stop-color="#0000"/>
-            <stop offset="100%" stop-color="red"/>
-          </linearGradient>
-          <linearGradient id="${blueGradId}" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="#0000"/>
-            <stop offset="100%" stop-color="blue"/>
-          </linearGradient>
-        </defs>
-        <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" fill="black"></rect>
-        <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" rx="${borderRadius}" fill="url(#${redGradId})" />
-        <rect x="0" y="0" width="${actualWidth}" height="${actualHeight}" rx="${borderRadius}" fill="url(#${blueGradId})" style="mix-blend-mode: ${mixBlendMode}" />
-        <rect x="${edgeSize}" y="${edgeSize}" width="${actualWidth - edgeSize * 2}" height="${actualHeight - edgeSize * 2}" rx="${borderRadius}" fill="hsl(0 0% ${brightness}% / ${opacity})" style="filter:blur(${blur}px)" />
-      </svg>
-    `;
-
-    return `data:image/svg+xml,${encodeURIComponent(svgContent)}`;
-  }, [blueGradId, blur, borderRadius, borderWidth, brightness, mixBlendMode, opacity, redGradId]);
-
-  const updateDisplacementMap = useCallback(() => {
+  const updateDisplacementMap = useCallback((measuredWidth?: number, measuredHeight?: number) => {
     if (feImageRef.current) {
-      feImageRef.current.setAttribute('href', generateDisplacementMap());
+      feImageRef.current.setAttribute('href', generateDisplacementMap(measuredWidth, measuredHeight));
     }
   }, [generateDisplacementMap]);
 
@@ -162,20 +151,28 @@ export default function GlassSurface({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const resizeObserver = new ResizeObserver(() => {
-      setTimeout(updateDisplacementMap, 0);
+    let frame = 0;
+    let nextWidth = 0;
+    let nextHeight = 0;
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      nextWidth = entry.contentRect.width;
+      nextHeight = entry.contentRect.height;
+      if (frame) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = 0;
+        updateDisplacementMap(nextWidth, nextHeight);
+      });
     });
 
     resizeObserver.observe(containerRef.current);
 
     return () => {
       resizeObserver.disconnect();
+      if (frame) window.cancelAnimationFrame(frame);
     };
   }, [updateDisplacementMap]);
-
-  useEffect(() => {
-    setTimeout(updateDisplacementMap, 0);
-  }, [width, height, updateDisplacementMap]);
 
   const containerStyle = {
     ...style,
