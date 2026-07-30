@@ -6,6 +6,7 @@ import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
 import { Container } from "@/components/ui/container";
 import type { ProjectSummary } from "@/content/portfolio-content";
+import { subscribeToScrollRead } from "@/lib/scroll-runtime";
 import { likeKey, useLikes } from "@/lib/use-likes";
 
 interface GithubProject {
@@ -162,26 +163,15 @@ export function ProjectsSection({ projects }: { projects: ProjectSummary[] }) {
   useEffect(() => {
     const el = lastCardRef.current;
     if (!el) return;
-    let raf = 0;
     const measure = () => {
-      raf = 0;
       const rect = el.getBoundingClientRect();
       // Title pin is around y=88; hide it once the last card's top has moved
       // above ~y=200 (i.e. it's occupying the title's area).
-      setTitleFading(rect.top < 200);
-    };
-    const onScroll = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(measure);
+      const next = rect.top < 200;
+      setTitleFading((current) => (current === next ? current : next));
     };
     measure();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
-    return () => {
-      if (raf) cancelAnimationFrame(raf);
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onScroll);
-    };
+    return subscribeToScrollRead(measure);
   }, []);
 
   const lastIndex = githubProjects.length - 1;

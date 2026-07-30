@@ -34,7 +34,27 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
   const [message, setMessage] = useState<string>("Waiting for Touch ID…");
   const [showPasscode, setShowPasscode] = useState(false);
   const [passcode, setPasscode] = useState("");
+  const [clientReady, setClientReady] = useState(false);
   const autoStartedRef = useRef(false);
+  const authenticationInFlightRef = useRef(false);
+  const openRef = useRef(open);
+  const mountedRef = useRef(false);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    setClientReady(true);
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    openRef.current = open;
+    if (!open) {
+      autoStartedRef.current = false;
+      authenticationInFlightRef.current = false;
+    }
+  }, [open]);
 
   const goToAdmin = useCallback(() => {
     setStatus("success");
@@ -88,11 +108,14 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
   }, [open, close]);
 
   const handleFingerprint = useCallback(async () => {
-    if (status === "authenticating") return;
+    if (status === "authenticating" || authenticationInFlightRef.current) return;
+    authenticationInFlightRef.current = true;
 
     if (!browserSupportsWebAuthn()) {
-      setStatus("error");
-      setMessage("This browser doesn't support passkeys.");
+      setStatus("idle");
+      setShowPasscode(true);
+      setMessage("This browser doesn't support passkeys. Sign in with your passcode.");
+      authenticationInFlightRef.current = false;
       return;
     }
 
@@ -100,7 +123,9 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
     setMessage("Waiting for Touch ID…");
 
     try {
-      const { registered } = (await fetch("/api/auth/webauthn/status").then((r) => r.json())) as {
+      const statusResponse = await fetch("/api/auth/webauthn/status", { cache: "no-store" });
+      if (!statusResponse.ok) throw new Error("Could not check passkey availability.");
+      const { registered } = (await statusResponse.json()) as {
         registered: boolean;
       };
 
@@ -126,6 +151,8 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
           : (err as Error)?.message || "Authentication failed.";
       setStatus("error");
       setMessage(friendly);
+    } finally {
+      authenticationInFlightRef.current = false;
     }
   }, [status, goToAdmin]);
 
@@ -139,13 +166,19 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
     }
     if (autoStartedRef.current) return;
     autoStartedRef.current = true;
-    const timer = window.setTimeout(() => {
-      void handleFingerprint();
+    // Do not clear this tiny handoff timer during React Strict Mode's
+    // development-only effect replay. The refs keep it inert after a genuine
+    // close or unmount, while ensuring one automatic passkey attempt survives.
+    window.setTimeout(() => {
+      if (openRef.current && mountedRef.current) {
+        void handleFingerprint();
+      }
     }, 50);
-    return () => window.clearTimeout(timer);
   }, [open, handleFingerprint]);
 
-  if (!open || typeof document === "undefined") return null;
+  // Match the server's empty portal slot on the first client render. Rendering
+  // a portal immediately on /login otherwise creates a hydration mismatch.
+  if (!open || !clientReady || typeof document === "undefined") return null;
 
   // Portal to <body> so the fixed overlay isn't trapped by the header's CSS transform.
   return createPortal(

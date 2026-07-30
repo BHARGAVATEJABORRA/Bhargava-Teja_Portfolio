@@ -2,12 +2,12 @@
 
 import { useEffect } from "react";
 
-import { getActiveLenis } from "@/lib/smooth-scroll-instance";
+import { scrollToSection } from "@/lib/scroll-to-section";
 
 /**
  * Scrolls to the URL hash target after the home page mounts. Needed because
- * the page is client-rendered with Lenis smooth scrolling and tall scroll
- * tracks — the browser's native hash jump fires before layout settles, so
+ * the page is client-rendered with tall scroll tracks — the browser's native
+ * hash jump fires before layout settles, so
  * deep links like /#blogs would otherwise land at the top.
  */
 export function HashScroll() {
@@ -25,14 +25,8 @@ export function HashScroll() {
 
     const scrollToTarget = () => {
       if (cancelled) return;
-      const target = document.getElementById(hash);
-      if (!target) return;
-      const lenis = getActiveLenis();
-      if (lenis) {
-        lenis.scrollTo(target, { immediate: false });
-      } else {
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
+      if (!document.getElementById(hash)) return;
+      scrollToSection(hash);
     };
 
     // Layout (fonts, canvases, scroll tracks) settles progressively; retry a

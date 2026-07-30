@@ -1,10 +1,4 @@
-import { getActiveLenis } from "@/lib/smooth-scroll-instance";
-
 const EXTRA_SCROLL_OFFSET = 16;
-const SCROLL_DURATION = 0.7;
-const SCROLL_DURATION_MS = SCROLL_DURATION * 1000;
-
-let fallbackAnimationFrame: number | null = null;
 let activeScrollToken = 0;
 
 function getHeaderOffset(): number {
@@ -27,55 +21,10 @@ function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-const easeOutExpo = (time: number) => Math.min(1, 1.001 - 2 ** (-10 * time));
-
-function animateFallbackScroll(targetTop: number, immediate: boolean) {
-  if (fallbackAnimationFrame !== null) {
-    window.cancelAnimationFrame(fallbackAnimationFrame);
-    fallbackAnimationFrame = null;
-  }
-
-  if (immediate) {
-    window.scrollTo({ top: targetTop, behavior: "auto" });
-    return;
-  }
-
-  const startTop = window.scrollY;
-  const distance = targetTop - startTop;
-  const startTime = Date.now();
-
-  const step = () => {
-    const elapsed = Date.now() - startTime;
-    const progress = Math.min(1, elapsed / SCROLL_DURATION_MS);
-    const nextTop = startTop + distance * easeOutExpo(progress);
-
-    window.scrollTo({ top: nextTop, behavior: "auto" });
-
-    if (progress < 1) {
-      fallbackAnimationFrame = window.requestAnimationFrame(step);
-      return;
-    }
-
-    fallbackAnimationFrame = null;
-  };
-
-  fallbackAnimationFrame = window.requestAnimationFrame(step);
-}
-
 export function scrollToY(top: number, hash?: string) {
   const reducedMotion = prefersReducedMotion();
   const targetTop = Math.max(0, top);
-  const lenis = getActiveLenis() ?? window.__portfolioLenis;
-
-  if (lenis) {
-    lenis.resize();
-    lenis.scrollTo(targetTop, {
-      duration: SCROLL_DURATION,
-      immediate: reducedMotion,
-    });
-  } else {
-    animateFallbackScroll(targetTop, reducedMotion);
-  }
+  window.scrollTo({ top: targetTop, behavior: reducedMotion ? "auto" : "smooth" });
 
   if (hash) {
     window.history.replaceState(null, "", hash);
@@ -105,5 +54,5 @@ export function scrollToSection(sectionId: string) {
     if (Math.abs(correctedTop - window.scrollY) > 2) {
       window.scrollTo({ top: correctedTop, behavior: "auto" });
     }
-  }, SCROLL_DURATION_MS + 80);
+  }, 850);
 }

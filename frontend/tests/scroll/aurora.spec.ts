@@ -11,6 +11,10 @@ test.describe("§3.3 footer aurora is a scene-anchored WebGL curtain", () => {
   test("aurora wrapper stays anchored and its canvas renders", async ({ page }) => {
     await gotoReady(page);
 
+    // Footer WebGL is intentionally not mounted at the top of the page.
+    await expect(page.locator(AURORA)).toHaveCount(0);
+    await page.locator("#contact").scrollIntoViewIfNeeded();
+
     const aurora = page.locator(AURORA);
     await expect(aurora).toHaveCount(1);
 
@@ -35,6 +39,8 @@ test.describe("§3.3 footer aurora is a scene-anchored WebGL curtain", () => {
   // down-left at rotate(34deg) with a ~0.7s fade.
   test("meteors: adaline plus-lighter layer spawns rotated streak imgs", async ({ page }) => {
     await gotoReady(page);
+
+    await page.locator("#contact").scrollIntoViewIfNeeded();
 
     const layer = page.locator('[data-scroll-scene="meteors"]');
     await expect(layer).toHaveCount(1);

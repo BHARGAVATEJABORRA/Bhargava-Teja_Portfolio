@@ -23,7 +23,7 @@ import {
   mulberry32,
 } from "@/components/scenes/tides-painter";
 import { clamp01, smoothStep } from "@/components/scenes/footer-sky-painter";
-import { subscribeToScroll } from "@/lib/scroll-progress";
+import { subscribeToScrollRead, subscribeToScrollWrite } from "@/lib/scroll-runtime";
 
 // Day runs SUNRISE (t = 0.14, sun on the horizon) → SUNSET (t = 1). The arc
 // completes by 82% of the page so the last stretch holds sunset for the footer
@@ -50,24 +50,82 @@ export function TidesBackground() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const veilRef = useRef<HTMLDivElement | null>(null);
   const progressRef = useRef(0);
+  const workerRef = useRef<Worker | null>(null);
   const reduceMotion = useReducedMotion();
 
-  // Global scroll progress — identical source to AmbientAurora.
+  // Global scroll progress is a single read from the application scheduler.
   useEffect(() => {
-    const update = () => {
-      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
-      progressRef.current = maxScroll > 0 ? clamp01(window.scrollY / maxScroll) : 0;
+    const update = ({ y, maxY }: { y: number; maxY: number }) => {
+      const next = maxY > 0 ? clamp01(y / maxY) : 0;
+      if (next !== progressRef.current) {
+        progressRef.current = next;
+        workerRef.current?.postMessage({ type: "update", progress: next });
+      }
     };
-    update();
-    return subscribeToScroll(update);
+    return subscribeToScrollRead(update);
+  }, []);
+
+  useEffect(() => {
+    return subscribeToScrollWrite(() => {
+      if (veilRef.current) veilRef.current.style.opacity = veilOpacityFor(progressRef.current).toFixed(3);
+    });
   }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d", { alpha: false });
-    if (!canvas || !context) {
+    if (!canvas) {
       return;
     }
+
+    // Move the always-visible, full-viewport simulation off the main thread
+    // where the browser supports OffscreenCanvas. Safari/mobile safely retain
+    // the exact same main-thread painter below.
+    const supportsWorkerCanvas =
+      typeof Worker !== "undefined" &&
+      typeof OffscreenCanvas !== "undefined" &&
+      "transferControlToOffscreen" in canvas;
+    if (supportsWorkerCanvas) {
+      try {
+        const worker = new Worker(new URL("./tides-worker.ts", import.meta.url));
+        const offscreen = canvas.transferControlToOffscreen();
+        workerRef.current = worker;
+        worker.postMessage(
+          {
+            type: "init",
+            canvas: offscreen,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            dpr: window.devicePixelRatio || 1,
+            progress: progressRef.current,
+            reduceMotion,
+          },
+          [offscreen],
+        );
+        let width = window.innerWidth;
+        let height = window.innerHeight;
+        const unsubscribeResize = subscribeToScrollRead((snapshot) => {
+          if (snapshot.width === width && snapshot.height === height) return;
+          width = snapshot.width;
+          height = snapshot.height;
+          worker.postMessage({ type: "resize", width, height, dpr: window.devicePixelRatio || 1 });
+        });
+        const visibility = () => worker.postMessage({ type: "visibility", hidden: document.hidden });
+        document.addEventListener("visibilitychange", visibility);
+        return () => {
+          unsubscribeResize();
+          document.removeEventListener("visibilitychange", visibility);
+          worker.postMessage({ type: "destroy" });
+          worker.terminate();
+          if (workerRef.current === worker) workerRef.current = null;
+        };
+      } catch {
+        // An implementation can expose the API but reject transfer at runtime;
+        // fall through to the browser-tested main-thread renderer.
+      }
+    }
+
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) return;
 
     const random = reduceMotion ? mulberry32(0x7d1e5) : Math.random;
     const world = createTidesWorld(random);
@@ -97,7 +155,14 @@ export function TidesBackground() {
     };
 
     resize();
-    window.addEventListener("resize", resize);
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const unsubscribeResize = subscribeToScrollRead((snapshot) => {
+      if (snapshot.width === width && snapshot.height === height) return;
+      width = snapshot.width;
+      height = snapshot.height;
+      resize();
+    });
 
     if (reduceMotion) {
       const paintStill = () => {
@@ -106,10 +171,10 @@ export function TidesBackground() {
         applyScrollLinked();
       };
       paintStill();
-      const unsubscribe = subscribeToScroll(paintStill);
+      const unsubscribe = subscribeToScrollWrite(paintStill);
       return () => {
         unsubscribe();
-        window.removeEventListener("resize", resize);
+        unsubscribeResize();
       };
     }
 
@@ -136,11 +201,21 @@ export function TidesBackground() {
       applyScrollLinked();
       raf = requestAnimationFrame(tick);
     };
+    const visibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf);
+      } else {
+        last = performance.now();
+        raf = requestAnimationFrame(tick);
+      }
+    };
+    document.addEventListener("visibilitychange", visibility);
     raf = requestAnimationFrame(tick);
 
     return () => {
       cancelAnimationFrame(raf);
-      window.removeEventListener("resize", resize);
+      unsubscribeResize();
+      document.removeEventListener("visibilitychange", visibility);
     };
   }, [reduceMotion]);
 

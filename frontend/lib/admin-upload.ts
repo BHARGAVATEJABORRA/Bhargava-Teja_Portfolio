@@ -17,6 +17,17 @@ export type UploadKind = "resume" | "image" | "media";
 
 let modePromise: Promise<"blob" | "fs"> | null = null;
 
+function safeBlobFilename(name: string): string {
+  const extension = name.match(/\.[a-z0-9]{1,10}$/i)?.[0] ?? "";
+  const stem = name
+    .slice(0, extension ? -extension.length : undefined)
+    .normalize("NFKD")
+    .replace(/[^a-z0-9]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return `${stem || "upload"}${extension.toLowerCase()}`;
+}
+
 function getMode(): Promise<"blob" | "fs"> {
   modePromise ??= fetch("/api/admin/upload", { cache: "no-store" })
     .then(async (res) => {
@@ -32,7 +43,7 @@ async function uploadViaBlob(file: File, kind: UploadKind, label: string): Promi
   const pathname =
     kind === "resume"
       ? "resume/bhargava-teja-borra-resume.pdf"
-      : `uploads/${file.name || "upload"}`;
+      : `uploads/${safeBlobFilename(file.name || "upload")}`;
 
   const blob = await upload(pathname, file, {
     access: "public",

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 
-import { getActiveLenis } from "@/lib/smooth-scroll-instance";
+import { subscribeToScrollRead } from "@/lib/scroll-runtime";
 import "./ScrollStack.css";
 
 export const ScrollStackItem = ({
@@ -200,9 +200,17 @@ const ScrollStack = ({
     };
     media.addEventListener("change", onMediaChange);
 
-    window.addEventListener("scroll", updateCardTransforms, { passive: true });
-    window.addEventListener("resize", remeasureAndUpdate);
-    getActiveLenis()?.on("scroll", updateCardTransforms);
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+    const unsubscribeScroll = subscribeToScrollRead((snapshot) => {
+      if (snapshot.width !== width || snapshot.height !== height) {
+        width = snapshot.width;
+        height = snapshot.height;
+        remeasureAndUpdate();
+      } else {
+        updateCardTransforms();
+      }
+    });
 
     // Remeasure as fonts / images settle; each call resets transforms then re-snapshots.
     const timeouts = [50, 250, 700, 1400].map((d) => window.setTimeout(remeasureAndUpdate, d));
@@ -211,9 +219,7 @@ const ScrollStack = ({
 
     return () => {
       media.removeEventListener("change", onMediaChange);
-      window.removeEventListener("scroll", updateCardTransforms);
-      window.removeEventListener("resize", remeasureAndUpdate);
-      getActiveLenis()?.off("scroll", updateCardTransforms);
+      unsubscribeScroll();
       timeouts.forEach(clearTimeout);
       stackCompletedRef.current = false;
       cardsRef.current = [];

@@ -103,9 +103,11 @@ export function GlobeWidget({
   ],
   label = portfolioContent.identity.controlCenter.location,
 }: GlobeWidgetProps) {
+  const viewportRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hasRenderError, setHasRenderError] = useState(false);
   const [ready, setReady] = useState(false);
+  const [nearViewport, setNearViewport] = useState(false);
   const [markerLat, markerLng] = markerLocation;
 
   // Auto-spin baseline plus drag offset accumulated from pointer interaction.
@@ -137,6 +139,18 @@ export function GlobeWidget({
   }, []);
 
   useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setNearViewport(entry.isIntersecting),
+      { rootMargin: "1200px 0px" },
+    );
+    observer.observe(viewport);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!nearViewport) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -293,7 +307,7 @@ export function GlobeWidget({
       renderer.dispose();
       renderer.domElement.remove();
     };
-  }, [markerLat, markerLng]);
+  }, [markerLat, markerLng, nearViewport]);
 
   return (
     <ControlCenterPanel radius={32} className="flex h-full min-h-[16rem] flex-col p-4 sm:p-5">
@@ -307,7 +321,7 @@ export function GlobeWidget({
           edge lands below the panel and is clipped away. */}
       <div className="relative mx-auto mt-2 flex min-h-0 flex-1 items-end justify-center">
         <div className="pointer-events-none absolute inset-x-[16%] bottom-4 top-[24%] rounded-full bg-[radial-gradient(circle_at_center,rgba(56,132,196,0.2),transparent_62%)] blur-3xl" />
-        <div className="relative aspect-square w-full max-w-[15rem] translate-y-8 select-none sm:max-w-[17rem] sm:translate-y-9">
+        <div ref={viewportRef} className="relative aspect-square w-full max-w-[15rem] translate-y-8 select-none sm:max-w-[17rem] sm:translate-y-9">
           {hasRenderError ? (
             <div className="flex h-full w-full items-center justify-center rounded-full border border-white/18 bg-[radial-gradient(circle_at_38%_34%,rgba(120,178,236,0.32)_0%,rgba(84,140,201,0.16)_26%,rgba(18,50,86,0.1)_58%,rgba(8,18,31,0.05)_100%)]">
               <span className="text-center text-sm font-medium text-[var(--color-muted-ink)]">{label}</span>

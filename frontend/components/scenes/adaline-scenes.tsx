@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import type { CSSProperties, ReactNode } from "react";
-import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { MotionValue } from "framer-motion";
 import { motion, useReducedMotion, useTransform } from "framer-motion";
 
@@ -489,18 +489,35 @@ interface AdalineFooterSceneProps {
 // dock + reflection rendered as full-bleed 200vw images. The foreground copy
 // (contact + nav) holds the portfolio content.
 export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooterSceneProps) {
+  const footerSceneRef = useRef<HTMLDivElement | null>(null);
   const bandRef = useRef<HTMLDivElement | null>(null);
   const skyCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const cloudsCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const starsRef = useRef<HTMLDivElement | null>(null);
   const shouldReduceMotion = useReducedMotion();
+  const [nearViewport, setNearViewport] = useState(false);
   // Render only after mount: the sky/cloud canvases and the fixed-position
   // layers depend on window metrics that don't exist during SSR/prerender.
   // useSyncExternalStore: false on the server snapshot, true on the client.
   const mounted = useSyncExternalStore(subscribeNoop, getClientSnapshot, getServerSnapshot);
 
-  // Lenis is the single clock for the whole sequence: it eases the native
-  // scroll position, and every layer below is a pure function of that position,
+  // Keep the footer structure in flow, but only initialize its expensive
+  // visual modules when a visitor is close enough to reach them. Moving back
+  // up the page disposes the WebGL/animation layers rather than leaving hidden
+  // render loops and contexts alive.
+  useEffect(() => {
+    if (!mounted || !footerSceneRef.current) return;
+    const scene = footerSceneRef.current;
+    const observer = new IntersectionObserver(
+      ([entry]) => setNearViewport(entry.isIntersecting),
+      { rootMargin: "1400px 0px" },
+    );
+    observer.observe(scene);
+    return () => observer.disconnect();
+  }, [mounted]);
+
+  // Native scroll is the single clock for the whole sequence, and every layer
+  // below is a pure function of that position,
   // repainted only on scroll/resize rather than from a second spring/rAF clock.
   // The sky and the sunset cloud streaks are hand-painted on canvases and
   // recolored per scroll, so the streaks always catch the current light.
@@ -599,7 +616,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
   if (!mounted) return null;
 
   return (
-    <div className="adaline-footer-scene relative flex flex-col overflow-clip text-[#f4fbf7]" style={footerSceneTheme}>
+    <div ref={footerSceneRef} className="adaline-footer-scene relative flex flex-col overflow-clip text-[#f4fbf7]" style={footerSceneTheme}>
       {/* No opaque bridge or scene background at the seam: the fixed sky canvas
           fades in over the still-visible tides ocean (matching sunset palettes),
           so the articles -> footer handoff is a same-color crossfade with no
@@ -677,11 +694,11 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           band below paints over its lower edge — the glow rises from behind the
           ridgeline. */}
       <div data-scroll-scene="cta-band" className="relative flex flex-col items-center justify-center bg-gradient-to-b from-transparent to-[#050e11] to-100%">
-        <FooterStars />
-        <FooterAurora />
+        {nearViewport ? <FooterStars /> : null}
+        {nearViewport ? <FooterAurora /> : null}
         {/* Meteor layer (footer-meteors.tsx): JS spawns streak <img>s into it
             every 5-10s and flies them down-left. */}
-        <FooterMeteors />
+        {nearViewport ? <FooterMeteors /> : null}
 
         {/* The collapsed "Contact me" pill sits low in the band and its panel
             opens downward (over the hills/lake), so it stays on-screen even at
@@ -721,7 +738,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
               "linear-gradient(to bottom, black 0%, black 30%, rgba(0,0,0,0.42) 50%, rgba(0,0,0,0.12) 72%, transparent 88%)",
           }}
         >
-          {shouldReduceMotion ? (
+          {shouldReduceMotion || !nearViewport ? (
             <img
               src="/adaline-scenes/footer/footer-dock.webp?v=10"
               alt=""

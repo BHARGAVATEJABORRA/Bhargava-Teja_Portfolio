@@ -6,6 +6,7 @@
  */
 
 import { NextResponse, type NextRequest } from "next/server";
+import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 
 import { requireAdmin } from "@/lib/admin-guard";
@@ -82,6 +83,7 @@ export function collectionHandlers<TRow, TDto, TCreate>(cfg: {
           snapshot: dto,
         });
         await publishContentOverrides();
+        revalidatePath("/", "page");
         return NextResponse.json({ item: dto }, { status: 201 });
       } catch (err) {
         return mapPrismaError(err);
@@ -120,6 +122,7 @@ export function itemHandlers<TRow, TDto, TCreate>(cfg: {
           snapshot: dto,
         });
         await publishContentOverrides();
+        revalidatePath("/", "page");
         return NextResponse.json({ item: dto });
       } catch (err) {
         return mapPrismaError(err);
@@ -150,6 +153,7 @@ export function itemHandlers<TRow, TDto, TCreate>(cfg: {
           snapshot,
         });
         await publishContentOverrides();
+        revalidatePath("/", "page");
         return NextResponse.json({ ok: true });
       } catch (err) {
         return mapPrismaError(err);

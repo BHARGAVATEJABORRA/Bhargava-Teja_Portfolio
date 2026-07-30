@@ -4,11 +4,10 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
 
-import { getActiveLenis } from "@/lib/smooth-scroll-instance";
-
 import { BorderGlowCard } from "@/components/ui/border-glow-card";
 import { portfolioContent } from "@/content/portfolio-content";
 import type { ArticleSummary } from "@/content/portfolio-content";
+import { requestScrollRuntimeUpdate, subscribeToScrollRead, subscribeToScrollWrite } from "@/lib/scroll-runtime";
 import { useLikes } from "@/lib/use-likes";
 
 function ArticleCard({
@@ -160,10 +159,9 @@ export function BlogsSection() {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeArticle = articles[activeIndex] ?? articles[0];
 
-  // Drive the horizontal translate from scroll progress manually. We read the
-  // track's geometry on every scroll tick (works with native scroll and Lenis)
-  // and write the transform straight to the element — no animation library
-  // between the scroll position and the pixels. (Ported from ProjectsSection.)
+  // Drive the horizontal translate from the shared native scroll scheduler.
+  // Measurements run before style writes, and React only updates when the
+  // selected article actually changes.
   useEffect(() => {
     if (articles.length < 2) return;
     const clamp = (value: number) => Math.min(1, Math.max(0, value));
@@ -182,42 +180,65 @@ export function BlogsSection() {
       return Math.max(0, lastCenter - firstCenter);
     };
 
-    const update = () => {
+    let pendingTranslate = 0;
+    let pendingIndex = 0;
+    let hasPendingWrite = false;
+
+    const read = () => {
       const track = containerRef.current;
       const gallery = galleryRef.current;
       if (!track || !gallery) return;
       const rect = track.getBoundingClientRect();
       const distance = rect.height - window.innerHeight;
       const progress = distance > 0 ? clamp(-rect.top / distance) : 0;
-      currentTranslate = -progress * travel;
-      gallery.style.transform = `translate3d(${currentTranslate}px, 0, 0)`;
+      pendingTranslate = -progress * travel;
+      pendingIndex = Math.round(progress * (articles.length - 1));
+      hasPendingWrite = true;
+    };
 
-      const nextIndex = Math.round(progress * (articles.length - 1));
-      if (activeIndexRef.current !== nextIndex) {
-        activeIndexRef.current = nextIndex;
-        setActiveIndex(nextIndex);
+    const write = () => {
+      const gallery = galleryRef.current;
+      if (!gallery || !hasPendingWrite) return;
+      currentTranslate = pendingTranslate;
+      gallery.style.transform = `translate3d(${currentTranslate}px, 0, 0)`;
+      hasPendingWrite = false;
+      if (activeIndexRef.current !== pendingIndex) {
+        activeIndexRef.current = pendingIndex;
+        setActiveIndex(pendingIndex);
       }
     };
 
     const remeasure = () => {
       travel = measureTravel();
-      update();
+      read();
+      write();
     };
 
     remeasure();
-    window.addEventListener("scroll", update, { passive: true });
-    window.addEventListener("resize", remeasure);
+    const unsubscribeRead = subscribeToScrollRead(read);
+    const unsubscribeWrite = subscribeToScrollWrite(write);
 
-    const lenis = getActiveLenis();
-    lenis?.on("scroll", update);
+    let resizeFrame = 0;
+    const scheduleRemeasure = () => {
+      if (resizeFrame !== 0) return;
+      resizeFrame = window.requestAnimationFrame(() => {
+        resizeFrame = 0;
+        travel = measureTravel();
+        requestScrollRuntimeUpdate();
+      });
+    };
+    const resizeObserver = new ResizeObserver(scheduleRemeasure);
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
+    if (galleryRef.current) resizeObserver.observe(galleryRef.current);
 
     // Fonts/layout can settle after mount; re-measure a few times.
-    const timeouts = [200, 600, 1200].map((delay) => window.setTimeout(remeasure, delay));
+    const timeouts = [200, 600, 1200].map((delay) => window.setTimeout(scheduleRemeasure, delay));
 
     return () => {
-      window.removeEventListener("scroll", update);
-      window.removeEventListener("resize", remeasure);
-      lenis?.off("scroll", update);
+      unsubscribeRead();
+      unsubscribeWrite();
+      resizeObserver.disconnect();
+      if (resizeFrame !== 0) window.cancelAnimationFrame(resizeFrame);
       timeouts.forEach((timeout) => window.clearTimeout(timeout));
     };
   }, [articles.length]);

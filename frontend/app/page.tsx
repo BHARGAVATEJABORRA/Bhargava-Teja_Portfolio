@@ -4,6 +4,9 @@ import { StructuredData } from "@/components/seo/structured-data";
 import { portfolioContent } from "@/content/portfolio-content";
 import { getPublishedProjects } from "@/lib/content-store";
 
+// Public project data is database-backed and may be changed outside an admin
+// API request (imports, scripts, or direct Turso maintenance). Keep this route
+// dynamic so that content freshness is never traded for a render optimization.
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 

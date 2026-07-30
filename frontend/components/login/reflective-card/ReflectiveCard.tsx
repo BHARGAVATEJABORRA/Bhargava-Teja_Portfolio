@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import { LuActivity, LuFingerprint, LuLock } from "react-icons/lu";
 
 import "./ReflectiveCard.css";
@@ -56,37 +55,6 @@ const ReflectiveCard = ({
   statusMessage,
   actionLabel = "Touch ID to continue",
 }: ReflectiveCardProps) => {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  useEffect(() => {
-    let stream: MediaStream | null = null;
-
-    const startWebcam = async () => {
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            width: { ideal: 640 },
-            height: { ideal: 480 },
-            facingMode: "user",
-          },
-        });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        console.error("Error accessing webcam:", err);
-      }
-    };
-
-    startWebcam();
-
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
-
   const baseFrequency = 0.03 / Math.max(0.1, noiseScale);
   const saturation = 1 - Math.max(0, Math.min(1, grayscale));
 
@@ -152,7 +120,10 @@ const ReflectiveCard = ({
         </defs>
       </svg>
 
-      <video ref={videoRef} autoPlay playsInline muted className="reflective-video" />
+      {/* The old webcam layer triggered a physical-camera permission request
+          even though this is a purely decorative reflection. This deterministic
+          texture preserves the metallic motion without touching media devices. */}
+      <div aria-hidden className="reflective-texture" />
       <div className="reflective-noise" />
       <div className="reflective-sheen" />
       <div className="reflective-border" />

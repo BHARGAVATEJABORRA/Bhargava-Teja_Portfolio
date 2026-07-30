@@ -26,6 +26,12 @@ export const IMAGE_TYPES = new Set([
   "image/avif",
 ]);
 
+export function isAllowedUploadType(kind: UploadKind, type: string): boolean {
+  if (kind === "resume") return type === "application/pdf";
+  if (kind === "image") return IMAGE_TYPES.has(type);
+  return type === "application/pdf" || type.startsWith("image/") || type.startsWith("video/");
+}
+
 /** Blob pathname prefix for media-library assets (mirrors /public/uploads). */
 export const BLOB_UPLOAD_PREFIX = "uploads/";
 /** Blob pathname for the resume (a random suffix is appended per upload). */

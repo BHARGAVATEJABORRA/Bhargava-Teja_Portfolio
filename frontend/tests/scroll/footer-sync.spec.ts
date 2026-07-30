@@ -86,6 +86,7 @@ test.describe("§3.2 shooting stars", () => {
   test("uses the current additive image layer without legacy CSS meteors", async ({ page }) => {
     await gotoReady(page);
     await expect(page.locator(".adaline-meteor")).toHaveCount(0);
+    await page.locator("#contact").scrollIntoViewIfNeeded();
     const layer = page.locator('[data-scroll-scene="meteors"]');
     await expect(layer).toHaveCount(1);
     expect(await layer.evaluate((element) => getComputedStyle(element).mixBlendMode)).toBe("plus-lighter");

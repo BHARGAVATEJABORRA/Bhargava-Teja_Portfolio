@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { LuLogIn } from "react-icons/lu";
 
 import { LoginModal } from "@/components/login/login-modal";
@@ -9,23 +9,7 @@ import { portfolioContent } from "@/content/portfolio-content";
 import { trackEvent } from "@/lib/analytics";
 import { scrollToSection } from "@/lib/scroll-to-section";
 import { coreSectionLinks } from "@/lib/site";
-import { getActiveLenis } from "@/lib/smooth-scroll-instance";
-
-function sectionIdToActiveHref(sectionId: string) {
-  return sectionId === "hero" ? null : `/#${sectionId}`;
-}
-
-function getViewportHeaderOffset() {
-  const header = document.querySelector<HTMLElement>("[data-site-header='true']");
-
-  if (!header) {
-    return 0;
-  }
-
-  const headerBottom = header.getBoundingClientRect().bottom;
-
-  return Number.isFinite(headerBottom) && headerBottom > 0 ? headerBottom : 0;
-}
+import { subscribeToScrollRead } from "@/lib/scroll-runtime";
 
 function SectionNavigation({
   activeHref,
@@ -101,7 +85,6 @@ export function SiteHeader() {
   );
   const [activeHref, setActiveHref] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
-  const manualActiveUntilRef = useRef(0);
   const [liquidEnabled, setLiquidEnabled] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
 
@@ -110,43 +93,7 @@ export function SiteHeader() {
     setLoginOpen(true);
   }, []);
 
-  const syncActiveHrefToViewport = useCallback(() => {
-    if (Date.now() < manualActiveUntilRef.current) {
-      return;
-    }
-
-    const sections = observedSectionIds
-      .map((id) => document.getElementById(id))
-      .filter((section): section is HTMLElement => section !== null);
-
-    if (sections.length === 0) {
-      return;
-    }
-
-    const headerOffset = getViewportHeaderOffset();
-    const anchorY = window.scrollY + headerOffset + Math.max(120, (window.innerHeight - headerOffset) * 0.38);
-    let nextId = sections[0]?.id ?? "hero";
-
-    for (const section of sections) {
-      const top = section.getBoundingClientRect().top + window.scrollY;
-      const bottom = top + section.offsetHeight;
-
-      if (anchorY >= top && anchorY < bottom) {
-        nextId = section.id;
-        break;
-      }
-
-      if (anchorY >= top) {
-        nextId = section.id;
-      }
-    }
-
-    const nextHref = sectionIdToActiveHref(nextId);
-    setActiveHref((currentHref) => (currentHref === nextHref ? currentHref : nextHref));
-  }, [observedSectionIds]);
-
   const handleNavigate = useCallback((href: string) => {
-    manualActiveUntilRef.current = Date.now() + 900;
     setActiveHref(href);
   }, []);
 
@@ -164,52 +111,46 @@ export function SiteHeader() {
   }, []);
 
   useEffect(() => {
-    const updateScrollState = () => {
-      setIsScrolled(window.scrollY > 72);
-    };
-
-    updateScrollState();
-    window.addEventListener("scroll", updateScrollState, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", updateScrollState);
-    };
+    return subscribeToScrollRead(({ y }) => {
+      const next = y > 72;
+      setIsScrolled((current) => (current === next ? current : next));
+    });
   }, []);
 
   useEffect(() => {
-    let frameId: number | null = null;
-
-    const requestSync = () => {
-      if (frameId !== null) {
-        return;
-      }
-
-      frameId = window.requestAnimationFrame(() => {
-        frameId = null;
-        syncActiveHrefToViewport();
-      });
+    const intersecting = new Map<string, IntersectionObserverEntry>();
+    const syncActiveSection = () => {
+      const candidates = [...intersecting.values()].filter((entry) => entry.isIntersecting);
+      if (candidates.length === 0) return;
+      const closest = candidates.sort(
+        (a, b) =>
+          Math.abs(a.boundingClientRect.top - window.innerHeight * 0.38) -
+          Math.abs(b.boundingClientRect.top - window.innerHeight * 0.38),
+      )[0];
+      const id = (closest?.target as HTMLElement | undefined)?.id;
+      const nextHref = id && id !== "hero" ? `/#${id}` : null;
+      setActiveHref((current) => (current === nextHref ? current : nextHref));
     };
 
-    requestSync();
-    window.addEventListener("scroll", requestSync, { passive: true });
-    window.addEventListener("resize", requestSync);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => intersecting.set((entry.target as HTMLElement).id, entry));
+        syncActiveSection();
+      },
+      // This centered band is equivalent to the old header-offset anchor but
+      // avoids reading every section's layout on every scroll frame.
+      { rootMargin: "-18% 0px -52% 0px", threshold: 0 },
+    );
 
-    const lenis = getActiveLenis();
-    lenis?.on("scroll", requestSync);
-
-    const timeouts = [120, 420, 900].map((delay) => window.setTimeout(requestSync, delay));
+    observedSectionIds.forEach((id) => {
+      const section = document.getElementById(id);
+      if (section) observer.observe(section);
+    });
 
     return () => {
-      if (frameId !== null) {
-        window.cancelAnimationFrame(frameId);
-      }
-
-      window.removeEventListener("scroll", requestSync);
-      window.removeEventListener("resize", requestSync);
-      lenis?.off("scroll", requestSync);
-      timeouts.forEach((timeout) => window.clearTimeout(timeout));
+      observer.disconnect();
     };
-  }, [syncActiveHrefToViewport]);
+  }, [observedSectionIds]);
 
   return (
     <header
