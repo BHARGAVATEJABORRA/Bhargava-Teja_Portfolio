@@ -37,6 +37,7 @@ jobs:
         env:
           STATIC_EXPORT: "1"
           NEXT_PUBLIC_BASE_PATH: /Bhargava-Teja_Portfolio
+          NEXT_PUBLIC_SPOTIFY_ENDPOINT: ${{ vars.NEXT_PUBLIC_SPOTIFY_ENDPOINT }}
         run: |
           find app/api -type f -name '*.ts' | xargs rm -f
           rm -rf app/admin
