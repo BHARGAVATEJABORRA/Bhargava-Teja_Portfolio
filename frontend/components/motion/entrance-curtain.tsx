@@ -11,7 +11,7 @@ interface EntranceCurtainProps {
 const greetings = [
   { word: "Hello", note: "a calm beginning", accent: "#F0D9A0" },
   { word: "నమస్తే", note: "with warmth", accent: "#D4E3FF" },
-  { word: "నమస్కారం", note: "from Bhargava", accent: "#E5C9FF" },
+  { word: "నమస్కారం", note: "with intention", accent: "#E5C9FF" },
 ];
 
 export function EntranceCurtain({ onDone, ready }: EntranceCurtainProps) {
