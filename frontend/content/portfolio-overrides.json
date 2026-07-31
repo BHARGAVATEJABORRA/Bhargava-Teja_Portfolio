@@ -1,0 +1,1206 @@
+{
+  "projects": [
+    {
+      "title": "Creature Login UI",
+      "timeframe": "2025 – 2026",
+      "role": "Creator",
+      "category": "Frontend / UI",
+      "problem": "Login screens are functional but forgettable, with nothing to make a first impression.",
+      "approach": "Built an interactive login page in React, TypeScript, and GSAP where animated creatures track the cursor, lean toward inputs, and change expression with password strength.",
+      "outcome": "A memorable, playful authentication experience that showcases fine-grained, state-driven animation.",
+      "href": "https://github.com/BHARGAVATEJABORRA/creature-login-ui",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/creature-login-ui",
+      "stack": [
+        "React",
+        "TypeScript",
+        "GSAP"
+      ],
+      "techStack": [
+        "React",
+        "TypeScript",
+        "GSAP"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Transaction Ingestion Service (.NET 10)",
+      "timeframe": "2026",
+      "role": "Author",
+      "category": "Backend",
+      "problem": "High-volume financial transactions need reliable, well-structured ingestion.",
+      "approach": "Implemented a .NET 10 transaction-ingestion exercise focused on clean domain modeling and robust parsing and validation.",
+      "outcome": "A tidy reference for ingesting and processing transaction data in modern .NET.",
+      "href": "https://github.com/BHARGAVATEJABORRA/TransactionIngestExercise",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/TransactionIngestExercise",
+      "stack": [
+        "C#",
+        ".NET 10"
+      ],
+      "techStack": [
+        "C#",
+        ".NET"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Deep Learning: Vision Tasks with CNNs, YOLOv8 & SegFormer",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "AI/ML",
+      "problem": "Compare modern architectures across core computer-vision tasks.",
+      "approach": "Implemented image classification, object detection, segmentation, and style transfer using CNNs, YOLOv8, SegFormer, and more.",
+      "outcome": "An end-to-end survey of deep-learning vision techniques with working notebooks.",
+      "href": "https://github.com/BHARGAVATEJABORRA/deep-learning-final-project-SP24",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/deep-learning-final-project-SP24",
+      "stack": [
+        "Python",
+        "PyTorch",
+        "YOLOv8",
+        "SegFormer"
+      ],
+      "techStack": [
+        "Python",
+        "PyTorch",
+        "CNN"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Housing Price Modeling (ISL)",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "AI/ML",
+      "problem": "Predict housing prices and understand which features drive them.",
+      "approach": "Applied statistical-learning methods from ISL to a housing dataset for regression and model comparison.",
+      "outcome": "Interpretable price models with feature-importance insights.",
+      "href": "https://github.com/BHARGAVATEJABORRA/ISL_Housing-Prices_AMT",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/ISL_Housing-Prices_AMT",
+      "stack": [
+        "Python",
+        "Jupyter",
+        "scikit-learn"
+      ],
+      "techStack": [
+        "Python",
+        "scikit-learn"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Vehicle CO₂ Emissions Analysis",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "Data Science",
+      "problem": "Explain and predict vehicle CO₂ emissions from vehicle specs and fuel metrics.",
+      "approach": "Econometrics study on Canadian data (2014–2021): data prep, EDA, and multiple-regression modeling.",
+      "outcome": "Regression models that quantify how vehicle characteristics affect emissions.",
+      "href": "https://github.com/BHARGAVATEJABORRA/Vehicle-Co2-Emissions",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/Vehicle-Co2-Emissions",
+      "stack": [
+        "Python",
+        "Pandas",
+        "statsmodels"
+      ],
+      "techStack": [
+        "Python",
+        "Regression"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Amazon Rekognition on AWS (Serverless Blueprint)",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "Cloud Infrastructure",
+      "problem": "Analyze images and video at scale without managing servers.",
+      "approach": "Serverless blueprint for Amazon Rekognition (labels, faces, text, moderation, PPE, Custom Labels) with S3/Lambda triggers, Step Functions for async jobs, and DynamoDB/OpenSearch indexing — all via SAM/Terraform IaC.",
+      "outcome": "A reusable, IaC-driven pattern for production image and video analysis.",
+      "href": "https://github.com/BHARGAVATEJABORRA/Integrating-Amazon-Recognition-in-AWS-Cloud",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/Integrating-Amazon-Recognition-in-AWS-Cloud",
+      "stack": [
+        "AWS",
+        "Rekognition",
+        "Lambda",
+        "Step Functions",
+        "DynamoDB",
+        "Terraform"
+      ],
+      "techStack": [
+        "AWS",
+        "Rekognition",
+        "Serverless"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Amazon Lex V2 Chatbot",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "Cloud Infrastructure",
+      "problem": "Deliver a production-ready conversational bot across multiple channels.",
+      "approach": "Built an Amazon Lex V2 chatbot with Lambda fulfillment, DynamoDB session storage, multi-channel delivery (web/Slack/Connect), IaC (SAM/Terraform), and observability.",
+      "outcome": "A deployable, observable chatbot blueprint with session persistence.",
+      "href": "https://github.com/BHARGAVATEJABORRA/Chat-Bot-Using-Amazon-LEX",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/Chat-Bot-Using-Amazon-LEX",
+      "stack": [
+        "AWS",
+        "Amazon Lex",
+        "Lambda",
+        "DynamoDB",
+        "Terraform"
+      ],
+      "techStack": [
+        "AWS",
+        "Lex",
+        "Serverless"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "MANET Routing Protocols Survey",
+      "timeframe": "2025",
+      "role": "Author",
+      "category": "Research",
+      "problem": "Understand the trade-offs among mobile ad-hoc network routing strategies.",
+      "approach": "Surveyed proactive, reactive, and hybrid MANET routing with design goals and protocol highlights (AODV, DSR, OLSR, ZRP, SHARP, ADVR).",
+      "outcome": "A structured comparison of MANET routing protocols and their trade-offs.",
+      "href": "https://github.com/BHARGAVATEJABORRA/Routing-Protocols-For-Manet",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/Routing-Protocols-For-Manet",
+      "stack": [
+        "Networking",
+        "MANET"
+      ],
+      "techStack": [
+        "Networking",
+        "Research"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Ramp Hidden-URL Flag Fetcher",
+      "timeframe": "2025",
+      "role": "Creator",
+      "category": "Web",
+      "problem": "Fetch and surface a hidden flag from a target URL.",
+      "approach": "Built a small web utility to fetch and display the hidden URL flag, prototyped in CodeSandbox.",
+      "outcome": "A quick, deployable demo of client-side fetching and rendering.",
+      "href": "https://github.com/BHARGAVATEJABORRA/ramp-hidden-url-flag-fetcher",
+      "linkState": "configured",
+      "liveUrl": "https://9kmhq9-3000.csb.app/",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/ramp-hidden-url-flag-fetcher",
+      "stack": [
+        "HTML",
+        "JavaScript"
+      ],
+      "techStack": [
+        "HTML",
+        "JS"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Question Paper Framer",
+      "timeframe": "2025",
+      "role": "Creator",
+      "category": "Web",
+      "problem": "Creating exam question papers by hand is slow and inconsistent.",
+      "approach": "A B.Tech project at KL University that streamlines question-paper creation with HTML/CSS, later refreshed with a cleaner layout and liquid-glass UI.",
+      "outcome": "A simpler, better-looking tool for framing question papers.",
+      "href": "https://github.com/BHARGAVATEJABORRA/question-paper-framer",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/question-paper-framer",
+      "stack": [
+        "HTML",
+        "CSS"
+      ],
+      "techStack": [
+        "HTML",
+        "CSS"
+      ],
+      "metrics": []
+    },
+    {
+      "title": "Simple Calculator",
+      "timeframe": "2020",
+      "role": "Creator",
+      "category": "Web",
+      "problem": "A foundational exercise in DOM manipulation and event handling.",
+      "approach": "Built a basic calculator in vanilla JavaScript with arithmetic operations and a clean layout.",
+      "outcome": "A clean, working calculator demonstrating core JavaScript fundamentals.",
+      "href": "https://github.com/BHARGAVATEJABORRA/simple-calculator",
+      "linkState": "configured",
+      "repoUrl": "https://github.com/BHARGAVATEJABORRA/simple-calculator",
+      "stack": [
+        "JavaScript",
+        "HTML",
+        "CSS"
+      ],
+      "techStack": [
+        "JavaScript"
+      ],
+      "metrics": []
+    }
+  ],
+  "experience": {
+    "work": [
+      {
+        "organization": "Capital One",
+        "title": "Software Engineer",
+        "period": "Jul 2025 - Present",
+        "highlights": [
+          "Architect and maintain AWS cloud infrastructure (EC2, Lambda, S3, RDS) for enterprise banking systems, sustaining 99.9% uptime.",
+          "Automate deployments with Terraform and CloudFormation, cutting provisioning time by 60% across 5 engineering teams.",
+          "Implemented CI/CD with Jenkins and AWS CodePipeline, cutting release cycles from 3 weeks to 2 days and deployment failures by 70%.",
+          "Designed disaster recovery with 15-minute RTO meeting SOC2 and PCI-DSS compliance requirements.",
+          "Lowered monthly cloud spend by 25% (~$40K annual savings) through cost analysis and rightsizing."
+        ],
+        "location": "Dallas, TX"
+      },
+      {
+        "organization": "Accenture",
+        "title": "Software Engineer",
+        "period": "Jul 2021 - Jun 2023",
+        "highlights": [
+          "Designed and deployed microservices on AWS (EC2/EKS) serving 2M+ users at 99.9% uptime for Fortune 500 financial clients.",
+          "Built secure REST APIs with Spring Security (OAuth2/JWT) processing 500K+ daily calls, reducing auth failures by 85%.",
+          "Automated provisioning with Terraform, halving environment setup time; CI/CD with Jenkins and GitHub Actions cut deployments from 4 hours to 15 minutes.",
+          "Tuned PostgreSQL and DynamoDB with Redis caching, speeding API responses by 40% and cutting DB load by 60%.",
+          "Built CloudWatch dashboards detecting incidents 3x faster; resolved 200+ incidents and led 15+ Well-Architected workshops."
+        ],
+        "location": "Hyderabad, India"
+      },
+      {
+        "organization": "Accenture",
+        "title": "Associate Software Engineer",
+        "period": "May 2020 - Jun 2021",
+        "highlights": [
+          "Built serverless data-processing workflows with AWS Lambda, API Gateway, and S3 handling 500K+ daily events, cutting infrastructure costs by 30%.",
+          "Developed ML-enabled applications with pattern recognition and predictive analytics processing 500K+ transactions daily.",
+          "Created CodePipeline and Jenkins workflows reducing release errors by 85% via automated testing.",
+          "Improved SQL query performance by 50%; CloudWatch and SNS alerting cut MTTD by 70% and prevented 95% of outages."
+        ],
+        "location": "Hyderabad, India"
+      }
+    ],
+    "education": [
+      {
+        "organization": "University of Missouri - Kansas City",
+        "title": "Master of Science in Computer Science",
+        "period": "Aug 2023 - May 2025",
+        "highlights": [
+          "GPA: 3.83 · Graduate coursework in distributed systems, cloud computing, and software engineering."
+        ],
+        "location": "Kansas City, MO"
+      }
+    ],
+    "certifications": [
+      {
+        "organization": "Amazon Web Services",
+        "title": "AWS Certified Solutions Architect – Associate",
+        "period": "Active",
+        "highlights": [],
+        "badgeUrl": "https://images.credly.com/images/0e284c3f-5164-4b21-8660-0d84737941bc/image.png",
+        "verifyUrl": "https://www.credly.com/badges/aa60da34-5e5b-4665-aced-7a31b080e087/public_url",
+        "brandIconKey": "SiAmazonwebservices",
+        "brandColor": "#FF9900"
+      },
+      {
+        "organization": "Microsoft",
+        "title": "Azure Developer Associate (AZ-204)",
+        "period": "Active",
+        "highlights": [],
+        "badgeUrl": "https://images.credly.com/images/63316b60-f62d-4e51-aacc-c23cb850089c/azure-developer-associate-600x600.png",
+        "verifyUrl": "https://www.credly.com/badges/7cc8142a-e515-4ffc-85f7-27caf120af7b/public_url",
+        "brandIconKey": "SiMicrosoftazure",
+        "brandColor": "#0078D4"
+      },
+      {
+        "organization": "Microsoft",
+        "title": "Azure Fundamentals (AZ-900)",
+        "period": "Active",
+        "highlights": [],
+        "badgeUrl": "https://images.credly.com/images/be8fcaeb-c769-4858-b567-ffaaa73ce8cf/image.png",
+        "verifyUrl": "https://www.credly.com/badges/b2a5c6ea-7033-4b47-8e4c-2a200a7f219f/public_url",
+        "brandIconKey": "SiMicrosoftazure",
+        "brandColor": "#0078D4"
+      },
+      {
+        "organization": "Microsoft",
+        "title": "Azure AI Fundamentals (AI-900)",
+        "period": "Active",
+        "highlights": [],
+        "badgeUrl": "https://images.credly.com/images/4136ced8-75d5-4afb-8677-40b6236e2672/azure-ai-fundamentals-600x600.png",
+        "verifyUrl": "https://www.credly.com/badges/4746a260-add2-4d19-80fe-35864680c254/public_url",
+        "brandIconKey": "SiMicrosoftazure",
+        "brandColor": "#0078D4"
+      },
+      {
+        "organization": "Oracle",
+        "title": "Oracle Cloud Infrastructure Foundations",
+        "period": "Active",
+        "highlights": [],
+        "badgeUrl": "https://images.credly.com/images/27db49f3-8bae-4314-8a84-884935b569db/50_Oracle_Cloud_Infrastructure.png",
+        "verifyUrl": "https://catalog-education.oracle.com/ords/certview/sharebadge?id=94EF5220200418E05B601197C63E6BCB2CCD5061D98566CE5EB9384498A1B00F",
+        "brandIconKey": "SiOracle",
+        "brandColor": "#F80000"
+      },
+      {
+        "organization": "AWS + AICTE",
+        "title": "AWS Cloud Virtual Internship",
+        "period": "2020",
+        "highlights": [],
+        "verifyUrl": "https://aictecert.eduskillsfoundation.org/pages/home/verify.php?cert=acce9a106b5e284184e5990b3ea64433",
+        "brandIconKey": "SiAmazonwebservices",
+        "brandColor": "#FF9900"
+      }
+    ]
+  },
+  "skills": [
+    {
+      "category": "Cloud Platforms",
+      "skills": [
+        {
+          "name": "AWS",
+          "iconKey": "SiAmazonaws",
+          "brandColor": "#FF9900",
+          "keywords": [
+            "amazon web services",
+            "cloud"
+          ]
+        },
+        {
+          "name": "Azure",
+          "iconKey": "SiMicrosoftazure",
+          "brandColor": "#0078D4",
+          "keywords": [
+            "microsoft",
+            "cloud"
+          ]
+        },
+        {
+          "name": "Google Cloud",
+          "iconKey": "SiGooglecloud",
+          "brandColor": "#4285F4",
+          "keywords": [
+            "gcp",
+            "cloud"
+          ]
+        },
+        {
+          "name": "Oracle Cloud",
+          "iconKey": "SiOracle",
+          "brandColor": "#F80000",
+          "keywords": [
+            "oci",
+            "cloud"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Infrastructure as Code",
+      "skills": [
+        {
+          "name": "Terraform",
+          "iconKey": "SiTerraform",
+          "brandColor": "#844FBA",
+          "keywords": [
+            "iac",
+            "hashicorp"
+          ]
+        },
+        {
+          "name": "Ansible",
+          "iconKey": "SiAnsible",
+          "brandColor": "#EE0000",
+          "keywords": [
+            "automation",
+            "configuration"
+          ]
+        },
+        {
+          "name": "CloudFormation",
+          "iconKey": "SiAmazoncloudformation",
+          "brandColor": "#FF4F8B",
+          "keywords": [
+            "iac",
+            "aws"
+          ]
+        },
+        {
+          "name": "AWS CDK",
+          "iconKey": "SiAwscdk",
+          "brandColor": "#FF9900",
+          "keywords": [
+            "iac",
+            "cdk",
+            "aws"
+          ]
+        },
+        {
+          "name": "YAML",
+          "iconKey": "SiYaml",
+          "brandColor": "#CB171E",
+          "keywords": [
+            "config"
+          ]
+        },
+        {
+          "name": "JSON",
+          "iconKey": "SiJson",
+          "brandColor": "#000000",
+          "keywords": [
+            "config"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Containers & CI/CD",
+      "skills": [
+        {
+          "name": "Docker",
+          "iconKey": "SiDocker",
+          "brandColor": "#2496ED",
+          "keywords": [
+            "containers"
+          ]
+        },
+        {
+          "name": "Kubernetes",
+          "iconKey": "SiKubernetes",
+          "brandColor": "#326CE5",
+          "keywords": [
+            "k8s",
+            "orchestration"
+          ]
+        },
+        {
+          "name": "Helm",
+          "iconKey": "SiHelm",
+          "brandColor": "#0F1689",
+          "keywords": [
+            "kubernetes",
+            "charts"
+          ]
+        },
+        {
+          "name": "Jenkins",
+          "iconKey": "SiJenkins",
+          "brandColor": "#D24939",
+          "keywords": [
+            "ci",
+            "cd"
+          ]
+        },
+        {
+          "name": "GitHub Actions",
+          "iconKey": "SiGithubactions",
+          "brandColor": "#2088FF",
+          "keywords": [
+            "ci",
+            "cd"
+          ]
+        },
+        {
+          "name": "GitLab CI",
+          "iconKey": "SiGitlab",
+          "brandColor": "#FC6D26",
+          "keywords": [
+            "ci",
+            "cd"
+          ]
+        },
+        {
+          "name": "CircleCI",
+          "iconKey": "SiCircleci",
+          "brandColor": "#343434",
+          "keywords": [
+            "ci",
+            "cd"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Programming Languages",
+      "skills": [
+        {
+          "name": "Python",
+          "iconKey": "SiPython",
+          "brandColor": "#3776AB",
+          "keywords": [
+            "language"
+          ]
+        },
+        {
+          "name": "Java",
+          "iconKey": "SiJava",
+          "brandColor": "#007396",
+          "keywords": [
+            "language",
+            "jvm"
+          ]
+        },
+        {
+          "name": "JavaScript",
+          "iconKey": "SiJavascript",
+          "brandColor": "#F7DF1E",
+          "keywords": [
+            "language"
+          ]
+        },
+        {
+          "name": "TypeScript",
+          "iconKey": "SiTypescript",
+          "brandColor": "#3178C6",
+          "keywords": [
+            "language"
+          ]
+        },
+        {
+          "name": "C",
+          "iconKey": "SiC",
+          "brandColor": "#A8B9CC",
+          "keywords": [
+            "language"
+          ]
+        },
+        {
+          "name": "C++",
+          "iconKey": "SiCplusplus",
+          "brandColor": "#00599C",
+          "keywords": [
+            "language",
+            "cpp"
+          ]
+        },
+        {
+          "name": "C#",
+          "iconKey": "TbBrandCSharp",
+          "brandColor": "#512BD4",
+          "keywords": [
+            "language",
+            "dotnet",
+            "csharp"
+          ]
+        },
+        {
+          "name": "SQL",
+          "iconKey": "LuDatabase",
+          "brandColor": "#4479A1",
+          "keywords": [
+            "query",
+            "database"
+          ]
+        },
+        {
+          "name": "Bash",
+          "iconKey": "SiGnubash",
+          "brandColor": "#4EAA25",
+          "keywords": [
+            "shell",
+            "scripting"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Backend & Frameworks",
+      "skills": [
+        {
+          "name": "Node.js",
+          "iconKey": "SiNodedotjs",
+          "brandColor": "#5FA04E",
+          "keywords": [
+            "backend",
+            "javascript"
+          ]
+        },
+        {
+          "name": "Express",
+          "iconKey": "SiExpress",
+          "brandColor": "#0A0A0A",
+          "keywords": [
+            "node",
+            "api"
+          ]
+        },
+        {
+          "name": "Spring Boot",
+          "iconKey": "SiSpringboot",
+          "brandColor": "#6DB33F",
+          "keywords": [
+            "java",
+            "backend"
+          ]
+        },
+        {
+          "name": "Spring Security",
+          "iconKey": "SiSpringsecurity",
+          "brandColor": "#6DB33F",
+          "keywords": [
+            "java",
+            "auth"
+          ]
+        },
+        {
+          "name": "Hibernate",
+          "iconKey": "SiHibernate",
+          "brandColor": "#59666C",
+          "keywords": [
+            "java",
+            "orm"
+          ]
+        },
+        {
+          "name": "Flask",
+          "iconKey": "SiFlask",
+          "brandColor": "#3BABC3",
+          "keywords": [
+            "python",
+            "api"
+          ]
+        },
+        {
+          "name": ".NET",
+          "iconKey": "SiDotnet",
+          "brandColor": "#512BD4",
+          "keywords": [
+            "csharp",
+            "backend"
+          ]
+        },
+        {
+          "name": "REST APIs",
+          "iconKey": "LuGlobe",
+          "brandColor": "#FF6F00",
+          "keywords": [
+            "api",
+            "http"
+          ]
+        },
+        {
+          "name": "Microservices",
+          "iconKey": "LuNetwork",
+          "brandColor": "#00B4D8",
+          "keywords": [
+            "architecture",
+            "distributed"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Frontend",
+      "skills": [
+        {
+          "name": "React",
+          "iconKey": "SiReact",
+          "brandColor": "#61DAFB",
+          "keywords": [
+            "ui",
+            "javascript"
+          ]
+        },
+        {
+          "name": "Next.js",
+          "iconKey": "SiNextdotjs",
+          "brandColor": "#000000",
+          "keywords": [
+            "react",
+            "ssr"
+          ]
+        },
+        {
+          "name": "Tailwind CSS",
+          "iconKey": "SiTailwindcss",
+          "brandColor": "#06B6D4",
+          "keywords": [
+            "css",
+            "styling"
+          ]
+        },
+        {
+          "name": "HTML5",
+          "iconKey": "SiHtml5",
+          "brandColor": "#E34F26",
+          "keywords": [
+            "markup",
+            "web"
+          ]
+        },
+        {
+          "name": "CSS",
+          "iconKey": "SiCss3",
+          "brandColor": "#663399",
+          "keywords": [
+            "styling",
+            "web"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Databases",
+      "skills": [
+        {
+          "name": "MySQL",
+          "iconKey": "SiMysql",
+          "brandColor": "#4479A1",
+          "keywords": [
+            "sql",
+            "relational"
+          ]
+        },
+        {
+          "name": "PostgreSQL",
+          "iconKey": "SiPostgresql",
+          "brandColor": "#4169E1",
+          "keywords": [
+            "sql",
+            "relational"
+          ]
+        },
+        {
+          "name": "MongoDB",
+          "iconKey": "SiMongodb",
+          "brandColor": "#47A248",
+          "keywords": [
+            "nosql",
+            "document"
+          ]
+        },
+        {
+          "name": "SQL Server",
+          "iconKey": "SiMicrosoftsqlserver",
+          "brandColor": "#CC2927",
+          "keywords": [
+            "mssql",
+            "relational"
+          ]
+        },
+        {
+          "name": "Redis",
+          "iconKey": "SiRedis",
+          "brandColor": "#FF4438",
+          "keywords": [
+            "cache",
+            "in-memory"
+          ]
+        },
+        {
+          "name": "DynamoDB",
+          "iconKey": "SiAmazondynamodb",
+          "brandColor": "#4053D6",
+          "keywords": [
+            "nosql",
+            "aws"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Data Science & AI",
+      "skills": [
+        {
+          "name": "TensorFlow",
+          "iconKey": "SiTensorflow",
+          "brandColor": "#FF6F00",
+          "keywords": [
+            "deep learning",
+            "ml"
+          ]
+        },
+        {
+          "name": "NumPy",
+          "iconKey": "SiNumpy",
+          "brandColor": "#013243",
+          "keywords": [
+            "python",
+            "arrays"
+          ]
+        },
+        {
+          "name": "Pandas",
+          "iconKey": "SiPandas",
+          "brandColor": "#150458",
+          "keywords": [
+            "python",
+            "dataframes"
+          ]
+        },
+        {
+          "name": "Matplotlib",
+          "iconKey": "LuChartLine",
+          "brandColor": "#11557C",
+          "keywords": [
+            "python",
+            "plotting"
+          ]
+        },
+        {
+          "name": "scikit-learn",
+          "iconKey": "SiScikitlearn",
+          "brandColor": "#F7931E",
+          "keywords": [
+            "ml",
+            "python"
+          ]
+        },
+        {
+          "name": "Jupyter",
+          "iconKey": "SiJupyter",
+          "brandColor": "#F37626",
+          "keywords": [
+            "notebooks",
+            "python"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Generative AI",
+      "skills": [
+        {
+          "name": "ChatGPT",
+          "iconKey": "SiOpenai",
+          "brandColor": "#412991",
+          "keywords": [
+            "codex",
+            "gpt",
+            "openai",
+            "llm"
+          ]
+        },
+        {
+          "name": "Claude",
+          "iconKey": "SiClaude",
+          "brandColor": "#D97757",
+          "keywords": [
+            "claude code",
+            "cowork",
+            "anthropic",
+            "llm"
+          ]
+        },
+        {
+          "name": "Perplexity",
+          "iconKey": "SiPerplexity",
+          "brandColor": "#1FB8CD",
+          "keywords": [
+            "comet",
+            "research",
+            "llm"
+          ]
+        },
+        {
+          "name": "Prompt Engineering",
+          "iconKey": "LuMessageSquareCode",
+          "brandColor": "#38BDF8",
+          "keywords": [
+            "llm",
+            "ai"
+          ]
+        },
+        {
+          "name": "AI Integration",
+          "iconKey": "LuBot",
+          "brandColor": "#34D399",
+          "keywords": [
+            "ai",
+            "api",
+            "automation"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Testing & Monitoring",
+      "skills": [
+        {
+          "name": "JUnit",
+          "iconKey": "SiJunit5",
+          "brandColor": "#25A162",
+          "keywords": [
+            "java",
+            "testing"
+          ]
+        },
+        {
+          "name": "Mockito",
+          "iconKey": "LuFlaskConical",
+          "brandColor": "#4951F4",
+          "keywords": [
+            "java",
+            "mocking",
+            "testing"
+          ]
+        },
+        {
+          "name": "Selenium",
+          "iconKey": "SiSelenium",
+          "brandColor": "#43B02A",
+          "keywords": [
+            "e2e",
+            "testing"
+          ]
+        },
+        {
+          "name": "ELK Stack",
+          "iconKey": "SiElasticstack",
+          "brandColor": "#005571",
+          "keywords": [
+            "elasticsearch",
+            "logging"
+          ]
+        },
+        {
+          "name": "CloudWatch",
+          "iconKey": "SiAmazoncloudwatch",
+          "brandColor": "#FF4F8B",
+          "keywords": [
+            "monitoring",
+            "observability",
+            "aws"
+          ]
+        },
+        {
+          "name": "Postman",
+          "iconKey": "SiPostman",
+          "brandColor": "#FF6C37",
+          "keywords": [
+            "api",
+            "testing"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Developer Tools",
+      "skills": [
+        {
+          "name": "Git",
+          "iconKey": "SiGit",
+          "brandColor": "#F03C2E",
+          "keywords": [
+            "vcs",
+            "version control"
+          ]
+        },
+        {
+          "name": "Maven",
+          "iconKey": "SiApachemaven",
+          "brandColor": "#C71A36",
+          "keywords": [
+            "java",
+            "build"
+          ]
+        },
+        {
+          "name": "Gradle",
+          "iconKey": "SiGradle",
+          "brandColor": "#02303A",
+          "keywords": [
+            "java",
+            "build"
+          ]
+        },
+        {
+          "name": "IntelliJ IDEA",
+          "iconKey": "SiIntellijidea",
+          "brandColor": "#000000",
+          "keywords": [
+            "ide",
+            "jetbrains"
+          ]
+        },
+        {
+          "name": "Jira",
+          "iconKey": "SiJira",
+          "brandColor": "#0052CC",
+          "keywords": [
+            "agile",
+            "tracking"
+          ]
+        }
+      ]
+    },
+    {
+      "category": "Operating Systems",
+      "skills": [
+        {
+          "name": "Linux",
+          "iconKey": "SiLinux",
+          "brandColor": "#FCC624",
+          "keywords": [
+            "os",
+            "unix"
+          ]
+        },
+        {
+          "name": "Ubuntu",
+          "iconKey": "SiUbuntu",
+          "brandColor": "#E95420",
+          "keywords": [
+            "os",
+            "linux"
+          ]
+        },
+        {
+          "name": "macOS",
+          "iconKey": "SiApple",
+          "brandColor": "#000000",
+          "keywords": [
+            "os",
+            "apple"
+          ]
+        },
+        {
+          "name": "Windows",
+          "iconKey": "SiWindows",
+          "brandColor": "#0078D4",
+          "keywords": [
+            "os",
+            "microsoft"
+          ]
+        }
+      ]
+    }
+  ],
+  "articles": [
+    {
+      "slug": "loop-engineering",
+      "title": "Loop Engineering: How Coding Agents Turn Feedback Into Progress",
+      "excerpt": "Better coding-agent retries begin with clear goals, trusted evidence, bounded authority, and explicit decisions about when to accept, revise, stop, or escalate.",
+      "publishedAt": "July 27, 2026",
+      "readTime": "10 min read",
+      "href": "https://www.linkedin.com/pulse/loop-engineering-how-coding-agents-turn-feedback-progress-borra-vdx8c/",
+      "isExternal": true,
+      "isReal": true,
+      "premise": "Loop Engineering makes agent progress auditable: every attempt has a goal, a scope, evidence, a budget, and a deliberate ending.",
+      "takeaway": "A coding agent should earn its next attempt with new evidence—and hand consequential decisions back to people with a clear, reviewable record.",
+      "tags": [
+        "Coding Agents",
+        "AI Engineering",
+        "Verification"
+      ],
+      "source": "LinkedIn · AI Engineering",
+      "tagline": "The capability is that an agent can keep trying; the engineering is deciding whether it should.",
+      "body": "A coding agent can produce a green test and still make the product worse. Loop Engineering is the control system around each attempt: define the goal and constraints, let the agent make a bounded change, observe the result, verify it against both the task and protected behavior, then make an explicit decision about what happens next. The loop is Plan → Execute → Observe → Verify → Decide—not an unlimited prompt-and-retry cycle.\n\nThe quality of a retry depends on the evidence it receives. Tests, logs, diffs, screenshots, and runtime behavior should change the next action. A repeat is justified only when there is a new hypothesis, a narrower scope, a different tool, or a credible transient condition. Budgets for attempts, time, tokens, parallel work, and polling keep an agent from turning uncertainty into expensive motion.\n\nA reliable stop gate recognizes four outcomes: accept when the required evidence passes; revise when a specific, fixable gap remains; stop safely when scope, permission, budget, or evidence integrity fails; and escalate when the unresolved question is about intent, architecture, security, policy, or irreversible impact. Each outcome routes work to the stage that can actually change it.\n\nThe checkout example makes the boundary concrete. A postal-code validation may fix the original failing case while breaking digital-only orders. Protected-behavior tests reject that candidate, tell the next attempt exactly what regressed, and produce an evidence packet for review. When requirements are genuinely undefined, the correct result is a well-formed human question—not another confident guess.",
+      "accent": "#2dd4bf",
+      "ogImage": "/articles/loop-engineering-cover.png"
+    },
+    {
+      "slug": "mcp-layer-ai-thinking-to-doing",
+      "title": "MCP: The Layer That Turned AI Thinking Into AI Doing",
+      "excerpt": "Why Model Context Protocol is the interoperability layer that lets AI applications safely discover context, invoke tools, and work across the systems where work happens.",
+      "publishedAt": "March 9, 2026",
+      "readTime": "14 min read",
+      "href": "https://www.linkedin.com/pulse/mcp-layer-turned-ai-thinking-doing-bhargava-teja-borra-szezc/",
+      "isExternal": true,
+      "isReal": true,
+      "premise": "MCP is the interoperability layer that transforms AI from conversational intelligence into governed, operational intelligence.",
+      "takeaway": "Build the connection once, but govern every capability: standard access only becomes useful when permissions, approvals, and audit trails are designed with equal care.",
+      "tags": [
+        "MCP",
+        "AI Agents",
+        "Software Architecture"
+      ],
+      "source": "LinkedIn · AI Infrastructure",
+      "tagline": "The model is still the brain. MCP gives it a dependable way to reach the real world.",
+      "body": "AI systems can reason about a task without being able to read a dashboard, inspect a pull request, retrieve a document, or make a carefully governed change. Model Context Protocol (MCP) addresses that gap with a shared interface between AI applications and the tools, systems, and data they need. It replaces a growing web of custom, model-specific integrations with a standard capability layer.\n\nThe architecture separates responsibility cleanly. The host is the AI application and policy boundary; its clients speak the protocol; MCP servers contain the integrations, authentication, error handling, and domain logic. That host–client–server design means a change in an external API can be handled once in the server rather than rebuilt separately for every model or agent surface.\n\nMCP servers expose four useful capability types: tools for taking actions, resources for retrieving read-only context, prompts for reusable workflows, and sampling for model-assisted multi-step collaboration. Together they let a request move from reasoning to a coordinated workflow—for example, reading a pull request through GitHub, identifying an issue, and preparing a Jira ticket in the same interaction.\n\nInteroperability is not a substitute for governance. Local stdio servers are ideal for private development workflows, while remote HTTP deployments need scoped identity, auditability, and stronger controls. Least privilege, isolated servers, schema validation, approval gates for irreversible actions, and audit logs are the foundations that turn MCP from a compelling demo into dependable infrastructure.",
+      "accent": "#a78bfa",
+      "ogImage": "/articles/mcp-cover.png"
+    },
+    {
+      "slug": "dev-ops",
+      "title": "DEV Ops",
+      "excerpt": "A concise look at DevOps as a culture of shared responsibility, combining development, operations, agile delivery, and system-oriented thinking.",
+      "publishedAt": "October 30, 2021",
+      "readTime": "3 min read",
+      "href": "https://www.linkedin.com/pulse/dev-ops-bhargava-teja/",
+      "isExternal": true,
+      "isReal": true,
+      "premise": "DevOps is a cultural and operational practice that brings development and operations together around faster, more reliable delivery.",
+      "takeaway": "The strongest delivery teams share responsibility for both building the software and keeping it reliable once it is running.",
+      "tags": [
+        "DevOps",
+        "Agile",
+        "Site Reliability"
+      ],
+      "source": "LinkedIn · DevOps",
+      "tagline": "DevOps turns the handoff between building software and running it into a shared practice.",
+      "body": "DevOps is a change in IT culture centered on rapid service delivery through agile and lean practices, viewed through a system-oriented lens. Its name joins development and operations because the practice is about more than a handoff: it brings the teams responsible for building software and running it into the same collaborative effort.\n\nThe evolution of the discipline reflects the evolution of computing itself. Early programming created development roles; the growth of networked systems created operations and network centers; and later, dedicated site reliability engineering demonstrated the value of operating production systems closely with the people who build them.\n\nAgile and DevOps reinforce each other. Agile shortens the feedback cycle for creating working software, while DevOps connects that delivery work to the reliability, availability, performance, and operational learning required in production. Together they help teams reduce waste, continuously improve, and deliver value with shared accountability.",
+      "accent": "#f6c343",
+      "ogImage": "/articles/devops-cover.png"
+    }
+  ],
+  "siteConfig": {
+    "fullName": "Bhargava Teja Borra",
+    "roleLine": "Software Engineer",
+    "location": "Addison (Dallas), TX, USA",
+    "heroTagline": "Architect and engineer scalable AWS infrastructure with measurable reliability, performance, and cost outcomes.",
+    "aboutBio": "I'm a software engineer with 4+ years building high-scale AWS cloud infrastructure for enterprise banking and Fortune 500 systems — currently at Capital One in Dallas. I design architectures that hold 99.9% uptime, automate everything repeatable with Terraform and CloudFormation, and build CI/CD pipelines that turned three-week release cycles into two-day ships. I care about practical engineering: clear ownership, measurable outcomes, and systems the next engineer can run without a manual.",
+    "aboutSpecialties": [
+      "AWS Platform Engineering",
+      "Infrastructure as Code",
+      "CI/CD & Automation",
+      "Observability & Reliability"
+    ],
+    "aboutStats": [
+      {
+        "value": "4+",
+        "label": "Years building cloud systems"
+      },
+      {
+        "value": "99.9%",
+        "label": "Uptime on banking workloads"
+      },
+      {
+        "value": "35%",
+        "label": "Cloud costs cut"
+      }
+    ],
+    "currentEmployer": "Capital One",
+    "email": "bhargavateja.borra@gmail.com",
+    "githubUrl": "https://github.com/BHARGAVATEJABORRA",
+    "linkedinUrl": "https://www.linkedin.com/in/bhargavatejaborra/",
+    "resumeUrl": "/bhargava-teja-borra-resume.pdf",
+    "twitterUrl": "",
+    "customLink": {
+      "label": "",
+      "url": ""
+    },
+    "openaiModel": "gpt-4o-mini",
+    "aiSystemPrompt": "You are the AI companion on Bhargava Teja Borra's portfolio. Answer only from the provided portfolio context; if a detail is missing, say so directly. Keep answers concise, specific, and recruiter-friendly.",
+    "aiEnabled": false,
+    "spotifyEnabled": false,
+    "titleTemplate": "Bhargava Teja Borra | Software Engineer (Cloud & Platform)",
+    "metaDescription": "Recruiter-first software engineering portfolio with resume-backed cloud architecture, reliability, and delivery outcomes.",
+    "ogImageUrl": "/og-image.svg",
+    "analyticsId": "",
+    "contactHeading": "Let's build something reliable",
+    "contactSubheading": "Recruiter and hiring-manager outreach welcome — typically answered within one business day.",
+    "contactEmail": "bhargavateja.borra@gmail.com",
+    "contactFormDestination": "bhargavateja.borra@gmail.com",
+    "availableFor": "Open to senior IC and tech-lead opportunities in cloud, platform, and backend engineering",
+    "showContactForm": true,
+    "availabilityStatus": "available",
+    "showAvailabilityBadge": true,
+    "showProjects": true,
+    "showExperience": true,
+    "showSkills": true,
+    "showArticles": true,
+    "nowText": "Currently at Capital One building AWS platform tooling.\n\nLearning: deeper Kubernetes internals and platform-engineering patterns.\n\nOpen to: senior IC and tech-lead conversations in cloud, platform, and backend.",
+    "nowUpdatedAt": "July 2026"
+  }
+}

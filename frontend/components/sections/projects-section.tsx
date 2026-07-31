@@ -1,0 +1,260 @@
+"use client";
+
+import type { CSSProperties, Ref } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { LuArrowRight, LuThumbsUp } from "react-icons/lu";
+
+import { Container } from "@/components/ui/container";
+import type { ProjectSummary } from "@/content/portfolio-content";
+import {
+  requestScrollRuntimeUpdate,
+  subscribeToScrollRead,
+  subscribeToScrollWrite,
+} from "@/lib/scroll-runtime";
+import { likeKey, useLikes } from "@/lib/use-likes";
+
+interface GithubProject {
+  id: number;
+  title: string;
+  category: string;
+  timeframe: string;
+  description: string;
+  tagline?: string;
+  stack: string[];
+  accent: string;
+  href: string;
+  /** Stable key for the real like system (/api/likes). */
+  likeId: string;
+  imageUrl?: string;
+  imageAlt?: string;
+}
+
+// Card accents cycle through the section's established palette so DB-managed
+// projects keep the same visual rhythm as the original hand-tuned cards.
+const CARD_ACCENTS = ["#38bdf8", "#6aa6ff", "#c084fc", "#f59e0b", "#34d399"];
+
+function toGithubProjects(projects: ProjectSummary[]): GithubProject[] {
+  return projects.map((project, index) => ({
+    id: index + 1,
+    title: project.title,
+    category: project.category,
+    timeframe: project.timeframe,
+    description: `${project.problem} ${project.approach}`,
+    tagline: project.outcome,
+    stack: project.stack,
+    accent: CARD_ACCENTS[index % CARD_ACCENTS.length],
+    href: project.linkState === "configured" ? project.liveUrl ?? project.repoUrl ?? project.href : project.href,
+    likeId: likeKey(project.title),
+    imageUrl: project.imageUrl,
+    imageAlt: project.imageAlt,
+  }));
+}
+
+// Sticky stack tuning — mirrors kartavya-singh.com:
+// each card pins at (BASE + i*STEP) so previous cards peek above the next.
+// BASE is bumped to sit below the sticky section header (kicker + h2) that
+// stays pinned for the whole section.
+const STACK_BASE_PX = 220;
+const STACK_STEP_PX = 75;
+const SCALE_STEP = 0.00625;
+
+function ProjectCard({
+  project,
+  index,
+  slotRef,
+  liked,
+  likeCount,
+  onToggleLike,
+}: {
+  project: GithubProject;
+  index: number;
+  slotRef?: Ref<HTMLDivElement>;
+  liked: boolean;
+  likeCount: number;
+  onToggleLike: () => void;
+}) {
+  const accent = project.accent;
+
+  const stickyStyle: CSSProperties = {
+    position: "sticky",
+    top: `${STACK_BASE_PX + index * STACK_STEP_PX}px`,
+    transform: `scale(${1 - index * SCALE_STEP})`,
+    transformOrigin: "top center",
+    ["--article-accent" as string]: accent,
+    zIndex: 10 + index,
+  };
+
+  return (
+    <div ref={slotRef} className="project-sticky-slot" style={stickyStyle}>
+      <article className="article-card project-card-flat group" style={{ ["--article-accent" as string]: accent }}>
+        <button
+          type="button"
+          onClick={onToggleLike}
+          aria-pressed={liked}
+          aria-label={liked ? "Unlike project" : "Like project"}
+          className="article-like"
+          data-liked={liked}
+        >
+          <LuThumbsUp size={18} aria-hidden />
+        </button>
+
+        <div className="article-info">
+          <p className="article-kicker">
+            <span>{project.category}</span>
+            <span className="article-kicker-sep" aria-hidden>
+              |
+            </span>
+            <span>{project.timeframe}</span>
+          </p>
+
+          <h3 className="article-title">{project.title}</h3>
+
+          <span className="article-rule" aria-hidden />
+
+          {project.tagline ? <p className="article-tagline">&quot;{project.tagline}&quot;</p> : null}
+
+          <p className="article-body">{project.description}</p>
+
+          <div className="article-meta">
+            <span>Stack</span>
+            {project.stack.slice(0, 4).map((tech) => (
+              <span key={tech} className="article-tag">
+                {tech}
+              </span>
+            ))}
+          </div>
+
+          <a
+            href={project.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="article-learn"
+          >
+            Learn More <LuArrowRight size={16} aria-hidden />
+          </a>
+        </div>
+
+        <div className="article-image" aria-hidden={project.imageUrl ? undefined : true}>
+          {project.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element -- admin-uploaded asset, no loader config
+            <img
+              src={project.imageUrl}
+              alt={project.imageAlt ?? `${project.title} preview`}
+              loading="lazy"
+              className="article-image-photo"
+            />
+          ) : (
+            <div className="article-image-glow" />
+          )}
+          <span className="article-image-label">{project.category}</span>
+          <span className="article-image-likes">Likes: {likeCount}</span>
+        </div>
+      </article>
+    </div>
+  );
+}
+
+export function ProjectsSection({ projects }: { projects: ProjectSummary[] }) {
+  const stackRef = useRef<HTMLDivElement>(null);
+  const lastCardRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const likes = useLikes("project");
+  const githubProjects = useMemo(() => toGithubProjects(projects), [projects]);
+
+  // Fade the sticky "My Projects" title once the last card starts dominating
+  // the top of the viewport. Pure-CSS sticky can't handle this cleanly
+  // because the title's containing block extends past the last card's pin
+  // release point, so it lingers over the released card (see screenshot).
+  useEffect(() => {
+    const el = lastCardRef.current;
+    const stack = stackRef.current;
+    const title = titleRef.current;
+    if (!el || !stack || !title) return;
+
+    let needsMeasurement = true;
+    let fadeCutoff = Number.POSITIVE_INFINITY;
+    let pendingFade = false;
+    let appliedFade = false;
+    let width = window.innerWidth;
+    let height = window.innerHeight;
+
+    const measure = () => {
+      const stackTop = stack.getBoundingClientRect().top + window.scrollY;
+      // Match the old sticky release condition (last-card rect.top < 200)
+      // from stable layout geometry instead of forcing a rect read every tick.
+      fadeCutoff = stackTop + stack.scrollHeight - el.offsetHeight - 200;
+      needsMeasurement = false;
+    };
+
+    const resizeObserver = new ResizeObserver(() => {
+      needsMeasurement = true;
+      requestScrollRuntimeUpdate();
+    });
+    resizeObserver.observe(stack);
+    resizeObserver.observe(el);
+
+    const unsubscribeRead = subscribeToScrollRead((snapshot) => {
+      if (snapshot.width !== width || snapshot.height !== height) {
+        width = snapshot.width;
+        height = snapshot.height;
+        needsMeasurement = true;
+      }
+      if (needsMeasurement) measure();
+      pendingFade = snapshot.y > fadeCutoff;
+    });
+    const unsubscribeWrite = subscribeToScrollWrite(() => {
+      if (pendingFade === appliedFade) return;
+      appliedFade = pendingFade;
+      title.classList.toggle("projects-header-sticky--fade", appliedFade);
+    });
+    requestScrollRuntimeUpdate();
+
+    return () => {
+      resizeObserver.disconnect();
+      unsubscribeRead();
+      unsubscribeWrite();
+      title.classList.remove("projects-header-sticky--fade");
+    };
+  }, []);
+
+  const lastIndex = githubProjects.length - 1;
+
+  return (
+    <section
+      id="projects"
+      aria-labelledby="projects-title"
+      className="relative scroll-mt-28 pb-32 pt-20 sm:pt-24"
+    >
+      <Container className="w-full">
+        <div ref={stackRef} className="project-stack">
+          {/* Sticky title lives INSIDE the stack so its containing block is
+              the same as the cards. It fades out when the last card is
+              taking over the viewport (see effect above). */}
+          <div ref={titleRef} className="projects-header-sticky">
+            <h2
+              id="projects-title"
+              className="text-center text-4xl font-bold tracking-tight text-[var(--color-ink)] sm:text-5xl"
+            >
+              My Projects
+            </h2>
+          </div>
+          {githubProjects.map((project, index) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              index={index}
+              slotRef={index === lastIndex ? lastCardRef : undefined}
+              liked={likes.isLiked(project.likeId)}
+              likeCount={likes.count(project.likeId)}
+              onToggleLike={() => likes.toggle(project.likeId)}
+            />
+          ))}
+          {/* Trailing spacer: small buffer so the last card + title don't
+              snap loose exactly at the seam. Kept short so title fades out
+              with the last card instead of hanging on after. */}
+          <div aria-hidden className="project-stack-end" />
+        </div>
+      </Container>
+    </section>
+  );
+}

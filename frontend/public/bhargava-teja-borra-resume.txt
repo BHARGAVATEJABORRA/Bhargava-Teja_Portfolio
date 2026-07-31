@@ -1,0 +1,45 @@
+Bhargava Teja Borra
+Senior Software Engineer (Cloud & Platform)
+Addison (Dallas), TX, USA
+
+SUMMARY
+Architect and engineer scalable AWS infrastructure and microservice platforms with 3+ years of experience delivering production reliability, cost, and performance outcomes.
+Reduced compute costs by 35% and improved API/deployment performance by 40% through automation, observability, and architecture modernization.
+
+TECHNICAL SKILLS
+Cloud/DevOps: AWS, Azure, Docker, Kubernetes, Terraform, GitHub Actions, Jenkins, CircleCI
+Programming Languages: Python, Java, JavaScript, TypeScript, SQL, Bash
+Backend/Infrastructure: Node.js, MongoDB, CloudFormation, API Gateway, Microservices
+Frontend: React, Next.js, Tailwind CSS
+AI/ML: SageMaker, Predictive Analytics, ChatGPT/LLM Tools, Machine Learning
+
+WORK EXPERIENCE
+Senior Software Engineer | Capital One | Addison, TX | Jan 2023 - Present
+- Led migration of core services to AWS serverless microservices and API-driven architecture.
+- Engineered multi-region AWS deployment patterns with Terraform for resilient rollouts.
+- Built CI/CD automation in GitHub Actions to improve release speed and quality controls.
+- Reduced compute costs by 35% through rightsizing and automation strategies.
+- Improved API and deployment performance by 40% with observability-led tuning and refactors.
+
+Software Engineer | Accenture | Hyderabad, India | Nov 2020 - Dec 2022
+- Built ETL pipelines with Python and AWS Step Functions for scalable data-processing flows.
+- Containerized services using Docker and Kubernetes to improve portability and reliability.
+- Implemented Terraform-based infrastructure as code to reduce environment drift.
+- Improved data-processing efficiency by 40% and reduced operational costs by 35% through automation.
+
+EDUCATION
+University of Missouri - Kansas City
+Master of Science in Computer Science | 2019 - 2021 | GPA: 3.83
+
+CERTIFICATIONS
+- AWS Solutions Architect - Associate
+- Microsoft Azure Developer Associate (AZ-204)
+- Microsoft Azure Fundamentals (AZ-900)
+- Microsoft Azure AI Fundamentals (AI-900)
+- Oracle Cloud Infrastructure Foundations
+- AWS Cloud Virtual Internship (2020)
+
+CONTACT
+Email: bhargavateja.borra@gmail.com
+GitHub: https://github.com/Tony1btech
+LinkedIn: https://www.linkedin.com/in/bhargav-borra/

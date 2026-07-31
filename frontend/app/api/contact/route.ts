@@ -1,0 +1,241 @@
+import { NextResponse } from "next/server";
+
+import { recordChange } from "@/lib/change-log";
+import { createContactSubmission } from "@/lib/insights-store";
+import { clientIp, rateLimit } from "@/lib/rate-limit";
+
+interface ContactPayload {
+  name?: unknown;
+  email?: unknown;
+  phone?: unknown;
+  topic?: unknown;
+  message?: unknown;
+  website?: unknown;
+}
+
+type ContactValidationResult =
+  | { ok: false; message: string }
+  | {
+      ok: true;
+      data: {
+        name: string;
+        email: string;
+        phone: string;
+        topic: string;
+        message: string;
+        website: string;
+      };
+    };
+
+interface ContactSubmission {
+  name: string;
+  email: string;
+  phone?: string;
+  topic: string;
+  message: string;
+}
+
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 3;
+
+function getString(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function validatePayload(payload: ContactPayload): ContactValidationResult {
+  const name = getString(payload.name);
+  const email = getString(payload.email);
+  const phone = getString(payload.phone);
+  const topic = getString(payload.topic);
+  const message = getString(payload.message);
+  const website = getString(payload.website);
+
+  if (!name || name.length < 2) {
+    return { ok: false, message: "Please provide your name (at least 2 characters)." };
+  }
+  if (name.length > 200) {
+    return { ok: false, message: "Please keep your name under 200 characters." };
+  }
+
+  if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { ok: false, message: "Please provide a valid email address." };
+  }
+
+  if (phone && (phone.length < 7 || phone.length > 40)) {
+    return { ok: false, message: "Please provide a valid phone number or leave it blank." };
+  }
+
+  if (topic.length > 200) {
+    return { ok: false, message: "Please keep the topic under 200 characters." };
+  }
+
+  if (!message || message.length < 10) {
+    return { ok: false, message: "Please provide a short message (at least 10 characters)." };
+  }
+  if (message.length > 5000) {
+    return { ok: false, message: "Please keep your message under 5,000 characters." };
+  }
+
+  return {
+    ok: true,
+    data: {
+      name,
+      email,
+      phone,
+      topic,
+      message,
+      website,
+    },
+  };
+}
+
+function isLikelyBotSubmission(website: string): boolean {
+  return website.length > 0;
+}
+
+async function deliverContactSubmission(submission: ContactSubmission): Promise<void> {
+  const webhookUrl = process.env.CONTACT_WEBHOOK_URL?.trim();
+  const toEmail = process.env.CONTACT_TO_EMAIL?.trim();
+  const payload = {
+    ...submission,
+    to: toEmail || undefined,
+    submittedAt: new Date().toISOString(),
+  };
+
+  if (webhookUrl) {
+    const response = await fetch(webhookUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(process.env.CONTACT_WEBHOOK_SECRET
+          ? { Authorization: `Bearer ${process.env.CONTACT_WEBHOOK_SECRET}` }
+          : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Contact webhook failed with ${response.status}`);
+    }
+
+    return;
+  }
+
+  console.info("[contact_submission]", {
+    name: submission.name,
+    email: submission.email,
+    phone: submission.phone || undefined,
+    topic: submission.topic,
+    messagePreview: `${submission.message.slice(0, 80)}${submission.message.length > 80 ? "..." : ""}`,
+  });
+}
+
+export async function POST(request: Request) {
+  let payload: ContactPayload;
+
+  try {
+    payload = (await request.json()) as ContactPayload;
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "INVALID_JSON",
+          message: "Unable to process the request payload.",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const validation = validatePayload(payload);
+
+  if (!validation.ok) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "VALIDATION_ERROR",
+          message: validation.message,
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const { name, email, phone, topic, message, website } = validation.data;
+
+  if (isLikelyBotSubmission(website)) {
+    return NextResponse.json(
+      {
+        ok: true,
+        message: "Message received. I will reply within one business day.",
+      },
+      { status: 202 },
+    );
+  }
+
+  const limit = await rateLimit(`contact:${clientIp(request)}`, {
+    limit: RATE_LIMIT_MAX_REQUESTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+  });
+  if (!limit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "RATE_LIMITED",
+          message: "Too many requests. Please wait a minute before trying again.",
+        },
+      },
+      { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
+    );
+  }
+
+  // Persist to the admin inbox first (best-effort — never blocks delivery).
+  const submissionId = await createContactSubmission({
+    name,
+    email,
+    phone: phone || null,
+    topic: topic || "Portfolio contact",
+    message,
+  });
+  if (submissionId) {
+    await recordChange({
+      entity: "settings",
+      action: "create",
+      entityId: submissionId,
+      field: "contact",
+      summary: `New contact message from ${name}`,
+    });
+  }
+
+  try {
+    await deliverContactSubmission({
+      name,
+      email,
+      phone,
+      topic: topic || "Portfolio contact",
+      message,
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "DELIVERY_ERROR",
+          message: "Message delivery failed. Please email directly.",
+        },
+      },
+      { status: 502 },
+    );
+  }
+
+  return NextResponse.json(
+    {
+      ok: true,
+      message: "Message received. I will reply within one business day.",
+    },
+    { status: 201 },
+  );
+}

@@ -1,0 +1,170 @@
+// Portfolio content database (single-admin CMS).
+//
+// SQLite keeps this zero-ops for local dev and single-instance Node hosting.
+// Array-shaped fields (stack, highlights, tags, …) are stored as JSON strings;
+// lib/content-store.ts owns the (de)serialization and keeps the app-facing
+// shapes identical to the interfaces in content/portfolio-content.ts.
+
+generator client {
+  provider = "prisma-client-js"
+  // driverAdapters lets production talk to Turso/libSQL via @prisma/adapter-libsql
+  // while local dev keeps using the plain SQLite file.
+  previewFeatures = ["driverAdapters"]
+  // darwin-arm64 = local dev on Apple Silicon; linux target keeps CI/containers working.
+  binaryTargets = ["native", "darwin-arm64", "linux-arm64-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id        String   @id @default(cuid())
+  title     String
+  timeframe String
+  role      String
+  category  String
+  problem   String
+  approach  String
+  outcome   String
+  href      String   @default("#contact")
+  linkState String   @default("on-request") // "configured" | "on-request"
+  liveUrl   String?
+  repoUrl   String?
+  imageUrl  String? // card cover image (upload via /api/admin/upload). Recommended 1200×800 (3:2), <1 MB.
+  imageAlt  String? // accessible alt text for the cover image
+  stack     String   @default("[]") // JSON string[]
+  techStack String   @default("[]") // JSON string[]
+  metrics   String   @default("[]") // JSON { value, label }[]
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Site-wide configuration as key-value pairs (JSON-encoded values).
+// Keys/defaults/typing live in lib/site-config.ts; secrets (API keys) are
+// stored here but never published to content/portfolio-overrides.json.
+model SiteConfig {
+  key       String   @id
+  value     String // JSON-encoded: string | boolean | array | object
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Experience {
+  id           String   @id @default(cuid())
+  kind         String // "work" | "education" | "certifications"
+  organization String
+  title        String
+  period       String
+  location     String?
+  href         String?
+  badgeUrl     String?
+  verifyUrl    String?
+  brandIconKey String?
+  brandColor   String?
+  highlights   String   @default("[]") // JSON string[]
+  sortOrder    Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Append-only audit trail of every admin mutation (create/update/delete/upload/
+// publish/settings). Written via raw SQL in lib/change-log.ts so it works without
+// regenerating the Prisma client (same convention as SiteConfig). Never published
+// to the public overlay.
+model ChangeLog {
+  id        String   @id
+  entity    String // "project" | "experience" | "skill" | "article" | "settings" | "resume" | "media"
+  entityId  String? // row id when applicable
+  action    String // "create" | "update" | "delete" | "upload" | "publish"
+  summary   String // human-readable one-liner shown in the admin activity log
+  field     String? // optional: which field/section changed
+  snapshot  String? // optional JSON of the new (or removed) value
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([entity])
+}
+
+// First-party, privacy-first analytics (no cookies, no third party). Written via
+// raw SQL from /api/track; aggregated for the admin dashboard.
+model AnalyticsEvent {
+  id        String   @id
+  type      String // "pageview" | "event"
+  name      String // path for pageviews, event name for events
+  path      String?
+  referrer  String?
+  sessionId String? // anonymous, rotating per-visit id (not PII)
+  meta      String? // optional JSON
+  createdAt DateTime @default(now())
+
+  @@index([type])
+  @@index([createdAt])
+  @@index([name])
+}
+
+// AI companion Q&A transcript, for the admin "conversation history" view.
+model AiConversation {
+  id        String   @id
+  sessionId String?
+  question  String
+  answer    String
+  mode      String? // "openai" | "local-preview"
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+// Persisted contact-form submissions for the admin inbox/manager.
+model ContactSubmission {
+  id        String   @id
+  name      String
+  email     String
+  phone     String?
+  topic     String?
+  message   String
+  status    String   @default("new") // "new" | "read" | "replied" | "spam"
+  tag       String? // "freelance" | "fulltime" | "spam" | custom
+  createdAt DateTime @default(now())
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Skill {
+  id         String   @id @default(cuid())
+  category   String
+  name       String
+  iconKey    String
+  brandColor String
+  keywords   String   @default("[]") // JSON string[]
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model Article {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  publishedAt String
+  readTime    String
+  href        String   @default("#")
+  isExternal  Boolean  @default(false)
+  isReal      Boolean  @default(false)
+  premise     String
+  takeaway    String
+  source      String?
+  tagline     String?
+  body        String?
+  likes       Int?
+  accent      String?
+  ogImage     String? // per-article social share image (falls back to the site OG image)
+  tags        String   @default("[]") // JSON string[]
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
