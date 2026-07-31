@@ -72,7 +72,13 @@ export function ChangeHistory({
   }, [entity, limit]);
 
   useEffect(() => {
-    void load();
+    const frame = window.requestAnimationFrame(() => {
+      void load();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, [load]);
 
   return (

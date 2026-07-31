@@ -45,8 +45,13 @@ export function LoginModal({ open, onClose, redirectTo = "/admin" }: LoginModalP
 
   useEffect(() => {
     mountedRef.current = true;
-    setClientReady(true);
+
+    const frame = window.requestAnimationFrame(() => {
+      setClientReady(true);
+    });
+
     return () => {
+      window.cancelAnimationFrame(frame);
       mountedRef.current = false;
     };
   }, []);

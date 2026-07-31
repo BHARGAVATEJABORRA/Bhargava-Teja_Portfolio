@@ -71,10 +71,37 @@ const Shuffle: React.FC<ShuffleProps> = ({
   const hoverHandlerRef = useRef<((e: Event) => void) | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+
+    const markLoaded = () => {
+      if (!cancelled) {
+        setFontsLoaded(true);
+      }
+    };
+
     if ('fonts' in document) {
-      if (document.fonts.status === 'loaded') setFontsLoaded(true);
-      else document.fonts.ready.then(() => setFontsLoaded(true));
-    } else setFontsLoaded(true);
+      if (document.fonts.status === 'loaded') {
+        const frame = window.requestAnimationFrame(markLoaded);
+
+        return () => {
+          cancelled = true;
+          window.cancelAnimationFrame(frame);
+        };
+      }
+
+      document.fonts.ready.then(markLoaded);
+    } else {
+      const frame = window.requestAnimationFrame(markLoaded);
+
+      return () => {
+        cancelled = true;
+        window.cancelAnimationFrame(frame);
+      };
+    }
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const scrollTriggerStart = useMemo(() => {
@@ -419,7 +446,6 @@ const Shuffle: React.FC<ShuffleProps> = ({
   );
   const Tag = (tag || 'p') as keyof JSX.IntrinsicElements;
 
-  // eslint-disable-next-line react-hooks/refs
   return React.createElement(Tag, { ref: ref as React.Ref<HTMLElement>, className: classes, style: commonStyle }, text);
 };
 

@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from "next/image";
 import dynamic from "next/dynamic";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
@@ -737,7 +738,14 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           left the bottom-left anchor detaching the pier. */}
       <div className="relative z-[2] bg-[#050e11] xl:h-[40vw]">
         <div aria-hidden className="pointer-events-none absolute -top-[14vw] w-full">
-          <img src="/adaline-scenes/footer/footer-hills.webp" alt="" aria-hidden className="w-full object-cover" />
+          <NextImage
+            src="/adaline-scenes/footer/footer-hills.webp"
+            alt=""
+            aria-hidden
+            width={1920}
+            height={400}
+            className="w-full object-cover"
+          />
         </div>
 
         {/* Dock: a distant, left-of-center pier whose crossbar sits near the
@@ -757,10 +765,12 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           }}
         >
           {shouldReduceMotion || !sceneActive ? (
-            <img
+            <NextImage
               src="/adaline-scenes/footer/footer-dock.webp?v=10"
               alt=""
               aria-hidden
+              width={1200}
+              height={400}
               className="relative aspect-[3] w-full object-fill"
             />
           ) : (

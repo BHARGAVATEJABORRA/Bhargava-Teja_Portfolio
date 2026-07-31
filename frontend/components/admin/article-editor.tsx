@@ -93,7 +93,13 @@ export function ArticleEditor() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const frame = window.requestAnimationFrame(() => {
+      void refresh();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, [refresh]);
 
   const set = (patch: Partial<ArticleForm>) => setForm((f) => (f ? { ...f, ...patch } : f));

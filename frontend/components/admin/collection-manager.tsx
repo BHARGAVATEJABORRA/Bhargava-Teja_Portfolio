@@ -201,7 +201,13 @@ export function CollectionManager<TDto extends { id: string }>({
   }, [endpoint, showError, sortItems, filterItems]);
 
   useEffect(() => {
-    void refresh();
+    const frame = window.requestAnimationFrame(() => {
+      void refresh();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, [refresh]);
 
   const openCreate = () => {

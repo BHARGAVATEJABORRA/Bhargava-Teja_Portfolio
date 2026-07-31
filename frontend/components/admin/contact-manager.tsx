@@ -58,7 +58,13 @@ export function ContactManager() {
   }, [filter]);
 
   useEffect(() => {
-    void load();
+    const frame = window.requestAnimationFrame(() => {
+      void load();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, [load]);
 
   const patch = async (id: string, body: { status?: string; tag?: string | null }) => {
