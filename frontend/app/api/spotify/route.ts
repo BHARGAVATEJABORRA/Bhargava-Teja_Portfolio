@@ -8,6 +8,7 @@ const TOP_TRACKS_URL = "https://api.spotify.com/v1/me/top/tracks?limit=1&time_ra
 
 type SpotifyTrack = {
   name?: string;
+  duration_ms?: number;
   external_urls?: { spotify?: string };
   album?: { images?: Array<{ url?: string }> };
   artists?: Array<{ name?: string }>;
@@ -15,6 +16,7 @@ type SpotifyTrack = {
 
 type SpotifyPlaybackResponse = {
   is_playing?: boolean;
+  progress_ms?: number;
   item?: SpotifyTrack | null;
 };
 
@@ -117,10 +119,17 @@ async function getAccessToken(): Promise<AccessTokenResult | null> {
   };
 }
 
-function trackToPayload(track: SpotifyTrack | null | undefined, isPlaying: boolean, sourceLabel: string): SpotifyData | null {
+function trackToPayload(
+  track: SpotifyTrack | null | undefined,
+  isPlaying: boolean,
+  sourceLabel: string,
+  progressMs = 0,
+): SpotifyData | null {
   if (!track?.name) {
     return null;
   }
+
+  const durationMs = Math.max(0, track.duration_ms ?? 0);
 
   return {
     isPlaying,
@@ -129,6 +138,8 @@ function trackToPayload(track: SpotifyTrack | null | undefined, isPlaying: boole
     title: track.name,
     albumImageUrl: track.album?.images?.[0]?.url ?? "",
     artist: track.artists?.map((artist) => artist.name).filter(Boolean).join(", ") ?? "",
+    progressMs: Math.min(durationMs || progressMs, Math.max(0, progressMs)),
+    durationMs,
   };
 }
 
@@ -144,7 +155,11 @@ async function getRecentlyPlayed(accessToken: string): Promise<TrackLookupResult
   }
 
   const data = JSON.parse(text || "{}") as SpotifyRecentlyPlayedResponse;
-  return { payload: trackToPayload(data.items?.[0]?.track, false, "Last Played"), forbidden: false };
+  const track = data.items?.[0]?.track;
+  return {
+    payload: trackToPayload(track, false, "Last Played", track?.duration_ms),
+    forbidden: false,
+  };
 }
 
 async function getTopTrack(accessToken: string): Promise<TrackLookupResult> {
@@ -190,7 +205,9 @@ export async function GET() {
 
     if (nowPlayingResponse.ok && nowPlayingResponse.status !== 204) {
       const nowData = JSON.parse(nowPlayingText || "{}") as SpotifyPlaybackResponse;
-      const payload = nowData.is_playing ? trackToPayload(nowData.item, true, "Now Playing") : null;
+      const payload = nowData.is_playing
+        ? trackToPayload(nowData.item, true, "Now Playing", nowData.progress_ms)
+        : null;
 
       if (payload) {
         return NextResponse.json(payload, {

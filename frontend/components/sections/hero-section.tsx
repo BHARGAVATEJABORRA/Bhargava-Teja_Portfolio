@@ -357,13 +357,13 @@ export function HeroSection() {
             sequential
             speed={42}
             revealDirection="start"
-            parentClassName="text-xs font-semibold uppercase tracking-[0.24em] text-white/85 [text-shadow:0_2px_12px_rgba(0,0,0,0.35)] [@media(max-height:700px)]:text-[10px]"
+            parentClassName="hero-short-kicker text-xs font-semibold uppercase tracking-[0.24em] text-white/85 [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]"
             encryptedClassName="text-white/40"
           />
 
           <h1
             id="hero-title"
-            className="relative z-10 mt-6 text-balance text-[clamp(3.15rem,8vw,6.25rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-white [text-shadow:0_18px_44px_rgba(6,10,22,0.45)] [@media(max-height:700px)]:mt-4 [@media(max-height:700px)]:text-[clamp(2.8rem,5vw,4.75rem)] [@media(max-height:560px)]:text-[clamp(2.45rem,4.2vw,4rem)]"
+            className="hero-short-title relative z-10 mt-6 text-balance text-[clamp(3.15rem,8vw,6.25rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-white [text-shadow:0_18px_44px_rgba(6,10,22,0.45)]"
           >
             {portfolioContent.identity.publicAlias}
           </h1>
@@ -377,7 +377,7 @@ export function HeroSection() {
             showCursor
             cursorCharacter="|"
             cursorClassName="text-white"
-            className="relative z-10 mt-6 max-w-3xl text-pretty text-base font-medium leading-relaxed tracking-[0.01em] text-white/90 [text-shadow:0_2px_14px_rgba(0,0,0,0.32)] sm:text-lg [@media(max-height:700px)]:mt-4 [@media(max-height:700px)]:max-w-2xl [@media(max-height:700px)]:text-sm [@media(max-height:700px)]:leading-snug"
+            className="hero-short-copy relative z-10 mt-6 max-w-3xl text-pretty text-base font-medium leading-relaxed tracking-[0.01em] text-white/90 [text-shadow:0_2px_14px_rgba(0,0,0,0.32)] sm:text-lg"
           />
 
           <AiCompanion />
@@ -393,7 +393,7 @@ export function HeroSection() {
             glareAngle={-30}
             glareSize={300}
             transitionDuration={750}
-            className="relative z-10 mt-8 transition-transform duration-200 hover:-translate-y-0.5 [@media(max-height:700px)]:mt-5"
+            className="hero-short-cta relative z-10 mt-8 transition-transform duration-200 hover:-translate-y-0.5"
             style={{
               display: "inline-block",
               boxShadow: "0 22px 50px rgba(0,0,0,0.28)",

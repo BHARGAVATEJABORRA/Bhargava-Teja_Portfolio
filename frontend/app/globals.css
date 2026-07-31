@@ -2364,6 +2364,39 @@ a {
   }
 }
 
+/* Keep the hero balanced on short displays without Tailwind arbitrary media variants. */
+@media (max-height: 700px) {
+  .hero-short-kicker {
+    font-size: 10px;
+  }
+
+  .hero-short-title,
+  .hero-short-copy {
+    margin-top: 1rem;
+  }
+
+  .hero-short-title {
+    font-size: clamp(2.8rem, 5vw, 4.75rem);
+  }
+
+  .hero-short-copy {
+    max-width: 42rem;
+    font-size: 0.875rem;
+    line-height: 1.375;
+  }
+
+  .hero-short-companion,
+  .hero-short-cta {
+    margin-top: 1.25rem;
+  }
+}
+
+@media (max-height: 560px) {
+  .hero-short-title {
+    font-size: clamp(2.45rem, 4.2vw, 4rem);
+  }
+}
+
 @media (max-width: 767px) {
   .adaline-hero-base {
     background-image: url("/adaline-scenes/hero/hero-base-mobile.jpg");

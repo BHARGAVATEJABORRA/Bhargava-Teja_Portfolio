@@ -9,6 +9,9 @@ export type SpotifyData = {
   artist: string;
   isPlaying: boolean;
   sourceLabel: string;
+  /** Playback timing is present for the live player and recent-track fallback. */
+  progressMs?: number;
+  durationMs?: number;
   /** Technical reason for a degraded response — for debugging, never rendered. */
   detail?: string;
 };

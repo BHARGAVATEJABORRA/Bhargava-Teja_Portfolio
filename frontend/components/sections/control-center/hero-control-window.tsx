@@ -37,17 +37,15 @@ export function HeroControlWindow({
       </div>
 
       {/*
-        Exactly four "at a glance" blocks. 3-column layout at lg:
-          col 1 (1fr)          col 2 (13.75rem)   col 3 (13.75rem)
+        3-column layout at lg:
+          col 1 (1fr)          col 2 (16rem)      col 3 (16rem)
         ┌──────────────────────────┬────────────────────────────────┐  row 1 (16rem)
         │  1 · Earth / location    │  2 · GitHub contributions      │
-        ├──────────────────────────┼──────────────────┬─────────────┤  row 2 (13.75rem)
-        │  3 · Weather (wide)      │  4a · Clock (sq) │ 4b · Spotify│
-        └──────────────────────────┴──────────────────┴─────────────┘
-        Block 4 is one block split into two squares (clock + Spotify).
+        ├──────────────────────────┼────────────────────────────────┤  row 2 (16rem)
+        │  3 · Weather (wide)      │  4 · Clock + Spotify           │
+        └──────────────────────────┴────────────────────────────────┘
 
-        Below lg: single column, stacked in the same order. Clock + Spotify
-        share a 2-col row with aspect-square so they stay square on mobile.
+        Below lg: single column, stacked in the same order.
       */}
       <div className="grid grid-cols-[minmax(0,1fr)] gap-3 sm:gap-4 lg:grid-cols-[minmax(0,1fr)_16rem_16rem] lg:grid-rows-[16rem_16rem] lg:items-stretch">
 
@@ -66,9 +64,7 @@ export function HeroControlWindow({
           <WeatherWidget />
         </div>
 
-        {/* 4 · Clock + Spotify — one block split into two squares in row 2.
-            Below lg: side-by-side via 2-col sub-grid with aspect-square.
-            At lg: display:contents places each square into cols 2 and 3. */}
+        {/* Compact Spotify — the selected layout beside the local clock. */}
         <div className="grid min-w-0 grid-cols-2 gap-3 sm:gap-4 lg:contents">
           <div className="aspect-square min-w-0 lg:aspect-auto lg:col-start-2 lg:row-start-2 lg:h-[16rem] lg:w-[16rem]">
             <LocalTimeClock />

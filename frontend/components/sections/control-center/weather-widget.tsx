@@ -1,19 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { AnimatePresence, LayoutGroup, motion } from "framer-motion";
 import useSWR from "swr";
-import {
-  LuCloud,
-  LuCloudFog,
-  LuCloudRain,
-  LuCloudSnow,
-  LuCloudSun,
-  LuDroplets,
-  LuMoon,
-  LuSun,
-  LuWind,
-  LuZap,
-} from "react-icons/lu";
+import { LuCloud, LuMapPin, LuSearch, LuWind, LuX } from "react-icons/lu";
 
 import {
   buildOpenMeteoUrl,
@@ -39,56 +30,39 @@ function currentHourInWeatherTimezone() {
   return Number.isFinite(hour) ? hour % 24 : 12;
 }
 
-function hourLabel(hour: number) {
-  if (hour === 0) return "12am";
-  if (hour === 12) return "Noon";
-  return hour < 12 ? `${hour}am` : `${hour - 12}pm`;
-}
-
-function WeatherIcon({
-  kind,
-  isDay = true,
-  size = 18,
-  className = "",
-}: {
-  kind: WeatherKind;
-  isDay?: boolean;
-  size?: number;
-  className?: string;
-}) {
-  const props = { size, "aria-hidden": true, className } as const;
-  switch (kind) {
-    case "clear":
-      return isDay ? <LuSun {...props} /> : <LuMoon {...props} />;
-    case "partly-cloudy":
-      return isDay ? <LuCloudSun {...props} /> : <LuMoon {...props} />;
-    case "cloudy":
-      return <LuCloud {...props} />;
-    case "foggy":
-      return <LuCloudFog {...props} />;
-    case "rainy":
-      return <LuCloudRain {...props} />;
-    case "snowy":
-      return <LuCloudSnow {...props} />;
-    case "thunderstorm":
-      return <LuZap {...props} />;
-  }
+function currentTimeInWeatherTimezone() {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: WEATHER_TIMEZONE,
+  }).format(new Date());
 }
 
 // ─── Animated sky scene (liquid-glass backdrop) ──────────────────────────────
-function SkyScene({ kind, isNight, sunRotation }: { kind: WeatherKind; isNight: boolean; sunRotation: number }) {
+function SkyScene({
+  kind,
+  isNight,
+  sunRotation,
+  expanded = false,
+}: {
+  kind: WeatherKind;
+  isNight: boolean;
+  sunRotation: number;
+  expanded?: boolean;
+}) {
   const isRain = kind === "rainy";
   const isSnow = kind === "snowy";
   const isStorm = kind === "thunderstorm";
   const hasClouds = kind === "partly-cloudy" || kind === "cloudy" || kind === "foggy" || isRain || isStorm;
+  const cloudOpacity = isNight ? (hasClouds ? 0.38 : 0) : kind === "clear" ? 0.68 : kind === "partly-cloudy" ? 0.82 : 0.96;
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
       {/* Sky gradient */}
       <div
-        className="absolute inset-0 transition-opacity duration-700"
+        className="weather-sky-shift absolute inset-0 transition-opacity duration-700"
         style={{
-          background: "linear-gradient(180deg,#fefefe 0%,#5bc8f5 60%,#e8f5fe 100%)",
+          background: "linear-gradient(180deg,#91a8bd 0%,#bdcbd6 38%,#78b9e6 100%)",
           opacity: isNight ? 0 : 1,
         }}
       />
@@ -100,15 +74,26 @@ function SkyScene({ kind, isNight, sunRotation }: { kind: WeatherKind; isNight: 
         }}
       />
 
+      {/* Layered, slowly drifting cloud banks give the live weather-card feel. */}
+      {cloudOpacity > 0 && (
+        <div className="absolute inset-0" style={{ opacity: cloudOpacity }}>
+          <div className="weather-cloud-bank weather-cloud-bank-far" />
+          <div className="weather-cloud-bank weather-cloud-bank-mid" />
+          <div className="weather-cloud-bank weather-cloud-bank-near" />
+        </div>
+      )}
+
       {/* Sun / Moon disc */}
       <div
-        className="absolute left-[52%] h-12 w-12 rounded-full transition-all duration-700"
+        className="absolute left-[52%] rounded-full transition-all duration-700"
         style={{
-          bottom: "56%",
+          width: expanded ? "7rem" : "3rem",
+          height: expanded ? "7rem" : "3rem",
+          bottom: expanded ? "52%" : "56%",
           background: isNight ? "rgba(255,255,255,0.9)" : "#fceabb",
           boxShadow: isNight ? "0 0 18px 5px #ffffff88" : "0 0 32px 10px #fceabb",
           transform: `rotate(${sunRotation}deg)`,
-          transformOrigin: "0px 88px",
+          transformOrigin: expanded ? "0px 12rem" : "0px 88px",
           opacity: isStorm ? 0.3 : 1,
         }}
       />
@@ -116,20 +101,17 @@ function SkyScene({ kind, isNight, sunRotation }: { kind: WeatherKind; isNight: 
       {/* Moon crater overlay */}
       {isNight && (
         <div
-          className="absolute left-[52%] h-12 w-12 overflow-hidden rounded-full transition-opacity duration-700"
-          style={{ bottom: "56%", transform: `rotate(${sunRotation}deg)`, transformOrigin: "0px 88px" }}
+          className="absolute left-[52%] overflow-hidden rounded-full transition-opacity duration-700"
+          style={{
+            width: expanded ? "7rem" : "3rem",
+            height: expanded ? "7rem" : "3rem",
+            bottom: expanded ? "52%" : "56%",
+            transform: `rotate(${sunRotation}deg)`,
+            transformOrigin: expanded ? "0px 12rem" : "0px 88px",
+          }}
         >
-          <div className="absolute -right-1.5 -top-1.5 h-12 w-12 rounded-full bg-[#10213f]" />
+          <div className="absolute -right-1.5 -top-1.5 h-full w-full rounded-full bg-[#10213f]" />
         </div>
-      )}
-
-      {/* Clouds */}
-      {hasClouds && (
-        <>
-          <div className="weather-cloud weather-cloud-1 absolute left-0 top-[14%] h-6 w-24 rounded-full bg-white/40 blur-[2px]" />
-          <div className="weather-cloud weather-cloud-2 absolute left-0 top-[28%] h-7 w-28 rounded-full bg-white/30 blur-[2px]" />
-          <div className="weather-cloud weather-cloud-3 absolute left-0 top-[6%]  h-5 w-18 rounded-full bg-white/25 blur-[2px]" />
-        </>
       )}
 
       {/* Stars (clear nights) */}
@@ -185,23 +167,51 @@ function SkyScene({ kind, isNight, sunRotation }: { kind: WeatherKind; isNight: 
       <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(255,255,255,0.08)]" />
 
       <style jsx>{`
-        .weather-cloud {
-          animation: cloud-drift 28s linear infinite;
+        .weather-sky-shift {
+          background-size: 130% 130% !important;
+          animation: sky-breathe 20s ease-in-out infinite alternate;
         }
-        .weather-cloud::before,
-        .weather-cloud::after {
-          content: "";
+        .weather-cloud-bank {
           position: absolute;
+          left: -28%;
+          width: 150%;
           border-radius: 9999px;
-          background: inherit;
+          background:
+            radial-gradient(ellipse at 10% 72%, rgba(255,255,255,0.88) 0 12%, transparent 28%),
+            radial-gradient(ellipse at 25% 52%, rgba(255,255,255,0.94) 0 16%, transparent 33%),
+            radial-gradient(ellipse at 43% 68%, rgba(245,250,255,0.88) 0 15%, transparent 31%),
+            radial-gradient(ellipse at 59% 46%, rgba(255,255,255,0.9) 0 18%, transparent 35%),
+            radial-gradient(ellipse at 78% 68%, rgba(243,249,255,0.86) 0 17%, transparent 34%),
+            linear-gradient(180deg, rgba(255,255,255,0.68), rgba(222,235,247,0.28));
+          filter: blur(9px);
+          will-change: transform;
         }
-        .weather-cloud::before { width: 45%; height: 140%; left: 18%; top: -70%; }
-        .weather-cloud::after  { width: 55%; height: 165%; right: 10%; top: -88%; }
-        .weather-cloud-2 { animation-delay: -10s; }
-        .weather-cloud-3 { animation-delay: -20s; }
-        @keyframes cloud-drift {
-          from { transform: translateX(-150%); }
-          to   { transform: translateX(700%);  }
+        .weather-cloud-bank-far {
+          top: -7%;
+          height: 43%;
+          opacity: 0.55;
+          animation: cloud-bank-drift 48s ease-in-out infinite alternate;
+        }
+        .weather-cloud-bank-mid {
+          top: 10%;
+          height: 52%;
+          opacity: 0.72;
+          animation: cloud-bank-drift 38s ease-in-out -15s infinite alternate-reverse;
+        }
+        .weather-cloud-bank-near {
+          top: 31%;
+          height: 58%;
+          opacity: 0.62;
+          filter: blur(12px);
+          animation: cloud-bank-drift 31s ease-in-out -7s infinite alternate;
+        }
+        @keyframes sky-breathe {
+          from { background-position: 50% 0%; }
+          to { background-position: 50% 100%; }
+        }
+        @keyframes cloud-bank-drift {
+          from { transform: translate3d(-7%, 0, 0) scale(1.02); }
+          to { transform: translate3d(12%, -3%, 0) scale(1.08); }
         }
         .weather-rain {
           animation: rain-fall 0.4s linear infinite;
@@ -224,8 +234,40 @@ function SkyScene({ kind, isNight, sunRotation }: { kind: WeatherKind; isNight: 
           0%, 22%, 24%, 27%, 100% { opacity: 0; }
           23%, 26% { opacity: 0.9; }
         }
+        @media (prefers-reduced-motion: reduce) {
+          .weather-sky-shift,
+          .weather-cloud-bank,
+          .weather-rain,
+          .weather-snow,
+          .weather-lightning {
+            animation: none;
+          }
+        }
       `}</style>
     </div>
+  );
+}
+
+function hourLabel(hour: number) {
+  if (hour === 0) return "12 AM";
+  if (hour === 12) return "12 PM";
+  return hour < 12 ? `${hour} AM` : `${hour - 12} PM`;
+}
+
+function WeatherDetailCard({
+  label,
+  children,
+  className = "",
+}: {
+  label: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <section className={`rounded-2xl border border-white/16 bg-white/[0.11] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-2xl transition hover:bg-white/[0.15] ${className}`}>
+      <p className="text-[0.63rem] font-semibold uppercase tracking-[0.18em] text-white/58">{label}</p>
+      <div className="mt-3">{children}</div>
+    </section>
   );
 }
 
@@ -236,13 +278,15 @@ export function WeatherWidget() {
     revalidateOnFocus: true,
     dedupingInterval: 60_000,
   });
-
   const [nowHour, setNowHour] = useState<number>(12);
+  const [localTime, setLocalTime] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const update = () => setNowHour(currentHourInWeatherTimezone());
-    // First sync happens in a frame callback (not synchronously in the effect)
-    // so SSR/static HTML hydrates cleanly before the real local hour applies.
+    const update = () => {
+      setNowHour(currentHourInWeatherTimezone());
+      setLocalTime(currentTimeInWeatherTimezone());
+    };
     const frame = window.requestAnimationFrame(update);
     const id = window.setInterval(update, 60_000);
     return () => {
@@ -251,122 +295,185 @@ export function WeatherWidget() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isOpen]);
+
   const isLoading = !data && !error;
   const isNight = data ? !data.isDay : !(nowHour >= 6 && nowHour <= 21);
   const sunRotation = isNight
     ? -90 + ((nowHour < 7 ? nowHour + 24 : nowHour) - 6) * (180 / 8)
     : -90 + (nowHour - 7) * (180 / 15);
   const kind: WeatherKind = data?.kind ?? "partly-cloudy";
+  const forecast = data
+    ? [{ hour: nowHour, tempF: data.tempF, kind: data.kind, isDay: data.isDay, now: true }, ...data.hours]
+    : [];
 
-  // Foreground colour based on night vs day
-  const fg = isNight ? "text-white" : "text-black";
-  const fgMuted = isNight ? "text-white/65" : "text-black/55";
-  const chip = isNight
-    ? "border border-white/15 bg-white/12 text-white/80"
-    : "border border-white/45 bg-white/35 text-black/70";
-  const chipVal = isNight ? "text-white" : "text-black";
-
-  return (
-    <ControlCenterPanel
-      radius={28}
-      className="relative flex h-[220px] min-w-0 w-full flex-col overflow-hidden border-0 p-0 text-black shadow-[0_10px_28px_rgba(0,0,0,0.14)] lg:h-full"
+  const compactCard = (
+    <motion.button
+      type="button"
+      layoutId="dallas-weather-surface"
+      onClick={() => setIsOpen(true)}
+      className="block h-full w-full cursor-pointer text-left focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+      aria-label="Open Dallas weather details"
+      transition={{ type: "spring", stiffness: 270, damping: 28 }}
     >
-      {/* Sky animation — always shown once loaded */}
-      {!isLoading && <SkyScene kind={kind} isNight={isNight} sunRotation={sunRotation} />}
+      <ControlCenterPanel
+        radius={28}
+        className="relative flex h-[220px] min-w-0 w-full flex-col overflow-hidden border-0 p-0 text-white shadow-[0_10px_28px_rgba(0,0,0,0.14)] lg:h-full"
+      >
+        {!isLoading && <SkyScene kind={kind} isNight={isNight} sunRotation={sunRotation} />}
+        {!isLoading && <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,20,38,0.3),rgba(8,38,63,0.02)_52%,rgba(7,27,48,0.22))]" />}
 
-      {/* ── Loading skeleton ── */}
-      {isLoading && (
-        <div className="relative z-10 flex h-full flex-col justify-center gap-3 p-5">
-          <div className="h-4 w-24 animate-pulse rounded-lg bg-white/30" />
-          <div className="h-12 w-32 animate-pulse rounded-xl bg-white/30" />
-          <div className="h-3 w-40 animate-pulse rounded-lg bg-white/20" />
-        </div>
-      )}
-
-      {/* ── Live (or graceful unavailable) ── */}
-      {!isLoading && (
-        <div className={`relative z-10 flex h-full min-h-0 flex-col p-4 sm:p-5 ${fg}`}>
-          {/* Top row: location + condition | big temp */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] opacity-70">
-                {data?.location ?? WEATHER_LOCATION}
-              </p>
-              <p className={`mt-0.5 text-[11px] leading-tight ${fgMuted}`}>
-                {data ? data.condition : "Live weather unavailable"}
-              </p>
-              {data && (
-                <p className={`mt-0.5 text-[10px] tabular-nums ${fgMuted}`}>
-                  H {data.todayHighF}° · L {data.todayLowF}°
+        {isLoading ? (
+          <div className="relative z-10 flex h-full flex-col justify-center gap-3 p-5">
+            <div className="h-4 w-24 animate-pulse rounded-lg bg-white/30" />
+            <div className="h-12 w-32 animate-pulse rounded-xl bg-white/30" />
+            <div className="h-3 w-40 animate-pulse rounded-lg bg-white/20" />
+          </div>
+        ) : (
+          <div className="relative z-10 flex h-full min-h-0 flex-col p-5 sm:p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate text-2xl font-semibold tracking-[-0.04em] text-white sm:text-[1.75rem]">
+                  {data?.location ?? WEATHER_LOCATION}
                 </p>
-              )}
-            </div>
-
-            <div className="flex shrink-0 items-start gap-2">
-              <WeatherIcon
-                kind={kind}
-                isDay={!isNight}
-                size={28}
-                className={isNight ? "text-white/80" : "text-black/60"}
-              />
-              <p className="text-[2.6rem] font-bold leading-none tabular-nums sm:text-[3rem]">
+                <p className="mt-0.5 text-sm font-semibold text-white/88">{localTime || "--:--"}</p>
+              </div>
+              <p className="shrink-0 text-[4.25rem] font-light leading-[0.82] tracking-[-0.08em] tabular-nums text-white sm:text-[4.75rem]">
                 {data ? `${data.tempF}°` : "--"}
               </p>
             </div>
-          </div>
-
-          {/* Middle: frosted stat chips */}
-          <div className="mt-auto flex gap-2 pt-2">
-            <div className={`flex flex-1 items-center gap-1 rounded-2xl px-2.5 py-1.5 text-[10px] backdrop-blur-xl ${chip}`}>
-              <LuSun size={11} aria-hidden />
-              <span className={`font-bold ${chipVal}`}>{data ? `${data.feelsLikeF}°` : "--"}</span>
-              <span>Feels</span>
-            </div>
-            <div className={`flex flex-1 items-center gap-1 rounded-2xl px-2.5 py-1.5 text-[10px] backdrop-blur-xl ${chip}`}>
-              <LuDroplets size={11} aria-hidden />
-              <span className={`font-bold ${chipVal}`}>{data ? `${data.humidity}%` : "--"}</span>
-              <span>Hum</span>
-            </div>
-            <div className={`flex flex-1 items-center gap-1 rounded-2xl px-2.5 py-1.5 text-[10px] backdrop-blur-xl ${chip}`}>
-              <LuWind size={11} aria-hidden />
-              <span className={`font-bold ${chipVal}`}>{data ? data.windMph : "--"}</span>
-              <span>mph</span>
+            <div className="mt-auto flex items-end justify-between gap-4">
+              <div className="min-w-0">
+                <p className="truncate text-base font-semibold text-white/95 sm:text-lg">{data?.condition ?? "Weather unavailable"}</p>
+                <p className="mt-1 truncate text-xs font-medium text-white/72">{data ? `Feels like ${data.feelsLikeF}° · Tap for details` : "Tap to retry"}</p>
+              </div>
+              {data && <p className="shrink-0 text-sm font-semibold tabular-nums text-white/92 sm:text-base">H:{data.todayHighF}° L:{data.todayLowF}°</p>}
             </div>
           </div>
+        )}
+      </ControlCenterPanel>
+    </motion.button>
+  );
 
-          {/* Bottom: real upcoming hours + tomorrow */}
-          <div className="mt-2 flex gap-1">
-            {(data?.hours ?? []).map((slot) => (
-              <div
-                key={slot.time}
-                className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] backdrop-blur-xl ${chip}`}
+  const weatherWindow = (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-[#020711]/70 p-3 backdrop-blur-md sm:p-6"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsOpen(false);
+          }}
+          role="presentation"
+        >
+          <motion.section
+            layoutId="dallas-weather-surface"
+            transition={{ type: "spring", stiffness: 270, damping: 28 }}
+            className="relative flex h-[min(46rem,calc(100dvh-1.5rem))] w-[min(68rem,100%)] overflow-hidden rounded-[1.65rem] border border-white/16 bg-[#0d1d31] text-white shadow-[0_32px_100px_rgba(0,0,0,0.55)] sm:h-[min(46rem,calc(100dvh-3rem))]"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${data?.location ?? WEATHER_LOCATION} weather details`}
+          >
+            <aside className="hidden w-64 shrink-0 flex-col border-r border-white/10 bg-[#05111e]/62 p-5 backdrop-blur-2xl md:flex">
+              <div className="flex items-center gap-2" aria-hidden>
+                <span className="h-3 w-3 rounded-full bg-[#ff5f57]" />
+                <span className="h-3 w-3 rounded-full bg-[#febc2e]" />
+                <span className="h-3 w-3 rounded-full bg-[#28c840]" />
+              </div>
+              <div className="mt-7 flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.08] px-3 py-2 text-white/55">
+                <LuSearch size={15} aria-hidden />
+                <span className="text-xs">Saved city</span>
+              </div>
+              <button type="button" className="mt-4 rounded-2xl border border-white/18 bg-white/[0.14] p-3 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.14)]" aria-current="true">
+                <div className="flex items-start justify-between gap-3">
+                  <span className="font-semibold">{data?.location ?? WEATHER_LOCATION}</span>
+                  <span className="text-xl font-light tabular-nums">{data ? `${data.tempF}°` : "--"}</span>
+                </div>
+                <p className="mt-1 text-xs text-white/65">{data?.condition ?? "Loading weather"}</p>
+                {data && <p className="mt-2 text-[0.68rem] font-medium text-white/72">H:{data.todayHighF}° L:{data.todayLowF}°</p>}
+              </button>
+              <p className="mt-auto text-xs leading-relaxed text-white/42">Live weather powered by Open-Meteo. Press Esc to close.</p>
+            </aside>
+
+            <div className="relative min-w-0 flex-1 overflow-hidden">
+              <SkyScene kind={kind} isNight={isNight} sunRotation={sunRotation} expanded />
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,13,28,0.36),rgba(4,18,32,0.04)_42%,rgba(4,16,28,0.6))]" />
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="absolute right-4 top-4 z-20 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/18 bg-[#07111e]/40 text-white backdrop-blur-xl transition hover:bg-white/18 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                aria-label="Close weather details"
               >
-                <span className={fgMuted}>{hourLabel(slot.hour)}</span>
-                <WeatherIcon
-                  kind={slot.kind}
-                  isDay={slot.isDay}
-                  size={13}
-                  className={isNight ? "text-white/70" : "text-black/60"}
-                />
-                <span className={`font-semibold tabular-nums ${chipVal}`}>{slot.tempF}°</span>
-              </div>
-            ))}
-            {data && (
-              <div className={`flex flex-1 flex-col items-center gap-0.5 rounded-xl py-1.5 text-[10px] backdrop-blur-xl ${chip}`}>
-                <span className={fgMuted}>Tmrw</span>
-                <WeatherIcon
-                  kind={data.tomorrow.kind}
-                  size={13}
-                  className={isNight ? "text-white/70" : "text-black/60"}
-                />
-                <span className={`font-semibold tabular-nums ${chipVal}`}>
-                  {data.tomorrow.highF}°<span className={fgMuted}>/{data.tomorrow.lowF}°</span>
-                </span>
-              </div>
-            )}
-          </div>
-        </div>
+                <LuX size={20} aria-hidden />
+              </button>
+
+              <main className="relative z-10 h-full overflow-y-auto overscroll-contain px-5 pb-8 pt-6 sm:px-8 sm:pb-10 sm:pt-8">
+                <div className="max-w-3xl">
+                  <div className="flex items-start justify-between gap-4 pr-12">
+                    <div>
+                      <div className="flex items-center gap-2 text-white/72"><LuMapPin size={15} aria-hidden /><span className="text-sm">{data?.location ?? WEATHER_LOCATION}</span></div>
+                      <p className="mt-2 text-sm text-white/68">{localTime || "--:--"} · {data?.condition ?? "Live weather"}</p>
+                    </div>
+                    <p className="text-7xl font-light leading-none tracking-[-0.08em] tabular-nums text-white sm:text-8xl">{data ? `${data.tempF}°` : "--"}</p>
+                  </div>
+                  {data && <p className="mt-3 text-base text-white/84">Feels like {data.feelsLikeF}° · H:{data.todayHighF}° L:{data.todayLowF}°</p>}
+
+                  <div className="mt-8 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <WeatherDetailCard label="Hourly forecast" className="sm:col-span-2 xl:col-span-3">
+                      <div className="flex gap-2 overflow-x-auto pb-1">
+                        {forecast.map((slot, index) => (
+                          <div key={`${slot.hour}-${index}`} className="min-w-16 rounded-xl bg-white/[0.08] px-3 py-2.5 text-center">
+                            <p className="text-[0.68rem] text-white/65">{"now" in slot && slot.now ? "Now" : hourLabel(slot.hour)}</p>
+                            <LuCloud className="mx-auto my-2 text-white/85" size={18} aria-hidden />
+                            <p className="text-sm font-semibold tabular-nums">{slot.tempF}°</p>
+                          </div>
+                        ))}
+                      </div>
+                    </WeatherDetailCard>
+
+                    <WeatherDetailCard label="Humidity">
+                      <p className="text-3xl font-light tabular-nums">{data?.humidity ?? "--"}%</p>
+                      <p className="mt-1 text-xs text-white/65">Current relative humidity</p>
+                    </WeatherDetailCard>
+                    <WeatherDetailCard label="Wind">
+                      <div className="flex items-center gap-3"><LuWind size={27} className="text-white/85" aria-hidden /><div><p className="text-2xl font-light tabular-nums">{data?.windMph ?? "--"} <span className="text-sm">mph</span></p><p className="text-xs text-white/65">Surface wind</p></div></div>
+                    </WeatherDetailCard>
+                    <WeatherDetailCard label="Tomorrow">
+                      <p className="text-xl font-light tabular-nums">{data ? `${data.tomorrow.highF}° / ${data.tomorrow.lowF}°` : "--"}</p>
+                      <p className="mt-1 text-xs text-white/65">{data?.tomorrow.kind ?? "Forecast loading"}</p>
+                    </WeatherDetailCard>
+                    <WeatherDetailCard label="Feels like" className="sm:col-span-2 xl:col-span-1">
+                      <p className="text-3xl font-light tabular-nums">{data ? `${data.feelsLikeF}°` : "--"}</p>
+                      <p className="mt-1 text-xs text-white/65">How it feels outdoors now</p>
+                    </WeatherDetailCard>
+                  </div>
+                </div>
+              </main>
+            </div>
+          </motion.section>
+        </motion.div>
       )}
-    </ControlCenterPanel>
+    </AnimatePresence>
+  );
+
+  return (
+    <LayoutGroup id="dallas-weather">
+      {!isOpen && compactCard}
+      {typeof document !== "undefined" ? createPortal(weatherWindow, document.body) : null}
+    </LayoutGroup>
   );
 }

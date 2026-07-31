@@ -22,8 +22,9 @@ const OFFLINE = {
   sourceLabel: "Spotify",
 };
 
-function trackToPayload(track, isPlaying, sourceLabel) {
+function trackToPayload(track, isPlaying, sourceLabel, progressMs = 0) {
   if (!track || !track.name) return null;
+  const durationMs = Math.max(0, track.duration_ms || 0);
   return {
     isPlaying,
     sourceLabel,
@@ -35,6 +36,8 @@ function trackToPayload(track, isPlaying, sourceLabel) {
       .map((artist) => artist && artist.name)
       .filter(Boolean)
       .join(", "),
+    progressMs: Math.min(durationMs || progressMs, Math.max(0, progressMs)),
+    durationMs,
   };
 }
 
@@ -94,7 +97,7 @@ module.exports = async (req, res) => {
 
     const now = await fetchJson(`${PLAYER_URL}/currently-playing`, accessToken);
     if (now && now.is_playing) {
-      const payload = trackToPayload(now.item, true, "Now Playing");
+      const payload = trackToPayload(now.item, true, "Now Playing", now.progress_ms);
       if (payload) {
         res.status(200).json(payload);
         return;
@@ -102,10 +105,12 @@ module.exports = async (req, res) => {
     }
 
     const recent = await fetchJson(`${PLAYER_URL}/recently-played?limit=1`, accessToken);
+    const recentTrack = recent && recent.items && recent.items[0] && recent.items[0].track;
     const recentPayload = trackToPayload(
-      recent && recent.items && recent.items[0] && recent.items[0].track,
+      recentTrack,
       false,
       "Last Played",
+      recentTrack && recentTrack.duration_ms,
     );
     if (recentPayload) {
       res.status(200).json(recentPayload);

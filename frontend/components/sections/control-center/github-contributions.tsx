@@ -20,8 +20,10 @@ const CONTRIBUTIONS_URL = `https://github-contributions-api.jogruber.de/v4/${USE
 const LAST_PUSH_URL = `https://api.github.com/users/${USERNAME}/repos?sort=pushed&per_page=1&type=owner`;
 
 const HEATMAP_DAYS = 365;
-const CELL = 10;
-const GUTTER = 3;
+// Bigger, touch-friendly cells make the activity pattern the visual focus
+// without changing the surrounding card dimensions.
+const CELL = 15;
+const GUTTER = 4;
 const STEP = CELL + GUTTER;
 
 type ContributionDay = {
@@ -142,15 +144,14 @@ export function GitHubContributions() {
 
   const svgWidth = (weeks?.length ?? 53) * STEP - GUTTER;
   const svgHeight = 7 * STEP - GUTTER;
-
   const headerDetail = hovered
     ? `${hovered.count} contribution${hovered.count === 1 ? "" : "s"} on ${formatDayLabel(hovered.date)}`
     : total !== null
       ? `${total} contributions in the last year`
       : "Loading contributions...";
 
-  return (
-    <ControlCenterPanel radius={32} className="flex h-full min-h-[16rem] flex-col justify-between p-4 sm:p-5">
+  const content = (
+    <>
       {/* Header: pill + live detail (swaps to the hovered day, jestsee-style) */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/15 bg-[color-mix(in_srgb,var(--color-ink)_8%,transparent)] py-1.5 pl-3 pr-4 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--color-accent)]">
@@ -184,7 +185,7 @@ export function GitHubContributions() {
                     y={dayIndex * STEP}
                     width={CELL}
                     height={CELL}
-                    rx={2.5}
+                    rx={4}
                     fill={day ? LEVEL_FILLS[day.level] : LEVEL_FILLS[0]}
                     stroke={isHovered ? GH_GREEN : "transparent"}
                     strokeWidth={isHovered ? 1.5 : 0}
@@ -208,6 +209,12 @@ export function GitHubContributions() {
       <p className="mt-3 truncate text-xs text-[var(--color-muted-ink)]">
         {pushedAt ? `Last pushed on ${pushedAt}` : `@${USERNAME}`}
       </p>
+    </>
+  );
+
+  return (
+    <ControlCenterPanel radius={32} className="flex h-full min-h-[16rem] flex-col justify-between p-4 sm:p-5">
+      {content}
     </ControlCenterPanel>
   );
 }

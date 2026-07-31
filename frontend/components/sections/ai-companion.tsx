@@ -158,7 +158,7 @@ export function AiCompanion() {
   };
 
   return (
-    <div className="ai-companion-shell relative z-20 mx-auto mt-8 w-full max-w-[46rem] [@media(max-height:700px)]:mt-5">
+    <div className="ai-companion-shell hero-short-companion relative z-20 mx-auto mt-8 w-full max-w-[46rem]">
       <form
         onSubmit={handleSubmit}
         className="ai-companion-bar group flex min-h-14 w-full items-center gap-2 rounded-[20px] border border-white/22 bg-[rgba(8,15,24,0.78)] px-3 shadow-[0_22px_58px_rgba(0,0,0,0.22)] backdrop-blur-xl transition-colors focus-within:border-[rgba(116,255,210,0.48)] sm:min-h-16 sm:px-4"
