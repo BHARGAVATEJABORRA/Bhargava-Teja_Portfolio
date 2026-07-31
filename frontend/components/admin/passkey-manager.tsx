@@ -50,8 +50,14 @@ export function PasskeyManager() {
   }, []);
 
   useEffect(() => {
-    setSupported(browserSupportsWebAuthn());
-    void load();
+    const frame = window.requestAnimationFrame(() => {
+      setSupported(browserSupportsWebAuthn());
+      void load();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, [load]);
 
   const enroll = useCallback(async () => {

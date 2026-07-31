@@ -60,7 +60,13 @@ export function SkillsManager() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    const frame = window.requestAnimationFrame(() => {
+      void refresh();
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frame);
+    };
   }, [refresh]);
 
   const set = (patch: Partial<SkillForm>) => setForm((f) => (f ? { ...f, ...patch } : f));

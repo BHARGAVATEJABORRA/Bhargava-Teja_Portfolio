@@ -1,5 +1,7 @@
 "use client";
 
+import Image from "next/image";
+
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import {
   LinearFilter,
@@ -159,7 +161,16 @@ export function FooterDockThree() {
   if (!mounted) return null;
 
   if (webglFailed) {
-    return <img src={DOCK_ASSET} alt="" aria-hidden className="relative aspect-[3] w-full object-fill" />;
+    return (
+      <Image
+        src={DOCK_ASSET}
+        alt=""
+        aria-hidden
+        width={1200}
+        height={400}
+        className="relative aspect-[3] w-full object-fill"
+      />
+    );
   }
 
   return (

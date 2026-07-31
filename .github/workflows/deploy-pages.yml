@@ -41,8 +41,9 @@ jobs:
         run: |
           find app/api -type f -name '*.ts' | xargs rm -f
           rm -rf app/admin
-          sed -i '/export const dynamic = "force-dynamic";/d' app/page.tsx
-          sed -i '/export const revalidate = 0;/d' app/page.tsx
+          find app -type f -name 'page.tsx' -exec sed -i \
+            -e '/export const dynamic = "force-dynamic";/d' \
+            -e '/export const revalidate = 0;/d' {} +
           npx next build
 
       - name: Upload artifact

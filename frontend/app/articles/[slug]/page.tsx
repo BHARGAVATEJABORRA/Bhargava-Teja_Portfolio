@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LuClock, LuCalendar } from "react-icons/lu";
@@ -10,6 +11,12 @@ import { siteConfig } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+export function generateStaticParams() {
+  return (portfolioContent.articles ?? []).map((article) => ({
+    slug: article.slug,
+  }));
+}
 
 async function getArticles(): Promise<ArticleSummary[]> {
   try {
@@ -154,9 +161,11 @@ export default async function ArticlePage({
             className="mt-8 overflow-hidden rounded-2xl border p-1.5"
             style={{ borderColor: `${accent}40`, background: `${accent}0d` }}
           >
-            <img
+            <Image
               src={article.ogImage}
               alt={`Cover illustration for ${article.title}`}
+              width={1200}
+              height={630}
               className="aspect-[1200/630] w-full rounded-xl object-cover"
             />
           </figure>
