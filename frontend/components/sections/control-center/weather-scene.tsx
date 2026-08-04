@@ -103,6 +103,7 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
   const isSnow = kind === "snowy";
   const isStorm = kind === "thunderstorm";
   const isFog = kind === "foggy";
+  const usesClearAtmospherePlate = !isNight && (kind === "clear" || kind === "partly-cloudy");
   const hasClouds = kind === "partly-cloudy" || kind === "cloudy" || isRain || isSnow || isStorm || isFog;
   const sky = isNight
     ? "linear-gradient(180deg, #071327 0%, #152b4b 58%, #315574 100%)"
@@ -125,12 +126,19 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
     <div
       ref={setRoot}
       data-weather-scene-active={motionActive ? "true" : "false"}
-      className={`weather-scene weather-scene--${expanded ? "expanded" : "compact"} ${motionActive ? "weather-scene--animated" : ""}`}
+      className={`weather-scene weather-scene--${expanded ? "expanded" : "compact"} ${usesClearAtmospherePlate ? "weather-scene--photo" : ""} ${motionActive ? "weather-scene--animated" : ""}`}
       style={{ background: sky }}
       aria-hidden
     >
+      {usesClearAtmospherePlate ? (
+        <div
+          className="weather-scene__plate"
+          style={{ backgroundImage: "url('/weather-scenes/clear-atmosphere-v1.png')" }}
+        />
+      ) : null}
+      <div className="weather-scene__atmosphere" />
       <div className="weather-scene__horizon" />
-      {!isNight && !isStorm ? <div className="weather-scene__sun" /> : null}
+      {!isNight && !isStorm && !usesClearAtmospherePlate ? <div className="weather-scene__sun" /> : null}
       {isNight ? (
         <>
           <div className="weather-scene__stars">
@@ -166,8 +174,10 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
 
       <style jsx>{`
         .weather-scene { isolation: isolate; position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
-        .weather-scene__horizon { position: absolute; inset: 34% 0 0; background: linear-gradient(180deg, transparent, rgba(222, 243, 250, 0.23) 60%, rgba(207, 235, 245, 0.34)); }
-        .weather-scene__horizon::before { position: absolute; inset: 0; content: ""; opacity: .48; background: repeating-linear-gradient(176deg, transparent 0 13px, rgba(255,255,255,.09) 14px 15px, transparent 16px 27px); }
+        .weather-scene__plate { position: absolute; inset: -8%; background-position: 50% 55%; background-repeat: no-repeat; background-size: cover; transform: scale(1.04); }
+        .weather-scene__atmosphere { position: absolute; inset: 0; background: radial-gradient(90% 110% at 68% 38%, rgba(255,255,255,.15), transparent 50%), linear-gradient(180deg, rgba(2,13,31,.12), transparent 44%, rgba(2,27,51,.14)); mix-blend-mode: soft-light; }
+        .weather-scene__horizon { position: absolute; inset: 42% 0 0; background: linear-gradient(180deg, transparent, rgba(222, 243, 250, 0.16) 72%, rgba(207, 235, 245, 0.26)); }
+        .weather-scene--photo .weather-scene__horizon { opacity: .38; }
         .weather-scene__sun { position: absolute; top: 18%; right: 34%; width: ${expanded ? "9rem" : "4.8rem"}; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255,253,237,0.98) 0 20%, rgba(255,238,173,0.8) 42%, rgba(255,230,153,0) 71%); box-shadow: 0 0 34px rgba(255,240,184,.32); }
         .weather-scene__stars i { position: absolute; width: 1px; height: 1px; border-radius: 50%; background: rgba(255,255,255,.8); }
         .weather-scene__moon { position: absolute; top: 18%; right: 34%; width: ${expanded ? "7rem" : "3.75rem"}; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 34% 31%, rgba(132,149,170,.34) 0 5%, transparent 6%), radial-gradient(circle at 67% 65%, rgba(118,137,160,.28) 0 7%, transparent 8%), radial-gradient(circle at 43% 45%, #f5f8fb 0%, #d6e0eb 57%, #aebdce 100%); box-shadow: 0 0 24px rgba(207,226,247,.3); }
@@ -179,7 +189,8 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
         .weather-scene__clouds--partly-cloudy .weather-cloud-bank--far { opacity: .22; }
         .weather-scene__clouds--partly-cloudy .weather-cloud-bank--middle { opacity: .34; transform: translateX(28%); }
         .weather-scene__clouds--partly-cloudy .weather-cloud-bank--near { opacity: .22; transform: translateX(-28%); }
-        .weather-scene--animated .weather-scene__horizon::before { will-change: transform, opacity; animation: weather-haze 18s ease-in-out infinite alternate; }
+        .weather-scene--animated .weather-scene__plate { will-change: transform; animation: weather-sky-drift 22s cubic-bezier(.42,0,.58,1) infinite alternate; }
+        .weather-scene--animated .weather-scene__atmosphere { will-change: transform, opacity; animation: weather-haze 14s ease-in-out infinite alternate; }
         .weather-scene--animated .weather-scene__sun { will-change: transform, opacity; animation: weather-sun-drift 14s ease-in-out infinite alternate; }
         .weather-scene--animated .weather-cloud-bank--far { will-change: transform; animation: weather-cloud-far 56s linear infinite alternate; }
         .weather-scene--animated .weather-cloud-bank--middle { will-change: transform; animation: weather-cloud-middle 40s linear infinite alternate; }
@@ -194,7 +205,8 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
         .weather-scene__lightning { position: absolute; inset: 0; opacity: 0; background: linear-gradient(122deg, transparent 44%, rgba(255,255,255,.3) 47%, transparent 51%); }
         .weather-scene--animated .weather-scene__lightning { animation: weather-lightning 12s step-end infinite; }
         .weather-scene__finish { position: absolute; inset: 0; background: linear-gradient(165deg, rgba(255,255,255,.18), transparent 35%, rgba(2,15,28,.17)); box-shadow: inset 0 1px rgba(255,255,255,.38), inset 0 -1px rgba(0,0,0,.12); }
-        @keyframes weather-haze { from { transform: translate3d(-1.5%, 0, 0); opacity: .33; } to { transform: translate3d(1.5%, -1%, 0); opacity: .6; } }
+        @keyframes weather-sky-drift { from { transform: scale(1.04) translate3d(-1.2%, .4%, 0); } to { transform: scale(1.1) translate3d(1.1%, -.7%, 0); } }
+        @keyframes weather-haze { from { transform: translate3d(-1.5%, 0, 0); opacity: .42; } to { transform: translate3d(1.5%, -1%, 0); opacity: .76; } }
         @keyframes weather-sun-drift { from { transform: translate3d(-2px, 1px, 0) scale(.98); opacity: .9; } to { transform: translate3d(3px, -2px, 0) scale(1.04); opacity: 1; } }
         @keyframes weather-cloud-far { from { transform: translate3d(-5%,0,0); } to { transform: translate3d(5%,0,0); } }
         @keyframes weather-cloud-middle { from { transform: translate3d(-7%,0,0); } to { transform: translate3d(7%,0,0); } }

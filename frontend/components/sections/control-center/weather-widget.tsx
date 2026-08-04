@@ -122,7 +122,7 @@ export function WeatherWidget() {
         className="relative flex h-[220px] min-w-0 w-full flex-col overflow-hidden border-0 p-0 text-white shadow-[0_10px_28px_rgba(0,0,0,0.14)] lg:h-full"
       >
         {!isLoading && !isOpen && <WeatherScene kind={kind} isNight={isNight} />}
-        {!isLoading && <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,20,38,0.3),rgba(8,38,63,0.02)_52%,rgba(7,27,48,0.22))]" />}
+        {!isLoading && <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(3,16,32,0.10),rgba(8,38,63,0.01)_52%,rgba(7,27,48,0.14))]" />}
 
         {isLoading ? (
           <div className="relative z-10 flex h-full flex-col justify-center gap-3 p-5">
