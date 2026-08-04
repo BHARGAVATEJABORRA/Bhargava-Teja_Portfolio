@@ -3,10 +3,6 @@ import { NextResponse } from "next/server";
 import { getSpotifyEnvConfig } from "@/lib/spotify-env";
 import type { SpotifyData } from "@/lib/spotify-types";
 
-// The route must execute for every revalidation; the response headers below
-// provide the intentionally tiny shared cache instead of Next's data cache.
-export const dynamic = "force-dynamic";
-
 const PLAYER_URL = "https://api.spotify.com/v1/me/player";
 const TOP_TRACKS_URL = "https://api.spotify.com/v1/me/top/tracks?limit=1&time_range=short_term";
 const ACCESS_TOKEN_EARLY_REFRESH_MS = 60_000;
