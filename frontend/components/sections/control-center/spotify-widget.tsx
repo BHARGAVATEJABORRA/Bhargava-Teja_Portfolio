@@ -11,6 +11,10 @@ import { SPOTIFY_ENDPOINT, type SpotifyData } from "@/lib/spotify-types";
 import { ControlCenterPanel } from "./control-center-panel";
 
 const SPOTIFY_REFRESH_INTERVAL_MS = 2 * 60_000;
+
+function albumArtworkSrc(url: string) {
+  return `/api/spotify/artwork?url=${encodeURIComponent(url)}`;
+}
 const WAVEFORM_HEIGHTS = [12, 22, 31, 17, 38, 25, 14, 34, 19, 29, 11, 27, 36, 16, 24, 33, 13];
 
 const fetcher = async (url: string): Promise<SpotifyData> => {
@@ -113,7 +117,7 @@ function CompactSpotifyCard({ data, hasTrack, isPlaying, label }: SpotifyCardPro
       {data.albumImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={data.albumImageUrl}
+          src={albumArtworkSrc(data.albumImageUrl)}
           alt=""
           className="absolute inset-0 h-full w-full scale-110 object-cover opacity-80 transition-transform duration-700 group-hover:scale-[1.16]"
           aria-hidden
