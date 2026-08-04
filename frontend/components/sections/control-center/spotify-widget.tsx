@@ -71,18 +71,11 @@ function PlaybackProgress({ data }: { data: SpotifyData }) {
   const serverProgressMs = Math.min(durationMs || Infinity, Math.max(0, data.progressMs ?? 0));
   const [progressMs, setProgressMs] = useState(serverProgressMs);
 
-  useEffect(() => {
-    setProgressMs((current) => {
-      if (!data.isPlaying) {
-        return serverProgressMs;
-      }
-
-      // Spotify's sampled position can arrive a little behind this component's
-      // locally animated playhead. Keep the playhead monotonic so each poll
-      // cannot pull the bar backward; a new song remounts this component.
-      return Math.max(current, serverProgressMs);
-    });
-  }, [data.isPlaying, serverProgressMs]);
+  // Use Spotify's latest sampled position when it is ahead of the local
+  // playhead. This avoids synchronously setting state inside an effect.
+  const displayedProgressMs = data.isPlaying
+    ? Math.max(progressMs, serverProgressMs)
+    : serverProgressMs;
 
   useEffect(() => {
     if (!data.isPlaying || durationMs <= 0) {
@@ -98,7 +91,7 @@ function PlaybackProgress({ data }: { data: SpotifyData }) {
 
   const hasTiming = durationMs > 0;
   const percentage = hasTiming
-    ? Math.min(100, Math.max(0, (progressMs / durationMs) * 100))
+    ? Math.min(100, Math.max(0, (displayedProgressMs / durationMs) * 100))
     : data.isPlaying
       ? 38
       : 100;
@@ -113,7 +106,7 @@ function PlaybackProgress({ data }: { data: SpotifyData }) {
         />
       </div>
       <div className="flex items-center justify-between text-[0.68rem] font-medium tabular-nums text-white/65">
-        <span>{hasTiming ? formatTime(progressMs) : data.isPlaying ? "Live" : "Played"}</span>
+        <span>{hasTiming ? formatTime(displayedProgressMs) : data.isPlaying ? "Live" : "Played"}</span>
         <span>{hasTiming ? formatTime(durationMs) : "Spotify"}</span>
       </div>
     </div>

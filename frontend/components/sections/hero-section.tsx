@@ -8,7 +8,6 @@ import { LuArrowRight, LuLink2, LuMail } from "react-icons/lu";
 import { SiCredly, SiSnapchat } from "react-icons/si";
 
 import { GlareHover } from "@/components/reactbits/glare-hover";
-import DecryptedText from "@/components/reactbits/decrypted-text";
 import TextType from "@/components/reactbits/text-type";
 import { AiCompanion } from "@/components/sections/ai-companion";
 import { portfolioContent } from "@/content/portfolio-content";
@@ -349,21 +348,11 @@ export function HeroSection() {
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_46%,rgba(6,10,22,0.42)_0%,rgba(6,10,22,0.18)_40%,transparent_72%)]"
       />
 
-      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 pb-24 pt-[max(6.5rem,12svh)] sm:px-8 md:pb-28">
+      <div className="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 pb-20 pt-[max(11.5rem,26svh)] sm:px-8 md:pb-24">
         <div className="relative mx-auto flex max-w-4xl flex-col items-center text-center">
-          <DecryptedText
-            text={`${portfolioContent.identity.location} · ${portfolioContent.identity.role}`}
-            animateOn="view"
-            sequential
-            speed={42}
-            revealDirection="start"
-            parentClassName="hero-short-kicker text-xs font-semibold uppercase tracking-[0.24em] text-white/85 [text-shadow:0_2px_12px_rgba(0,0,0,0.35)]"
-            encryptedClassName="text-white/40"
-          />
-
           <h1
             id="hero-title"
-            className="hero-short-title relative z-10 mt-6 text-balance text-[clamp(3.15rem,8vw,6.25rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-white [text-shadow:0_18px_44px_rgba(6,10,22,0.45)]"
+            className="hero-short-title relative z-10 text-balance text-[clamp(3.15rem,8vw,6.25rem)] font-semibold leading-[0.92] tracking-[-0.05em] text-white [text-shadow:0_18px_44px_rgba(6,10,22,0.45)]"
           >
             {portfolioContent.identity.publicAlias}
           </h1>

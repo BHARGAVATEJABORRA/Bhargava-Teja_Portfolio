@@ -1148,7 +1148,7 @@
     "fullName": "Bhargava Teja Borra",
     "roleLine": "Software Engineer",
     "location": "Addison (Dallas), TX, USA",
-    "heroTagline": "Architect and engineer scalable AWS infrastructure with measurable reliability, performance, and cost outcomes.",
+    "heroTagline": "I build reliable cloud systems, intuitive software, and AI-powered experiences that turn ideas into impact.",
     "aboutBio": "I'm a software engineer with 4+ years building high-scale AWS cloud infrastructure for enterprise banking and Fortune 500 systems — currently at Capital One in Dallas. I design architectures that hold 99.9% uptime, automate everything repeatable with Terraform and CloudFormation, and build CI/CD pipelines that turned three-week release cycles into two-day ships. I care about practical engineering: clear ownership, measurable outcomes, and systems the next engineer can run without a manual.",
     "aboutSpecialties": [
       "AWS Platform Engineering",

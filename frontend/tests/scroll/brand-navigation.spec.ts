@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 import { gotoReady, scrollToAndSettle } from "./helpers";
 
-test("brand refresh always returns to the hero", async ({ page }) => {
+test("brand navigates home and returns to the hero without a reload", async ({ page }) => {
   await gotoReady(page);
   await scrollToAndSettle(
     page,
@@ -10,20 +10,12 @@ test("brand refresh always returns to the hero", async ({ page }) => {
   );
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(500);
 
-  await Promise.all([
-    page.waitForNavigation({ waitUntil: "domcontentloaded" }),
-    page.getByRole("link", { name: "Bhargava Teja Borra", exact: true }).click(),
-  ]);
+  const navigationCount = await page.evaluate(() => performance.getEntriesByType("navigation").length);
+  await page.getByRole("link", { name: "Bhargava Teja Borra", exact: true }).click();
 
-  await expect.poll(() => page.evaluate(() => window.location.hash), { timeout: 10_000 }).toBe("");
+  await expect.poll(() => page.evaluate(() => window.location.pathname), { timeout: 10_000 }).toBe("/");
   await expect.poll(() => page.evaluate(() => window.scrollY), { timeout: 10_000 }).toBeLessThan(8);
-  await expect
-    .poll(() =>
-      page.evaluate(
-        () => (performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined)?.type,
-      ),
-    )
-    .toBe("reload");
+  await expect.poll(() => page.evaluate(() => performance.getEntriesByType("navigation").length)).toBe(navigationCount);
 });
 
 test("an ordinary browser refresh preserves the current section", async ({ page }) => {

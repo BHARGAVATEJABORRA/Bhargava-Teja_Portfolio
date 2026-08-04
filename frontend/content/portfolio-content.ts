@@ -147,7 +147,7 @@ const basePortfolioContent = {
     phone: "123-456-7890",
     phoneVisibleOnPage: false,
     intro:
-      "Architect and engineer scalable AWS infrastructure with measurable reliability, performance, and cost outcomes.",
+      "I build reliable cloud systems, intuitive software, and AI-powered experiences that turn ideas into impact.",
     contactEmail: "bhargavateja.borra@gmail.com",
     socialLinks: [
       {
