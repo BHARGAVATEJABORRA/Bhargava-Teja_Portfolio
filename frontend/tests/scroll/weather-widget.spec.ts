@@ -48,7 +48,8 @@ test("weather scene is video-free, pauses offscreen, and keeps its detail intera
   await expect(weather).toBeVisible();
   await expect(page.locator("video")).toHaveCount(0);
   await expect(page.locator("[data-weather-scene-active='true']")).toHaveCount(1);
-  expect(requests.some((url) => /weather-scenes|\.webm(?:$|\?)/.test(url))).toBe(false);
+  await expect.poll(() => requests.some((url) => /partly-cloudy-atmosphere-v1\.png(?:$|\?)/.test(url))).toBe(true);
+  expect(requests.some((url) => /\.webm(?:$|\?)/.test(url))).toBe(false);
   fs.mkdirSync(OUT_DIR, { recursive: true });
   await weather.screenshot({
     path: path.join(OUT_DIR, `weather-partly-cloudy-${testInfo.project.name}.png`),
@@ -82,13 +83,14 @@ test("night weather renders one moon and honors reduced motion", async ({ page }
   });
 });
 
-test("clear day renders one sun with an immediate static scene", async ({ page }, testInfo) => {
+test("clear day renders a high-resolution atmosphere plate with an immediate static scene", async ({ page }, testInfo) => {
   await stubWeather(page, 0, 1);
   await gotoReady(page);
 
   const weather = page.getByRole("button", { name: "Open Dallas weather details" });
   await weather.scrollIntoViewIfNeeded();
-  await expect(page.locator(".weather-scene__sun")).toHaveCount(1);
+  await expect(page.locator("[data-weather-scene-kind='clear']")).toHaveCount(1);
+  await expect(page.locator("[data-weather-scene-plate='/weather-scenes/clear-atmosphere-v1.png']")).toHaveCount(1);
   await expect(page.locator(".weather-scene__moon")).toHaveCount(0);
   fs.mkdirSync(OUT_DIR, { recursive: true });
   await weather.screenshot({
@@ -96,3 +98,24 @@ test("clear day renders one sun with an immediate static scene", async ({ page }
     animations: "disabled",
   });
 });
+
+const CONDITION_CASES = [
+  [0, "clear", "clear-atmosphere-v1.png"],
+  [2, "partly-cloudy", "partly-cloudy-atmosphere-v1.png"],
+  [3, "cloudy", "cloudy-atmosphere-v1.png"],
+  [45, "foggy", "fog-atmosphere-v1.png"],
+  [63, "rainy", "rain-atmosphere-v1.png"],
+  [73, "snowy", "snow-atmosphere-v1.png"],
+  [95, "thunderstorm", "thunderstorm-atmosphere-v1.png"],
+] as const;
+
+for (const [weatherCode, kind, plate] of CONDITION_CASES) {
+  test(`weather code ${weatherCode} uses the correct composited ${kind} atmosphere`, async ({ page }) => {
+    await stubWeather(page, weatherCode);
+    await gotoReady(page);
+    const weather = page.getByRole("button", { name: "Open Dallas weather details" });
+    await weather.scrollIntoViewIfNeeded();
+    await expect(page.locator(`[data-weather-scene-kind='${kind}']`)).toHaveCount(1);
+    await expect(page.locator(`[data-weather-scene-plate='/weather-scenes/${plate}']`)).toHaveCount(1);
+  });
+}

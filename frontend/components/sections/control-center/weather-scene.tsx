@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useEffect, useState, useSyncExternalStore } from "react";
+import { memo, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useReducedMotion } from "framer-motion";
 
 import type { WeatherKind } from "@/lib/open-meteo";
@@ -92,9 +92,92 @@ const WEATHER_PARTICLES = Array.from({ length: 16 }, (_, index) => ({
   animationDelay: `${(index % 8) * -0.45}s`,
 }));
 
+const DAY_SCENE_PLATES: Record<WeatherKind, string> = {
+  clear: "/weather-scenes/clear-atmosphere-v1.png",
+  "partly-cloudy": "/weather-scenes/partly-cloudy-atmosphere-v1.png",
+  cloudy: "/weather-scenes/cloudy-atmosphere-v1.png",
+  foggy: "/weather-scenes/fog-atmosphere-v1.png",
+  rainy: "/weather-scenes/rain-atmosphere-v1.png",
+  snowy: "/weather-scenes/snow-atmosphere-v1.png",
+  thunderstorm: "/weather-scenes/thunderstorm-atmosphere-v1.png",
+};
+
 /**
- * A composited, CSS-only weather scene. It stays resolution-independent on
- * Retina displays; only transforms and opacity animate while visible.
+ * The scene plate carries the high-resolution cloud detail. This canvas is a
+ * separate, DPR-aware compositor for the moving light, air and fine grain.
+ * Keeping it separate lets the device use a still frame when motion is paused.
+ */
+function AtmosphereCompositor({ kind, isNight, active }: { kind: WeatherKind; isNight: boolean; active: boolean }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+
+    let width = 1;
+    let height = 1;
+    let frame = 0;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const resize = () => {
+      const bounds = canvas.getBoundingClientRect();
+      width = Math.max(1, bounds.width);
+      height = Math.max(1, bounds.height);
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+    const observer = new ResizeObserver(resize);
+    observer.observe(canvas);
+    resize();
+
+    const draw = (time: number) => {
+      context.clearRect(0, 0, width, height);
+      const phase = active ? time / 1000 : 0;
+      const drift = Math.sin(phase / 8) * width * 0.045;
+      const glow = context.createRadialGradient(width * 0.68 + drift, height * 0.34, 0, width * 0.68 + drift, height * 0.34, width * 0.54);
+      glow.addColorStop(0, isNight ? "rgba(93,142,255,.10)" : "rgba(255,255,255,.16)");
+      glow.addColorStop(1, "rgba(255,255,255,0)");
+      context.globalCompositeOperation = "screen";
+      context.fillStyle = glow;
+      context.fillRect(0, 0, width, height);
+
+      if (kind === "foggy") {
+        for (let index = 0; index < 3; index += 1) {
+          const fog = context.createRadialGradient(width * (0.2 + index * 0.34) + drift * (index - 1), height * (0.68 + index * 0.06), 0, width * (0.2 + index * 0.34) + drift * (index - 1), height * (0.68 + index * 0.06), width * 0.38);
+          fog.addColorStop(0, "rgba(242,250,255,.20)");
+          fog.addColorStop(1, "rgba(242,250,255,0)");
+          context.fillStyle = fog;
+          context.fillRect(0, 0, width, height);
+        }
+      }
+
+      context.globalCompositeOperation = "soft-light";
+      for (let index = 0; index < 88; index += 1) {
+        const x = ((index * 89.31) % width + Math.sin(phase * 0.45 + index) * 2 + width) % width;
+        const y = (index * 47.17) % height;
+        context.fillStyle = index % 3 === 0 ? "rgba(255,255,255,.12)" : "rgba(5,27,52,.10)";
+        context.fillRect(x, y, 1, 1);
+      }
+      context.globalCompositeOperation = "source-over";
+      if (active) frame = requestAnimationFrame(draw);
+    };
+
+    draw(0);
+    if (active) frame = requestAnimationFrame(draw);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+    };
+  }, [active, isNight, kind]);
+
+  return <canvas ref={canvasRef} className="weather-scene__compositor" aria-hidden />;
+}
+
+/**
+ * A layered weather compositor: high-resolution weather plate, DPR-aware
+ * canvas lighting/grain, then live precipitation and atmospheric layers.
  */
 export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded = false }: SceneProps) {
   const { canAnimate, nearViewport, setNearViewport } = useSceneMotion();
@@ -103,7 +186,8 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
   const isSnow = kind === "snowy";
   const isStorm = kind === "thunderstorm";
   const isFog = kind === "foggy";
-  const usesClearAtmospherePlate = !isNight && (kind === "clear" || kind === "partly-cloudy");
+  const scenePlate = isNight ? "/weather-scenes/night-atmosphere-v1.png" : DAY_SCENE_PLATES[kind];
+  const usesAtmospherePlate = Boolean(scenePlate);
   const hasClouds = kind === "partly-cloudy" || kind === "cloudy" || isRain || isSnow || isStorm || isFog;
   const sky = isNight
     ? "linear-gradient(180deg, #071327 0%, #152b4b 58%, #315574 100%)"
@@ -126,19 +210,22 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
     <div
       ref={setRoot}
       data-weather-scene-active={motionActive ? "true" : "false"}
-      className={`weather-scene weather-scene--${expanded ? "expanded" : "compact"} ${usesClearAtmospherePlate ? "weather-scene--photo" : ""} ${motionActive ? "weather-scene--animated" : ""}`}
+      data-weather-scene-kind={kind}
+      data-weather-scene-plate={scenePlate}
+      className={`weather-scene weather-scene--${expanded ? "expanded" : "compact"} ${usesAtmospherePlate ? "weather-scene--photo" : ""} ${motionActive ? "weather-scene--animated" : ""}`}
       style={{ background: sky }}
       aria-hidden
     >
-      {usesClearAtmospherePlate ? (
+      {usesAtmospherePlate ? (
         <div
           className="weather-scene__plate"
-          style={{ backgroundImage: "url('/weather-scenes/clear-atmosphere-v1.png')" }}
+          style={{ backgroundImage: `url('${scenePlate}')` }}
         />
       ) : null}
+      <AtmosphereCompositor kind={kind} isNight={isNight} active={motionActive} />
       <div className="weather-scene__atmosphere" />
       <div className="weather-scene__horizon" />
-      {!isNight && !isStorm && !usesClearAtmospherePlate ? <div className="weather-scene__sun" /> : null}
+      {!isNight && !isStorm && !usesAtmospherePlate ? <div className="weather-scene__sun" /> : null}
       {isNight ? (
         <>
           <div className="weather-scene__stars">
@@ -150,7 +237,7 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
         </>
       ) : null}
 
-      {hasClouds ? (
+      {hasClouds && !usesAtmospherePlate ? (
         <div className={`weather-scene__clouds weather-scene__clouds--${kind}`}>
           <CloudBank variant="far" storm={isStorm || isRain} night={isNight} />
           <CloudBank variant="middle" storm={isStorm || isRain} night={isNight} />
@@ -175,6 +262,7 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
       <style jsx>{`
         .weather-scene { isolation: isolate; position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
         .weather-scene__plate { position: absolute; inset: -8%; background-position: 50% 55%; background-repeat: no-repeat; background-size: cover; transform: scale(1.04); }
+        .weather-scene__compositor { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: soft-light; opacity: .82; }
         .weather-scene__atmosphere { position: absolute; inset: 0; background: radial-gradient(90% 110% at 68% 38%, rgba(255,255,255,.15), transparent 50%), linear-gradient(180deg, rgba(2,13,31,.12), transparent 44%, rgba(2,27,51,.14)); mix-blend-mode: soft-light; }
         .weather-scene__horizon { position: absolute; inset: 42% 0 0; background: linear-gradient(180deg, transparent, rgba(222, 243, 250, 0.16) 72%, rgba(207, 235, 245, 0.26)); }
         .weather-scene--photo .weather-scene__horizon { opacity: .38; }
@@ -196,6 +284,7 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
         .weather-scene--animated .weather-cloud-bank--middle { will-change: transform; animation: weather-cloud-middle 40s linear infinite alternate; }
         .weather-scene--animated .weather-cloud-bank--near { will-change: transform; animation: weather-cloud-near 28s linear infinite alternate; }
         .weather-scene__fog { position: absolute; inset: 42% -8% -8%; opacity: .54; background: linear-gradient(180deg, transparent, rgba(244,250,250,.55) 53%, rgba(217,231,235,.7)); }
+        .weather-scene--animated .weather-scene__fog { will-change: transform, opacity; animation: weather-fog-drift 12s ease-in-out infinite alternate; }
         .weather-scene__particles { position: absolute; inset: 0; overflow: hidden; }
         .weather-scene__particles i { position: absolute; display: block; opacity: .56; }
         .weather-scene__particles--rain i { width: 1px; height: 16px; background: linear-gradient(180deg, rgba(255,255,255,.8), transparent); transform: rotate(14deg); }
@@ -213,6 +302,7 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
         @keyframes weather-cloud-near { from { transform: translate3d(-9%,0,0); } to { transform: translate3d(9%,0,0); } }
         @keyframes weather-rain { from { transform: translate3d(-5px,-22px,0) rotate(14deg); opacity: 0; } 15% { opacity: .56; } to { transform: translate3d(18px,190px,0) rotate(14deg); opacity: 0; } }
         @keyframes weather-snow { from { transform: translate3d(0,-14px,0); opacity: 0; } 20% { opacity: .78; } to { transform: translate3d(15px,190px,0); opacity: 0; } }
+        @keyframes weather-fog-drift { from { transform: translate3d(-3%, 1%, 0) scale(1.02); opacity: .42; } to { transform: translate3d(3%, -1%, 0) scale(1.1); opacity: .66; } }
         @keyframes weather-lightning { 0%, 92%, 100% { opacity: 0; } 93%, 94% { opacity: .62; } }
         @media (prefers-reduced-motion: reduce), (prefers-reduced-data: reduce) { .weather-scene * { animation: none !important; } }
       `}</style>
