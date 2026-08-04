@@ -166,6 +166,7 @@ function liveResponse(payload: SpotifyData) {
     headers: {
       "Cache-Control": BROWSER_RESPONSE_CACHE_CONTROL,
       "CDN-Cache-Control": CDN_RESPONSE_CACHE_CONTROL,
+      "Vercel-CDN-Cache-Control": CDN_RESPONSE_CACHE_CONTROL,
     },
   });
 }
