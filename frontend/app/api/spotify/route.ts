@@ -3,8 +3,14 @@ import { NextResponse } from "next/server";
 import { getSpotifyEnvConfig } from "@/lib/spotify-env";
 import type { SpotifyData } from "@/lib/spotify-types";
 
+// The route must execute for every revalidation; the response headers below
+// provide the intentionally tiny shared cache instead of Next's data cache.
+export const dynamic = "force-dynamic";
+
 const PLAYER_URL = "https://api.spotify.com/v1/me/player";
 const TOP_TRACKS_URL = "https://api.spotify.com/v1/me/top/tracks?limit=1&time_range=short_term";
+const ACCESS_TOKEN_EARLY_REFRESH_MS = 60_000;
+const SHARED_RESPONSE_CACHE_CONTROL = "public, max-age=0, must-revalidate, s-maxage=1";
 
 type SpotifyTrack = {
   name?: string;
@@ -33,10 +39,17 @@ type AccessTokenResult = {
   scopes: Set<string>;
 };
 
+type CachedAccessToken = AccessTokenResult & {
+  expiresAt: number;
+};
+
 type TrackLookupResult = {
   payload: SpotifyData | null;
   forbidden: boolean;
 };
+
+let cachedAccessToken: CachedAccessToken | null = null;
+let accessTokenRequest: Promise<AccessTokenResult | null> | null = null;
 
 export type { SpotifyData };
 
@@ -77,7 +90,7 @@ function forbidden(siteUrl: string): SpotifyData {
   };
 }
 
-async function getAccessToken(): Promise<AccessTokenResult | null> {
+async function refreshAccessToken(): Promise<AccessTokenResult | null> {
   const { clientId, clientSecret, refreshToken, isConfigured } = getSpotifyEnvConfig();
 
   if (!isConfigured) {
@@ -108,15 +121,50 @@ async function getAccessToken(): Promise<AccessTokenResult | null> {
     return null;
   }
 
-  const data = (await response.json()) as { access_token?: string; scope?: string };
+  const data = (await response.json()) as {
+    access_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
   if (!data.access_token) {
     return null;
   }
 
-  return {
+  const accessToken = {
     token: data.access_token,
     scopes: new Set((data.scope ?? "").split(" ").filter(Boolean)),
   };
+  // Spotify access tokens normally last an hour. Retaining it only in this
+  // server runtime keeps credentials server-side and avoids one token request
+  // per one-second widget poll. Refresh a minute early when an expiry is sent.
+  cachedAccessToken = {
+    ...accessToken,
+    expiresAt: Date.now() + Math.max(0, (data.expires_in ?? 3_600) * 1000 - ACCESS_TOKEN_EARLY_REFRESH_MS),
+  };
+
+  return accessToken;
+}
+
+async function getAccessToken(): Promise<AccessTokenResult | null> {
+  if (cachedAccessToken && cachedAccessToken.expiresAt > Date.now()) {
+    return cachedAccessToken;
+  }
+
+  // A burst of revalidations can reach a warm function together. Share one
+  // refresh-token exchange between them instead of issuing duplicates.
+  if (!accessTokenRequest) {
+    accessTokenRequest = refreshAccessToken().finally(() => {
+      accessTokenRequest = null;
+    });
+  }
+
+  return accessTokenRequest;
+}
+
+function liveResponse(payload: SpotifyData) {
+  return NextResponse.json(payload, {
+    headers: { "Cache-Control": SHARED_RESPONSE_CACHE_CONTROL },
+  });
 }
 
 function trackToPayload(
@@ -210,18 +258,14 @@ export async function GET() {
         : null;
 
       if (payload) {
-        return NextResponse.json(payload, {
-          headers: { "Cache-Control": "s-maxage=8, stale-while-revalidate=2" },
-        });
+        return liveResponse(payload);
       }
     }
 
     const recent = await getRecentlyPlayed(accessToken.token);
     wasForbidden = wasForbidden || recent.forbidden;
     if (recent.payload) {
-      return NextResponse.json(recent.payload, {
-        headers: { "Cache-Control": "s-maxage=8, stale-while-revalidate=2" },
-      });
+      return liveResponse(recent.payload);
     }
 
     const topTrack = accessToken.scopes.has("user-top-read")
@@ -229,9 +273,7 @@ export async function GET() {
       : { payload: null, forbidden: false };
     wasForbidden = wasForbidden || topTrack.forbidden;
     if (topTrack.payload) {
-      return NextResponse.json(topTrack.payload, {
-        headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=300" },
-      });
+      return liveResponse(topTrack.payload);
     }
 
     if (wasForbidden) {

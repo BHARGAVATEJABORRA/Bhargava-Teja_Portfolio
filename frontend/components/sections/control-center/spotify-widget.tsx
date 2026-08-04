@@ -10,7 +10,10 @@ import { SPOTIFY_ENDPOINT, type SpotifyData } from "@/lib/spotify-types";
 
 import { ControlCenterPanel } from "./control-center-panel";
 
-const SPOTIFY_REFRESH_INTERVAL_MS = 2 * 60_000;
+// Keep the now-playing card in step with a track change. The API response is
+// shared-edge cached for one second, so multiple visitors do not multiply
+// Spotify requests while the browser still receives a revalidated response.
+const SPOTIFY_REFRESH_INTERVAL_MS = 1_000;
 
 function albumArtworkSrc(url: string) {
   return `/api/spotify/artwork?url=${encodeURIComponent(url)}`;
@@ -18,7 +21,10 @@ function albumArtworkSrc(url: string) {
 const WAVEFORM_HEIGHTS = [12, 22, 31, 17, 38, 25, 14, 34, 19, 29, 11, 27, 36, 16, 24, 33, 13];
 
 const fetcher = async (url: string): Promise<SpotifyData> => {
-  const response = await fetch(url, { cache: "no-store" });
+  // `max-age=0` on the API response makes the browser revalidate every poll.
+  // Do not use fetch's `no-store` mode here: it bypasses Vercel's one-second
+  // shared cache and turns simultaneous visitors into duplicate API calls.
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`Spotify endpoint ${response.status}`);
   const payload = (await response.json()) as SpotifyData;
   if (payload.detail && process.env.NODE_ENV !== "production") {
@@ -172,7 +178,11 @@ function CompactSpotifyCard({ data, hasTrack, isPlaying, label }: SpotifyCardPro
 export function SpotifyWidget() {
   const { data, error } = useSWR(SPOTIFY_ENDPOINT, fetcher, {
     refreshInterval: SPOTIFY_REFRESH_INTERVAL_MS,
+    dedupingInterval: SPOTIFY_REFRESH_INTERVAL_MS,
     revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
   });
 
   const isLoading = !data && !error;
