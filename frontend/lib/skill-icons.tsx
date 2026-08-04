@@ -14,6 +14,7 @@
  */
 
 import type { ComponentType, CSSProperties } from "react";
+import { OpenAiBlossom } from "@/components/icons/openai-blossom";
 import { DiMsqlServer } from "react-icons/di";
 import { FaAws, FaJava, FaMicrosoft, FaWindows } from "react-icons/fa6";
 import { GrOracle } from "react-icons/gr";
@@ -179,7 +180,7 @@ export const skillIconMap: Record<string, SkillIconComponent> = {
   SiNumpy,
   SiScikitlearn,
   SiJupyter,
-  SiOpenai: LuBot,
+  SiOpenai: OpenAiBlossom,
   SiClaude,
   SiAnthropic,
   SiPerplexity,

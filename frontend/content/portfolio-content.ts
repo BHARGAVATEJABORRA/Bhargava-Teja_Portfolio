@@ -567,7 +567,7 @@ const basePortfolioContent = {
     {
       category: "Generative AI",
       skills: [
-        { name: "ChatGPT", iconKey: "SiOpenai", brandColor: "#412991", keywords: ["codex", "gpt", "openai", "llm"] },
+        { name: "ChatGPT", iconKey: "SiOpenai", brandColor: "#10A37F", keywords: ["codex", "gpt", "openai", "llm"] },
         { name: "Claude", iconKey: "SiClaude", brandColor: "#D97757", keywords: ["claude code", "cowork", "anthropic", "llm"] },
         { name: "Perplexity", iconKey: "SiPerplexity", brandColor: "#1FB8CD", keywords: ["comet", "research", "llm"] },
         { name: "Prompt Engineering", iconKey: "LuMessageSquareCode", brandColor: "#38BDF8", keywords: ["llm", "ai"] },

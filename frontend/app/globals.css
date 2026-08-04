@@ -2566,6 +2566,20 @@ a {
   transition: filter 0.3s ease, opacity 0.3s ease;
 }
 
+/* ChatGPT stays monochrome at rest, then uses its green only as an intentional
+   hover state—matching the product mark's restrained presentation. */
+.skill-icon--openai {
+  color: #d5ddd7 !important;
+  filter: none;
+  opacity: 0.58;
+}
+
+.skill-card:hover .skill-icon--openai {
+  color: var(--skill-glow) !important;
+  filter: drop-shadow(0 0 10px var(--skill-glow)) !important;
+  opacity: 1 !important;
+}
+
 .skill-bg-glow {
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -2840,5 +2854,24 @@ a {
   .contact-reveal-shine {
     animation: none;
     color: rgba(255, 255, 255, 0.9);
+  }
+}
+@keyframes text-type-cursor-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.text-type-cursor {
+  animation: text-type-cursor-blink var(--text-type-cursor-duration, 1s) ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .text-type-cursor {
+    animation: none;
   }
 }

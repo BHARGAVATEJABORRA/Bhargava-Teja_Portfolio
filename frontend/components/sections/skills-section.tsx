@@ -24,7 +24,7 @@ function SkillChip({ skill }: { skill: SkillItem }) {
             flags when assigned to a component-shaped variable. */}
         {createElement(resolveSkillIcon(skill.iconKey), {
           size: 22,
-          className: "skill-icon",
+          className: skill.iconKey === "SiOpenai" ? "skill-icon skill-icon--openai" : "skill-icon",
           style: { color: skill.brandColor },
           "aria-hidden": true,
         })}

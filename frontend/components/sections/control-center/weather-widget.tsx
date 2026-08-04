@@ -15,6 +15,7 @@ import {
 import { portfolioContent } from "@/content/portfolio-content";
 
 import { ControlCenterPanel } from "./control-center-panel";
+import { WeatherScene } from "./weather-scene";
 
 const WEATHER_TIMEZONE = portfolioContent.identity.controlCenter.weatherTimezone;
 const WEATHER_LOCATION = portfolioContent.identity.controlCenter.weatherLocation;
@@ -36,216 +37,6 @@ function currentTimeInWeatherTimezone() {
     minute: "2-digit",
     timeZone: WEATHER_TIMEZONE,
   }).format(new Date());
-}
-
-// ─── Animated sky scene (liquid-glass backdrop) ──────────────────────────────
-function SkyScene({
-  kind,
-  isNight,
-  sunRotation,
-  expanded = false,
-}: {
-  kind: WeatherKind;
-  isNight: boolean;
-  sunRotation: number;
-  expanded?: boolean;
-}) {
-  const isRain = kind === "rainy";
-  const isSnow = kind === "snowy";
-  const isStorm = kind === "thunderstorm";
-  const hasClouds = kind === "partly-cloudy" || kind === "cloudy" || kind === "foggy" || isRain || isStorm;
-  const cloudOpacity = isNight ? (hasClouds ? 0.38 : 0) : kind === "clear" ? 0.68 : kind === "partly-cloudy" ? 0.82 : 0.96;
-
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
-      {/* Sky gradient */}
-      <div
-        className="weather-sky-shift absolute inset-0 transition-opacity duration-700"
-        style={{
-          background: "linear-gradient(180deg,#91a8bd 0%,#bdcbd6 38%,#78b9e6 100%)",
-          opacity: isNight ? 0 : 1,
-        }}
-      />
-      <div
-        className="absolute inset-0 transition-opacity duration-700"
-        style={{
-          background: "linear-gradient(180deg,#060e22 0%,#1a2d5a 60%,#2d4a7a 100%)",
-          opacity: isNight ? 1 : 0,
-        }}
-      />
-
-      {/* Layered, slowly drifting cloud banks give the live weather-card feel. */}
-      {cloudOpacity > 0 && (
-        <div className="absolute inset-0" style={{ opacity: cloudOpacity }}>
-          <div className="weather-cloud-bank weather-cloud-bank-far" />
-          <div className="weather-cloud-bank weather-cloud-bank-mid" />
-          <div className="weather-cloud-bank weather-cloud-bank-near" />
-        </div>
-      )}
-
-      {/* Sun / Moon disc */}
-      <div
-        className="absolute left-[52%] rounded-full transition-all duration-700"
-        style={{
-          width: expanded ? "7rem" : "3rem",
-          height: expanded ? "7rem" : "3rem",
-          bottom: expanded ? "52%" : "56%",
-          background: isNight ? "rgba(255,255,255,0.9)" : "#fceabb",
-          boxShadow: isNight ? "0 0 18px 5px #ffffff88" : "0 0 32px 10px #fceabb",
-          transform: `rotate(${sunRotation}deg)`,
-          transformOrigin: expanded ? "0px 12rem" : "0px 88px",
-          opacity: isStorm ? 0.3 : 1,
-        }}
-      />
-
-      {/* Moon crater overlay */}
-      {isNight && (
-        <div
-          className="absolute left-[52%] overflow-hidden rounded-full transition-opacity duration-700"
-          style={{
-            width: expanded ? "7rem" : "3rem",
-            height: expanded ? "7rem" : "3rem",
-            bottom: expanded ? "52%" : "56%",
-            transform: `rotate(${sunRotation}deg)`,
-            transformOrigin: expanded ? "0px 12rem" : "0px 88px",
-          }}
-        >
-          <div className="absolute -right-1.5 -top-1.5 h-full w-full rounded-full bg-[#10213f]" />
-        </div>
-      )}
-
-      {/* Stars (clear nights) */}
-      {isNight && !hasClouds && (
-        <div className="absolute inset-0">
-          {[15, 25, 40, 55, 70, 82, 12, 34, 60, 78, 90, 48].map((x, i) => (
-            <div
-              key={i}
-              className="absolute h-0.5 w-0.5 rounded-full bg-white"
-              style={{
-                left: `${x}%`,
-                top: `${[10, 20, 8, 18, 12, 25, 35, 30, 22, 15, 28, 5][i]}%`,
-                opacity: 0.6 + (i % 3) * 0.15,
-              }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Rain */}
-      {isRain && (
-        <div className="absolute inset-0 opacity-70">
-          {Array.from({ length: 40 }).map((_, i) => (
-            <span
-              key={i}
-              className="weather-rain absolute h-6 w-px bg-gradient-to-b from-white/80 to-white/0"
-              style={{ left: `${(i * 23) % 100}%`, top: `${(i * 31) % 80}%`, animationDelay: `${i * 0.03}s` }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Snow */}
-      {isSnow && (
-        <div className="absolute inset-0 opacity-90">
-          {Array.from({ length: 50 }).map((_, i) => (
-            <span
-              key={i}
-              className="weather-snow absolute h-1.5 w-1.5 rounded-full bg-white"
-              style={{ left: `${(i * 17) % 100}%`, top: `${(i * 23) % 80}%`, animationDelay: `${i * 0.07}s` }}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* Lightning */}
-      {isStorm && (
-        <div className="weather-lightning absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.9),rgba(255,255,255,0)_60%)]" />
-      )}
-
-      {/* Liquid-glass finish: specular top highlight + soft inner edge */}
-      <div className="absolute inset-0 rounded-[inherit] bg-[linear-gradient(165deg,rgba(255,255,255,0.28)_0%,rgba(255,255,255,0.06)_28%,rgba(255,255,255,0)_46%)]" />
-      <div className="absolute inset-0 rounded-[inherit] shadow-[inset_0_1px_0_rgba(255,255,255,0.35),inset_0_-1px_0_rgba(255,255,255,0.08)]" />
-
-      <style jsx>{`
-        .weather-sky-shift {
-          background-size: 130% 130% !important;
-          animation: sky-breathe 20s ease-in-out infinite alternate;
-        }
-        .weather-cloud-bank {
-          position: absolute;
-          left: -28%;
-          width: 150%;
-          border-radius: 9999px;
-          background:
-            radial-gradient(ellipse at 10% 72%, rgba(255,255,255,0.88) 0 12%, transparent 28%),
-            radial-gradient(ellipse at 25% 52%, rgba(255,255,255,0.94) 0 16%, transparent 33%),
-            radial-gradient(ellipse at 43% 68%, rgba(245,250,255,0.88) 0 15%, transparent 31%),
-            radial-gradient(ellipse at 59% 46%, rgba(255,255,255,0.9) 0 18%, transparent 35%),
-            radial-gradient(ellipse at 78% 68%, rgba(243,249,255,0.86) 0 17%, transparent 34%),
-            linear-gradient(180deg, rgba(255,255,255,0.68), rgba(222,235,247,0.28));
-          filter: blur(9px);
-          will-change: transform;
-        }
-        .weather-cloud-bank-far {
-          top: -7%;
-          height: 43%;
-          opacity: 0.55;
-          animation: cloud-bank-drift 48s ease-in-out infinite alternate;
-        }
-        .weather-cloud-bank-mid {
-          top: 10%;
-          height: 52%;
-          opacity: 0.72;
-          animation: cloud-bank-drift 38s ease-in-out -15s infinite alternate-reverse;
-        }
-        .weather-cloud-bank-near {
-          top: 31%;
-          height: 58%;
-          opacity: 0.62;
-          filter: blur(12px);
-          animation: cloud-bank-drift 31s ease-in-out -7s infinite alternate;
-        }
-        @keyframes sky-breathe {
-          from { background-position: 50% 0%; }
-          to { background-position: 50% 100%; }
-        }
-        @keyframes cloud-bank-drift {
-          from { transform: translate3d(-7%, 0, 0) scale(1.02); }
-          to { transform: translate3d(12%, -3%, 0) scale(1.08); }
-        }
-        .weather-rain {
-          animation: rain-fall 0.4s linear infinite;
-        }
-        @keyframes rain-fall {
-          to { transform: translateY(400px); }
-        }
-        .weather-snow {
-          animation: snow-fall 5s linear infinite;
-        }
-        @keyframes snow-fall {
-          from { transform: translateY(-30px) translateX(0);   }
-          to   { transform: translateY(500px) translateX(20px); }
-        }
-        .weather-lightning {
-          opacity: 0;
-          animation: lightning 2.8s linear infinite;
-        }
-        @keyframes lightning {
-          0%, 22%, 24%, 27%, 100% { opacity: 0; }
-          23%, 26% { opacity: 0.9; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .weather-sky-shift,
-          .weather-cloud-bank,
-          .weather-rain,
-          .weather-snow,
-          .weather-lightning {
-            animation: none;
-          }
-        }
-      `}</style>
-    </div>
-  );
 }
 
 function hourLabel(hour: number) {
@@ -311,9 +102,6 @@ export function WeatherWidget() {
 
   const isLoading = !data && !error;
   const isNight = data ? !data.isDay : !(nowHour >= 6 && nowHour <= 21);
-  const sunRotation = isNight
-    ? -90 + ((nowHour < 7 ? nowHour + 24 : nowHour) - 6) * (180 / 8)
-    : -90 + (nowHour - 7) * (180 / 15);
   const kind: WeatherKind = data?.kind ?? "partly-cloudy";
   const forecast = data
     ? [{ hour: nowHour, tempF: data.tempF, kind: data.kind, isDay: data.isDay, now: true }, ...data.hours]
@@ -332,7 +120,7 @@ export function WeatherWidget() {
         radius={28}
         className="relative flex h-[220px] min-w-0 w-full flex-col overflow-hidden border-0 p-0 text-white shadow-[0_10px_28px_rgba(0,0,0,0.14)] lg:h-full"
       >
-        {!isLoading && <SkyScene kind={kind} isNight={isNight} sunRotation={sunRotation} />}
+        {!isLoading && !isOpen && <WeatherScene kind={kind} isNight={isNight} />}
         {!isLoading && <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(7,20,38,0.3),rgba(8,38,63,0.02)_52%,rgba(7,27,48,0.22))]" />}
 
         {isLoading ? (
@@ -345,12 +133,12 @@ export function WeatherWidget() {
           <div className="relative z-10 flex h-full min-h-0 flex-col p-5 sm:p-6">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <p className="truncate text-2xl font-semibold tracking-[-0.04em] text-white sm:text-[1.75rem]">
+                <p className="truncate text-2xl font-semibold tracking-[-0.04em] text-white [text-shadow:0_2px_12px_rgba(0,15,32,0.52)] sm:text-[1.75rem]">
                   {data?.location ?? WEATHER_LOCATION}
                 </p>
-                <p className="mt-0.5 text-sm font-semibold text-white/88">{localTime || "--:--"}</p>
+                <p className="mt-0.5 text-sm font-semibold text-white/88 [text-shadow:0_2px_10px_rgba(0,15,32,0.48)]">{localTime || "--:--"}</p>
               </div>
-              <p className="shrink-0 text-[4.25rem] font-light leading-[0.82] tracking-[-0.08em] tabular-nums text-white sm:text-[4.75rem]">
+              <p className="shrink-0 text-[4.25rem] font-light leading-[0.82] tracking-[-0.08em] tabular-nums text-white [text-shadow:0_3px_16px_rgba(0,15,32,0.46)] sm:text-[4.75rem]">
                 {data ? `${data.tempF}°` : "--"}
               </p>
             </div>
@@ -410,7 +198,7 @@ export function WeatherWidget() {
             </aside>
 
             <div className="relative min-w-0 flex-1 overflow-hidden">
-              <SkyScene kind={kind} isNight={isNight} sunRotation={sunRotation} expanded />
+              <WeatherScene kind={kind} isNight={isNight} expanded />
               <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(4,13,28,0.36),rgba(4,18,32,0.04)_42%,rgba(4,16,28,0.6))]" />
               <button
                 type="button"
