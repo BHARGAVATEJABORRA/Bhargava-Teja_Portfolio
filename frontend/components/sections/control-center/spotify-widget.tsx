@@ -68,8 +68,21 @@ function Waveform({ active }: { active: boolean }) {
 
 function PlaybackProgress({ data }: { data: SpotifyData }) {
   const durationMs = Math.max(0, data.durationMs ?? 0);
-  const initialProgressMs = Math.min(durationMs || Infinity, Math.max(0, data.progressMs ?? 0));
-  const [progressMs, setProgressMs] = useState(initialProgressMs);
+  const serverProgressMs = Math.min(durationMs || Infinity, Math.max(0, data.progressMs ?? 0));
+  const [progressMs, setProgressMs] = useState(serverProgressMs);
+
+  useEffect(() => {
+    setProgressMs((current) => {
+      if (!data.isPlaying) {
+        return serverProgressMs;
+      }
+
+      // Spotify's sampled position can arrive a little behind this component's
+      // locally animated playhead. Keep the playhead monotonic so each poll
+      // cannot pull the bar backward; a new song remounts this component.
+      return Math.max(current, serverProgressMs);
+    });
+  }, [data.isPlaying, serverProgressMs]);
 
   useEffect(() => {
     if (!data.isPlaying || durationMs <= 0) {
@@ -165,10 +178,7 @@ function CompactSpotifyCard({ data, hasTrack, isPlaying, label }: SpotifyCardPro
             <FiHeart className="mb-1 shrink-0 text-white/90" size={24} aria-hidden />
           </div>
 
-          <PlaybackProgress
-            key={`${data.songUrl}-${data.progressMs}-${data.durationMs}-${data.isPlaying}`}
-            data={data}
-          />
+          <PlaybackProgress key={data.songUrl} data={data} />
         </div>
       </div>
     </ControlCenterPanel>
