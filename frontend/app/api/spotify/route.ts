@@ -6,7 +6,8 @@ import type { SpotifyData } from "@/lib/spotify-types";
 const PLAYER_URL = "https://api.spotify.com/v1/me/player";
 const TOP_TRACKS_URL = "https://api.spotify.com/v1/me/top/tracks?limit=1&time_range=short_term";
 const ACCESS_TOKEN_EARLY_REFRESH_MS = 60_000;
-const SHARED_RESPONSE_CACHE_CONTROL = "public, max-age=0, must-revalidate, s-maxage=1";
+const BROWSER_RESPONSE_CACHE_CONTROL = "public, max-age=0, must-revalidate";
+const CDN_RESPONSE_CACHE_CONTROL = "public, s-maxage=1";
 
 type SpotifyTrack = {
   name?: string;
@@ -159,7 +160,13 @@ async function getAccessToken(): Promise<AccessTokenResult | null> {
 
 function liveResponse(payload: SpotifyData) {
   return NextResponse.json(payload, {
-    headers: { "Cache-Control": SHARED_RESPONSE_CACHE_CONTROL },
+    // Browsers revalidate every poll, while Vercel serves at most a one-second
+    // old shared response to prevent concurrent visitors from duplicating the
+    // same Spotify request.
+    headers: {
+      "Cache-Control": BROWSER_RESPONSE_CACHE_CONTROL,
+      "CDN-Cache-Control": CDN_RESPONSE_CACHE_CONTROL,
+    },
   });
 }
 
