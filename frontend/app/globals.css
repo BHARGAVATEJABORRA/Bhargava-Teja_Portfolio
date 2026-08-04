@@ -1087,6 +1087,23 @@ a {
   width: 100%;
 }
 
+/* Weather is a scene, not frosted content. Avoid applying the generic
+   displacement/glass treatment to its backdrop so gradients and vector detail
+   retain their native contrast on high-density displays. */
+.weather-panel.glass-surface,
+.weather-panel.glass-surface--fallback,
+.weather-panel.glass-surface--svg {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: 0 16px 36px rgba(1, 12, 28, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.weather-panel.glass-surface > .glass-surface__content {
+  overflow: hidden;
+  border: 1px solid rgba(228, 247, 255, 0.28);
+}
+
 .control-center-panel::before,
 .control-center-panel::after {
   position: absolute;

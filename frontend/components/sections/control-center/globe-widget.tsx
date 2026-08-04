@@ -1,19 +1,12 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import { LuMapPin } from "react-icons/lu";
 
 import { portfolioContent } from "@/content/portfolio-content";
-import { subscribeToScrollRead } from "@/lib/scroll-runtime";
 
 import { ControlCenterPanel } from "./control-center-panel";
-
-const GlobeRenderer = dynamic(() => import("./globe-renderer").then((module) => module.GlobeRenderer), {
-  ssr: false,
-});
-
-const ACTIVATION_MARGIN = 0;
+import { EARTH_TEXTURE_URL, GlobeRenderer } from "./globe-renderer";
 
 interface GlobeWidgetProps {
   markerLocation?: [number, number];
@@ -38,39 +31,39 @@ export function GlobeWidget({
   const [ready, setReady] = useState(false);
   const [nearViewport, setNearViewport] = useState(false);
   const [documentVisible, setDocumentVisible] = useState(true);
-  const [enhancementAllowed, setEnhancementAllowed] = useState(false);
+  // Start the renderer as soon as the control center mounts. The preference
+  // effect below still turns the enhancement off for data-saver users, but a
+  // normal reload now begins loading the Three.js chunk and texture before
+  // this card reaches the viewport.
+  const [enhancementAllowed, setEnhancementAllowed] = useState(true);
   const [markerLat, markerLng] = markerLocation;
-  const sceneActive = nearViewport && documentVisible && enhancementAllowed && !hasRenderError;
+  const sceneActive = documentVisible && enhancementAllowed && !hasRenderError;
 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setNearViewport(entry.isIntersecting),
-      { rootMargin: `${ACTIVATION_MARGIN}px 0px` },
-    );
+    // This only pauses drawing. It never delays loading or unmounts the WebGL
+    // context, so returning to the card does not show a loading transition.
+    const observer = new IntersectionObserver(([entry]) => setNearViewport(entry.isIntersecting), {
+      rootMargin: "240px 0px",
+    });
     observer.observe(viewport);
     return () => observer.disconnect();
   }, []);
-
-  // IntersectionObserver governs entry. While active, the shared read phase
-  // verifies exit so a delayed observer callback cannot retain a WebGL context.
-  useEffect(() => {
-    if (!nearViewport || !documentVisible) return;
-    return subscribeToScrollRead(() => {
-      const rect = viewportRef.current?.getBoundingClientRect();
-      if (!rect) return;
-      if (rect.bottom < -ACTIVATION_MARGIN || rect.top > window.innerHeight + ACTIVATION_MARGIN) {
-        setNearViewport(false);
-      }
-    });
-  }, [documentVisible, nearViewport]);
 
   useEffect(() => {
     const updateVisibility = () => setDocumentVisible(!document.hidden);
     updateVisibility();
     document.addEventListener("visibilitychange", updateVisibility);
     return () => document.removeEventListener("visibilitychange", updateVisibility);
+  }, []);
+
+  useEffect(() => {
+    // Begin the image request in parallel with the renderer's dynamic Three.js
+    // import. TextureLoader reuses this cache entry when it creates the globe.
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.src = EARTH_TEXTURE_URL;
   }, []);
 
   useEffect(() => {
@@ -114,6 +107,7 @@ export function GlobeWidget({
               markerLat={markerLat}
               markerLng={markerLng}
               ready={ready}
+              shouldAnimate={nearViewport && documentVisible}
               setReady={setReady}
               setRenderError={setHasRenderError}
             />

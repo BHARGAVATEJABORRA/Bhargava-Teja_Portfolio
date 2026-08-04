@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, type Dispatch, type SetStateAction } from "react";
 
-const EARTH_TEXTURE_URL = "https://unpkg.com/three-globe@2.31.0/example/img/earth-blue-marble.jpg";
+export const EARTH_TEXTURE_URL = "https://unpkg.com/three-globe@2.31.0/example/img/earth-blue-marble.jpg";
 const AUTO_SPIN_SPEED = 0.0022;
 const GLOBE_TILT = 0.32;
 
@@ -26,19 +26,25 @@ type GlobeRendererProps = {
   markerLat: number;
   markerLng: number;
   ready: boolean;
+  shouldAnimate: boolean;
   setReady: Dispatch<SetStateAction<boolean>>;
   setRenderError: Dispatch<SetStateAction<boolean>>;
 };
 
 /**
- * The heavy renderer lives in its own conditional chunk. Three.js is imported
- * only after the location card is actually visible, and every GPU/resource
- * handle is disposed when the card leaves the viewport.
+ * The renderer mounts as soon as the control-center mounts so its Three.js
+ * chunk and texture are ready before the visitor scrolls to this card. It
+ * still uses a capped pixel ratio and a 30fps loop to keep the GPU cost small.
  */
-export function GlobeRenderer({ markerLat, markerLng, ready, setReady, setRenderError }: GlobeRendererProps) {
+export function GlobeRenderer({ markerLat, markerLng, ready, shouldAnimate, setReady, setRenderError }: GlobeRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const pointerStartRef = useRef<number | null>(null);
   const dragDeltaRef = useRef(0);
+  const shouldAnimateRef = useRef(shouldAnimate);
+
+  useEffect(() => {
+    shouldAnimateRef.current = shouldAnimate;
+  }, [shouldAnimate]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     pointerStartRef.current = event.clientX - dragDeltaRef.current;
@@ -89,7 +95,10 @@ export function GlobeRenderer({ markerLat, markerLng, ready, setReady, setRender
           return;
         }
 
-        renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
+        // 2x is required to avoid a visibly soft globe on Retina panels. Cap
+        // it there so 3x/4x screens do not create an unnecessarily large
+        // render target.
+        renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
         renderer.domElement.style.width = "100%";
         renderer.domElement.style.height = "100%";
         renderer.domElement.style.display = "block";
@@ -104,7 +113,7 @@ export function GlobeRenderer({ markerLat, markerLng, ready, setReady, setRender
         globeGroup.rotation.x = GLOBE_TILT;
         scene.add(globeGroup);
 
-        const sphereGeometry = new THREE.SphereGeometry(1, 40, 40);
+        const sphereGeometry = new THREE.SphereGeometry(1, 72, 72);
         const sphereMaterial = new THREE.MeshPhongMaterial({
           color: 0xffffff,
           specular: new THREE.Color(0x223344),
@@ -113,7 +122,7 @@ export function GlobeRenderer({ markerLat, markerLng, ready, setReady, setRender
         const globe = new THREE.Mesh(sphereGeometry, sphereMaterial);
         globeGroup.add(globe);
 
-        const atmosphereGeometry = new THREE.SphereGeometry(1, 40, 40);
+        const atmosphereGeometry = new THREE.SphereGeometry(1, 72, 72);
         const atmosphereMaterial = new THREE.ShaderMaterial({
           vertexShader: ATMOSPHERE_VERTEX,
           fragmentShader: ATMOSPHERE_FRAGMENT,
@@ -198,6 +207,12 @@ export function GlobeRenderer({ markerLat, markerLng, ready, setReady, setRender
         let lastRender = 0;
         const animate = (timestamp: number) => {
           frame = window.requestAnimationFrame(animate);
+          // Keep the initialized renderer and decoded texture resident, but
+          // skip all GPU drawing while the card is away from the viewport.
+          if (!shouldAnimateRef.current) {
+            lastRender = timestamp;
+            return;
+          }
           if (timestamp - lastRender < 1000 / 30) return;
           lastRender = timestamp;
           timer.update(timestamp);

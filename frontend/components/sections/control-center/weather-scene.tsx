@@ -93,8 +93,8 @@ const WEATHER_PARTICLES = Array.from({ length: 16 }, (_, index) => ({
 }));
 
 /**
- * A composited, CSS-only weather scene. The only animated properties are
- * transforms/opacity, and they run only while this scene is actually visible.
+ * A composited, CSS-only weather scene. It stays resolution-independent on
+ * Retina displays; only transforms and opacity animate while visible.
  */
 export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded = false }: SceneProps) {
   const { canAnimate, nearViewport, setNearViewport } = useSceneMotion();
@@ -166,8 +166,9 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
 
       <style jsx>{`
         .weather-scene { isolation: isolate; position: absolute; inset: 0; overflow: hidden; border-radius: inherit; }
-        .weather-scene__horizon { position: absolute; inset: 40% 0 0; background: linear-gradient(180deg, transparent, rgba(222, 243, 250, 0.16)); }
-        .weather-scene__sun { position: absolute; top: 18%; right: 34%; width: ${expanded ? "9rem" : "4.8rem"}; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255,253,237,0.98) 0 20%, rgba(255,238,173,0.8) 42%, rgba(255,230,153,0) 71%); }
+        .weather-scene__horizon { position: absolute; inset: 34% 0 0; background: linear-gradient(180deg, transparent, rgba(222, 243, 250, 0.23) 60%, rgba(207, 235, 245, 0.34)); }
+        .weather-scene__horizon::before { position: absolute; inset: 0; content: ""; opacity: .48; background: repeating-linear-gradient(176deg, transparent 0 13px, rgba(255,255,255,.09) 14px 15px, transparent 16px 27px); }
+        .weather-scene__sun { position: absolute; top: 18%; right: 34%; width: ${expanded ? "9rem" : "4.8rem"}; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle, rgba(255,253,237,0.98) 0 20%, rgba(255,238,173,0.8) 42%, rgba(255,230,153,0) 71%); box-shadow: 0 0 34px rgba(255,240,184,.32); }
         .weather-scene__stars i { position: absolute; width: 1px; height: 1px; border-radius: 50%; background: rgba(255,255,255,.8); }
         .weather-scene__moon { position: absolute; top: 18%; right: 34%; width: ${expanded ? "7rem" : "3.75rem"}; aspect-ratio: 1; border-radius: 50%; background: radial-gradient(circle at 34% 31%, rgba(132,149,170,.34) 0 5%, transparent 6%), radial-gradient(circle at 67% 65%, rgba(118,137,160,.28) 0 7%, transparent 8%), radial-gradient(circle at 43% 45%, #f5f8fb 0%, #d6e0eb 57%, #aebdce 100%); box-shadow: 0 0 24px rgba(207,226,247,.3); }
         .weather-scene__clouds { position: absolute; inset: 0; opacity: .93; }
@@ -178,9 +179,11 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
         .weather-scene__clouds--partly-cloudy .weather-cloud-bank--far { opacity: .22; }
         .weather-scene__clouds--partly-cloudy .weather-cloud-bank--middle { opacity: .34; transform: translateX(28%); }
         .weather-scene__clouds--partly-cloudy .weather-cloud-bank--near { opacity: .22; transform: translateX(-28%); }
-        .weather-scene--animated .weather-cloud-bank--far { will-change: transform; animation: weather-cloud-far 300s linear infinite; }
-        .weather-scene--animated .weather-cloud-bank--middle { will-change: transform; animation: weather-cloud-middle 230s linear infinite; }
-        .weather-scene--animated .weather-cloud-bank--near { will-change: transform; animation: weather-cloud-near 170s linear infinite; }
+        .weather-scene--animated .weather-scene__horizon::before { will-change: transform, opacity; animation: weather-haze 18s ease-in-out infinite alternate; }
+        .weather-scene--animated .weather-scene__sun { will-change: transform, opacity; animation: weather-sun-drift 14s ease-in-out infinite alternate; }
+        .weather-scene--animated .weather-cloud-bank--far { will-change: transform; animation: weather-cloud-far 56s linear infinite alternate; }
+        .weather-scene--animated .weather-cloud-bank--middle { will-change: transform; animation: weather-cloud-middle 40s linear infinite alternate; }
+        .weather-scene--animated .weather-cloud-bank--near { will-change: transform; animation: weather-cloud-near 28s linear infinite alternate; }
         .weather-scene__fog { position: absolute; inset: 42% -8% -8%; opacity: .54; background: linear-gradient(180deg, transparent, rgba(244,250,250,.55) 53%, rgba(217,231,235,.7)); }
         .weather-scene__particles { position: absolute; inset: 0; overflow: hidden; }
         .weather-scene__particles i { position: absolute; display: block; opacity: .56; }
@@ -191,9 +194,11 @@ export const WeatherScene = memo(function WeatherScene({ kind, isNight, expanded
         .weather-scene__lightning { position: absolute; inset: 0; opacity: 0; background: linear-gradient(122deg, transparent 44%, rgba(255,255,255,.3) 47%, transparent 51%); }
         .weather-scene--animated .weather-scene__lightning { animation: weather-lightning 12s step-end infinite; }
         .weather-scene__finish { position: absolute; inset: 0; background: linear-gradient(165deg, rgba(255,255,255,.18), transparent 35%, rgba(2,15,28,.17)); box-shadow: inset 0 1px rgba(255,255,255,.38), inset 0 -1px rgba(0,0,0,.12); }
-        @keyframes weather-cloud-far { from { transform: translate3d(-1.5%,0,0); } to { transform: translate3d(1.5%,0,0); } }
-        @keyframes weather-cloud-middle { from { transform: translate3d(-2.1%,0,0); } to { transform: translate3d(2.1%,0,0); } }
-        @keyframes weather-cloud-near { from { transform: translate3d(-2.8%,0,0); } to { transform: translate3d(2.8%,0,0); } }
+        @keyframes weather-haze { from { transform: translate3d(-1.5%, 0, 0); opacity: .33; } to { transform: translate3d(1.5%, -1%, 0); opacity: .6; } }
+        @keyframes weather-sun-drift { from { transform: translate3d(-2px, 1px, 0) scale(.98); opacity: .9; } to { transform: translate3d(3px, -2px, 0) scale(1.04); opacity: 1; } }
+        @keyframes weather-cloud-far { from { transform: translate3d(-5%,0,0); } to { transform: translate3d(5%,0,0); } }
+        @keyframes weather-cloud-middle { from { transform: translate3d(-7%,0,0); } to { transform: translate3d(7%,0,0); } }
+        @keyframes weather-cloud-near { from { transform: translate3d(-9%,0,0); } to { transform: translate3d(9%,0,0); } }
         @keyframes weather-rain { from { transform: translate3d(-5px,-22px,0) rotate(14deg); opacity: 0; } 15% { opacity: .56; } to { transform: translate3d(18px,190px,0) rotate(14deg); opacity: 0; } }
         @keyframes weather-snow { from { transform: translate3d(0,-14px,0); opacity: 0; } 20% { opacity: .78; } to { transform: translate3d(15px,190px,0); opacity: 0; } }
         @keyframes weather-lightning { 0%, 92%, 100% { opacity: 0; } 93%, 94% { opacity: .62; } }

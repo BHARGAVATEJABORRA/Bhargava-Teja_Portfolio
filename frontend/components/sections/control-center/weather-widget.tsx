@@ -118,6 +118,7 @@ export function WeatherWidget() {
     >
       <ControlCenterPanel
         radius={28}
+        surfaceClassName="weather-panel"
         className="relative flex h-[220px] min-w-0 w-full flex-col overflow-hidden border-0 p-0 text-white shadow-[0_10px_28px_rgba(0,0,0,0.14)] lg:h-full"
       >
         {!isLoading && !isOpen && <WeatherScene kind={kind} isNight={isNight} />}
