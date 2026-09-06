@@ -12,6 +12,9 @@ import { ADMIN_SESSION_COOKIE, verifySessionToken } from "@/lib/admin-session";
 export async function requireAdmin(): Promise<NextResponse | null> {
   const store = await cookies();
   const token = store.get(ADMIN_SESSION_COOKIE)?.value;
+  // CSRF/origin checks belong to mutating requests in proxy/route handlers.
+  // Rejecting every cross-site GET here would break the local Spotify OAuth
+  // callback, which navigates back from accounts.spotify.com with a state cookie.
   if (await verifySessionToken(token)) return null;
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
 }

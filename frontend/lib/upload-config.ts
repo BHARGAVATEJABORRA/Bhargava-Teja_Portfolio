@@ -26,10 +26,21 @@ export const IMAGE_TYPES = new Set([
   "image/avif",
 ]);
 
+const FILE_EXTENSIONS: Record<string, readonly string[]> = {
+  "image/png": ["png"], "image/jpeg": ["jpg", "jpeg"], "image/webp": ["webp"],
+  "image/gif": ["gif"], "image/avif": ["avif"], "application/pdf": ["pdf"],
+  "video/mp4": ["mp4", "m4v"], "video/webm": ["webm"], "video/quicktime": ["mov"],
+};
+
+export function uploadNameMatchesType(name: string, type: string): boolean {
+  const ext = name.split(".").at(-1)?.toLowerCase() ?? "";
+  return FILE_EXTENSIONS[type]?.includes(ext) ?? false;
+}
+
 export function isAllowedUploadType(kind: UploadKind, type: string): boolean {
   if (kind === "resume") return type === "application/pdf";
   if (kind === "image") return IMAGE_TYPES.has(type);
-  return type === "application/pdf" || IMAGE_TYPES.has(type) || type.startsWith("video/");
+  return Object.hasOwn(FILE_EXTENSIONS, type);
 }
 
 /** Blob pathname prefix for media-library assets (mirrors /public/uploads). */

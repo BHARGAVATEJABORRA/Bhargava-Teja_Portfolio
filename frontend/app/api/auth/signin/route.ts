@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { getSpotifyEnvConfig } from "@/lib/spotify-env";
+import { requireAdmin } from "@/lib/admin-guard";
 
 const SPOTIFY_AUTHORIZE_URL = "https://accounts.spotify.com/authorize";
 const SPOTIFY_SCOPES = [
@@ -15,6 +16,11 @@ function createState(): string {
 }
 
 export async function GET() {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    return NextResponse.json({ error: "Spotify setup is local-only. Configure production credentials through your hosting settings." }, { status: 403, headers: { "Cache-Control": "no-store" } });
+  }
   const { clientId, clientSecret, redirectUri } = getSpotifyEnvConfig();
 
   if (!clientId || !clientSecret) {
@@ -37,6 +43,7 @@ export async function GET() {
   authorizationUrl.searchParams.set("show_dialog", "true");
 
   const response = NextResponse.redirect(authorizationUrl);
+  response.headers.set("Cache-Control", "no-store");
   response.cookies.set("spotify_oauth_state", state, {
     httpOnly: true,
     sameSite: "lax",

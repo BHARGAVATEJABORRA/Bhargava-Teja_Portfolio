@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 
 import { getSpotifyEnvConfig } from "@/lib/spotify-env";
 import type { SpotifyData } from "@/lib/spotify-types";
+import { getSiteConfig } from "@/lib/content-store";
 
 const PLAYER_URL = "https://api.spotify.com/v1/me/player";
 const TOP_TRACKS_URL = "https://api.spotify.com/v1/me/top/tracks?limit=1&time_range=short_term";
+const ACCESS_TOKEN_EARLY_REFRESH_MS = 60_000;
+const BROWSER_RESPONSE_CACHE_CONTROL = "public, max-age=0, must-revalidate";
+const CDN_RESPONSE_CACHE_CONTROL = "public, s-maxage=1";
 
 type SpotifyTrack = {
   name?: string;
@@ -33,10 +37,17 @@ type AccessTokenResult = {
   scopes: Set<string>;
 };
 
+type CachedAccessToken = AccessTokenResult & {
+  expiresAt: number;
+};
+
 type TrackLookupResult = {
   payload: SpotifyData | null;
   forbidden: boolean;
 };
+
+let cachedAccessToken: CachedAccessToken | null = null;
+let accessTokenRequest: Promise<AccessTokenResult | null> | null = null;
 
 export type { SpotifyData };
 
@@ -61,23 +72,21 @@ const UNAVAILABLE: SpotifyData = {
   detail: "Spotify did not return an access token or track data right now",
 };
 
-// Point re-auth instructions at whatever origin this deployment runs on
-// (NEXT_PUBLIC_SITE_URL et al via getSpotifyEnvConfig) instead of localhost.
-function tokenRejected(siteUrl: string): SpotifyData {
+function tokenRejected(): SpotifyData {
   return {
     ...OFFLINE,
-    detail: `Spotify rejected the refresh token (likely expired or revoked). Re-mint it: open ${siteUrl}/api/auth/signin, authorize, then retry /api/spotify`,
+    detail: "Spotify rejected the refresh token. The owner must renew it using the local-only setup flow and update the deployment secret.",
   };
 }
 
-function forbidden(siteUrl: string): SpotifyData {
+function forbidden(): SpotifyData {
   return {
     ...OFFLINE,
-    detail: `Spotify returned 403 on the player/track endpoints (usually missing scopes). Re-run ${siteUrl}/api/auth/signin to re-grant scopes`,
+    detail: "Spotify denied access to playback data. The owner should check scopes using the local-only setup flow.",
   };
 }
 
-async function getAccessToken(): Promise<AccessTokenResult | null> {
+async function refreshAccessToken(): Promise<AccessTokenResult | null> {
   const { clientId, clientSecret, refreshToken, isConfigured } = getSpotifyEnvConfig();
 
   if (!isConfigured) {
@@ -108,15 +117,57 @@ async function getAccessToken(): Promise<AccessTokenResult | null> {
     return null;
   }
 
-  const data = (await response.json()) as { access_token?: string; scope?: string };
+  const data = (await response.json()) as {
+    access_token?: string;
+    expires_in?: number;
+    scope?: string;
+  };
   if (!data.access_token) {
     return null;
   }
 
-  return {
+  const accessToken = {
     token: data.access_token,
     scopes: new Set((data.scope ?? "").split(" ").filter(Boolean)),
   };
+  // Spotify access tokens normally last an hour. Retaining it only in this
+  // server runtime keeps credentials server-side and avoids one token request
+  // per one-second widget poll. Refresh a minute early when an expiry is sent.
+  cachedAccessToken = {
+    ...accessToken,
+    expiresAt: Date.now() + Math.max(0, (data.expires_in ?? 3_600) * 1000 - ACCESS_TOKEN_EARLY_REFRESH_MS),
+  };
+
+  return accessToken;
+}
+
+async function getAccessToken(): Promise<AccessTokenResult | null> {
+  if (cachedAccessToken && cachedAccessToken.expiresAt > Date.now()) {
+    return cachedAccessToken;
+  }
+
+  // A burst of revalidations can reach a warm function together. Share one
+  // refresh-token exchange between them instead of issuing duplicates.
+  if (!accessTokenRequest) {
+    accessTokenRequest = refreshAccessToken().finally(() => {
+      accessTokenRequest = null;
+    });
+  }
+
+  return accessTokenRequest;
+}
+
+function liveResponse(payload: SpotifyData) {
+  return NextResponse.json(payload, {
+    // Browsers revalidate every poll, while Vercel serves at most a one-second
+    // old shared response to prevent concurrent visitors from duplicating the
+    // same Spotify request.
+    headers: {
+      "Cache-Control": BROWSER_RESPONSE_CACHE_CONTROL,
+      "CDN-Cache-Control": CDN_RESPONSE_CACHE_CONTROL,
+      "Vercel-CDN-Cache-Control": CDN_RESPONSE_CACHE_CONTROL,
+    },
+  });
 }
 
 function trackToPayload(
@@ -178,6 +229,8 @@ async function getTopTrack(accessToken: string): Promise<TrackLookupResult> {
 }
 
 export async function GET() {
+  const config = await getSiteConfig().catch(() => null);
+  if (!config?.spotifyEnabled) return NextResponse.json({ ...OFFLINE, detail: "Spotify sharing is disabled." }, { headers: { "Cache-Control": "no-store" } });
   const spotifyConfig = getSpotifyEnvConfig();
 
   if (!spotifyConfig.isConfigured) {
@@ -190,7 +243,7 @@ export async function GET() {
   if (!accessToken) {
     // We already know credentials are configured, so a null token means the
     // refresh exchange itself failed — almost always an expired/revoked token.
-    return NextResponse.json(tokenRejected(spotifyConfig.siteUrl), {
+    return NextResponse.json(tokenRejected(), {
       headers: { "Cache-Control": "no-store" },
     });
   }
@@ -210,18 +263,14 @@ export async function GET() {
         : null;
 
       if (payload) {
-        return NextResponse.json(payload, {
-          headers: { "Cache-Control": "s-maxage=8, stale-while-revalidate=2" },
-        });
+        return liveResponse(payload);
       }
     }
 
     const recent = await getRecentlyPlayed(accessToken.token);
     wasForbidden = wasForbidden || recent.forbidden;
     if (recent.payload) {
-      return NextResponse.json(recent.payload, {
-        headers: { "Cache-Control": "s-maxage=8, stale-while-revalidate=2" },
-      });
+      return liveResponse(recent.payload);
     }
 
     const topTrack = accessToken.scopes.has("user-top-read")
@@ -229,13 +278,11 @@ export async function GET() {
       : { payload: null, forbidden: false };
     wasForbidden = wasForbidden || topTrack.forbidden;
     if (topTrack.payload) {
-      return NextResponse.json(topTrack.payload, {
-        headers: { "Cache-Control": "s-maxage=600, stale-while-revalidate=300" },
-      });
+      return liveResponse(topTrack.payload);
     }
 
     if (wasForbidden) {
-      return NextResponse.json(forbidden(spotifyConfig.siteUrl), {
+      return NextResponse.json(forbidden(), {
         headers: { "Cache-Control": "no-store" },
       });
     }
@@ -245,7 +292,7 @@ export async function GET() {
         ...UNAVAILABLE,
         detail: accessToken.scopes.has("user-top-read")
           ? "Token is valid but Spotify returned no current, recent, or top track — play something, then retry"
-          : "Visit /api/auth/signin again to grant the updated top-track scope",
+          : "The owner must grant the top-track scope using the local-only Spotify setup flow",
       },
       { headers: { "Cache-Control": "no-store" } },
     );

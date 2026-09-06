@@ -603,6 +603,11 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
           paintFooterClouds(cloudsContext, cloudsWidth, cloudsHeight, progress, cloudImage);
           lastCloudsKey = cloudsKey;
         }
+
+        // Expose that the asynchronously decoded plate has been painted at
+        // least once. This is useful both for deterministic visual testing
+        // and to avoid treating an empty canvas as a settled scene.
+        cloudsCanvas.dataset.ready = "true";
       }
 
       const starsKey = String(starsAlpha(progress));
@@ -620,6 +625,7 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
 
     return () => {
       cloudImage.removeEventListener("load", paint);
+      delete cloudsCanvas.dataset.ready;
       unsubscribe();
     };
   }, [mounted, sceneActive]);
@@ -766,7 +772,8 @@ export function AdalineFooterScene({ contact, contactId, footer }: AdalineFooter
         >
           {shouldReduceMotion || !sceneActive ? (
             <NextImage
-              src="/adaline-scenes/footer/footer-dock.webp?v=10"
+              src="/adaline-scenes/footer/footer-dock.webp"
+              data-footer-dock-static
               alt=""
               aria-hidden
               width={1200}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Space_Grotesk, IBM_Plex_Mono } from "next/font/google";
 
 import { AnalyticsBootstrap } from "@/components/analytics/analytics-bootstrap";
@@ -57,11 +58,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   return (
     <html lang="en" className="dark" suppressHydrationWarning>
       <body className={`${spaceGrotesk.variable} ${ibmPlexMono.variable} bg-[var(--color-bg)] antialiased`}>
@@ -73,7 +75,7 @@ export default function RootLayout({
           >
             Skip to main content
           </a>
-          <AnalyticsBootstrap />
+          <AnalyticsBootstrap nonce={nonce} />
           <PageBeacon />
           <div className="relative min-h-screen">{children}</div>
         </SmoothScrollProvider>

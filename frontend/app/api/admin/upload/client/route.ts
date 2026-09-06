@@ -28,6 +28,7 @@ import {
   UPLOAD_KINDS,
   type UploadKind,
 } from "@/lib/upload-config";
+import { readJsonObject, requestErrorResponse } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -44,9 +45,9 @@ function parseKind(clientPayload: string | null): UploadKind {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   let body: HandleUploadBody;
   try {
-    body = (await req.json()) as HandleUploadBody;
-  } catch {
-    return NextResponse.json({ error: "Expected a JSON body." }, { status: 400 });
+    body = await readJsonObject(req, 32_768) as unknown as HandleUploadBody;
+  } catch (error) {
+    return requestErrorResponse(error);
   }
 
   // Only the token mint is admin-gated; the completion webhook authenticates
@@ -61,12 +62,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       body,
       request: req,
       onBeforeGenerateToken: async (pathname, clientPayload) => {
+        const denied = await requireAdmin();
+        if (denied) throw new Error("Unauthorized");
         const kind = parseKind(clientPayload);
         const isValidResumePath = kind === "resume" && pathname === RESUME_BLOB_PATH;
         const isValidMediaPath =
           kind !== "resume" &&
           pathname.startsWith(BLOB_UPLOAD_PREFIX) &&
-          /^[a-z0-9][a-z0-9-]{0,47}(?:\.[a-z0-9]{1,10})?$/i.test(pathname.slice(BLOB_UPLOAD_PREFIX.length));
+          /^[a-z0-9][a-z0-9-]{0,47}\.(?:png|jpe?g|webp|gif|avif|pdf|mp4|m4v|webm|mov)$/i.test(pathname.slice(BLOB_UPLOAD_PREFIX.length));
         if (!isValidResumePath && !isValidMediaPath) {
           throw new Error(`Uploads must live under ${BLOB_UPLOAD_PREFIX}`);
         }
@@ -76,7 +79,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
               ? ["application/pdf"]
               : kind === "image"
                 ? [...IMAGE_TYPES]
-                : [...IMAGE_TYPES, "video/*", "application/pdf"],
+                : [...IMAGE_TYPES, "video/mp4", "video/webm", "video/quicktime", "application/pdf"],
           maximumSizeInBytes: MAX_UPLOAD_BYTES[kind],
           addRandomSuffix: true,
           tokenPayload: clientPayload ?? "",
@@ -90,6 +93,6 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return NextResponse.json(jsonResponse);
   } catch (err) {
     console.error("[admin-upload-client]", err);
-    return NextResponse.json({ error: (err as Error).message || "Upload token exchange failed." }, { status: 400 });
+    return NextResponse.json({ error: "Upload token exchange failed." }, { status: 400 });
   }
 }

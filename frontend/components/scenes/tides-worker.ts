@@ -19,7 +19,8 @@ type WorkerMessage = InitMessage | UpdateMessage | ResizeMessage | VisibilityMes
 
 const SUNRISE_T = 0.14;
 const DAY_SPAN = 0.82;
-const FRAME_MS = 1000 / 60;
+const SIMULATION_FRAME_MS = 1000 / 60;
+const RENDER_INTERVAL_MS = 1000 / 30;
 
 let canvas: OffscreenCanvas | null = null;
 let context: OffscreenCanvasRenderingContext2D | null = null;
@@ -55,7 +56,7 @@ function paint(now: number, advance: boolean) {
   if (!context || !world) return;
   if (advance) {
     const elapsed = Math.min(now - last, 64);
-    advanceTidesWorld(world, elapsed / FRAME_MS, Math.random);
+    advanceTidesWorld(world, elapsed / SIMULATION_FRAME_MS, Math.random);
   }
   last = now;
   drawTides(
@@ -80,13 +81,13 @@ function stop() {
 function loop() {
   if (hidden || reduceMotion) return;
   paint(performance.now(), true);
-  timer = setTimeout(loop, FRAME_MS);
+  timer = setTimeout(loop, RENDER_INTERVAL_MS);
 }
 
 function start() {
   if (hidden || reduceMotion || timer !== null) return;
   last = performance.now();
-  timer = setTimeout(loop, FRAME_MS);
+  timer = setTimeout(loop, RENDER_INTERVAL_MS);
 }
 
 self.onmessage = (event: MessageEvent<WorkerMessage>) => {

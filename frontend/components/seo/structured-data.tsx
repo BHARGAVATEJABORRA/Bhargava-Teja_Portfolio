@@ -1,8 +1,10 @@
 import { portfolioContent, type ArticleSummary, type ProjectSummary } from "@/content/portfolio-content";
 import { getResolvedSocialLink, resolveRecruiterSafeLink } from "@/lib/profile-links";
 import { siteConfig } from "@/lib/site";
+import { headers } from "next/headers";
 
-export function StructuredData({ projects, articles }: { projects: ProjectSummary[]; articles: ArticleSummary[] }) {
+export async function StructuredData({ projects, articles }: { projects: ProjectSummary[]; articles: ArticleSummary[] }) {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
   const socialProfiles = [getResolvedSocialLink("github"), getResolvedSocialLink("linkedin")]
     .filter((link) => link.isConfigured)
     .map((link) => link.href);
@@ -68,10 +70,10 @@ export function StructuredData({ projects, articles }: { projects: ProjectSummar
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(personSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(websiteSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(projectListSchema) }} />
-      {articleListSchema ? <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(articleListSchema) }} /> : null}
+      <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(personSchema) }} />
+      <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(websiteSchema) }} />
+      <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(projectListSchema) }} />
+      {articleListSchema ? <script nonce={nonce} type="application/ld+json" dangerouslySetInnerHTML={{ __html: json(articleListSchema) }} /> : null}
     </>
   );
 }

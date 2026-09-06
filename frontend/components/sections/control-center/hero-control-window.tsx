@@ -14,6 +14,7 @@ interface HeroControlWindowProps {
   scale?: MotionValue<number>;
   visible?: boolean;
   className?: string;
+  spotifyEnabled?: boolean;
 }
 
 export function HeroControlWindow({
@@ -22,6 +23,7 @@ export function HeroControlWindow({
   scale,
   visible = true,
   className = "",
+  spotifyEnabled = false,
 }: HeroControlWindowProps) {
   return (
     <motion.section
@@ -69,9 +71,9 @@ export function HeroControlWindow({
           <div className="aspect-square min-w-0 lg:aspect-auto lg:col-start-2 lg:row-start-2 lg:h-[16rem] lg:w-[16rem]">
             <LocalTimeClock />
           </div>
-          <div className="aspect-square min-w-0 lg:aspect-auto lg:col-start-3 lg:row-start-2 lg:h-[16rem] lg:w-[16rem]">
+          {spotifyEnabled && <div className="aspect-square min-w-0 lg:aspect-auto lg:col-start-3 lg:row-start-2 lg:h-[16rem] lg:w-[16rem]">
             <SpotifyWidget />
-          </div>
+          </div>}
         </div>
       </div>
     </motion.section>

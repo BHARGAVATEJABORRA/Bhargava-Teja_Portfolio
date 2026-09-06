@@ -5,7 +5,7 @@ import { useRef } from "react";
 
 import { HeroControlWindow } from "@/components/sections/control-center/hero-control-window";
 
-export function ControlCenterSection() {
+export function ControlCenterSection({ spotifyEnabled = false }: { spotifyEnabled?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-120px" });
 
@@ -21,7 +21,7 @@ export function ControlCenterSection() {
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="flex justify-center"
       >
-        <HeroControlWindow className="mx-auto" />
+        <HeroControlWindow className="mx-auto" spotifyEnabled={spotifyEnabled} />
       </motion.div>
     </section>
   );

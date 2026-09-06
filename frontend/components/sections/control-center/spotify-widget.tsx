@@ -10,11 +10,21 @@ import { SPOTIFY_ENDPOINT, type SpotifyData } from "@/lib/spotify-types";
 
 import { ControlCenterPanel } from "./control-center-panel";
 
-const SPOTIFY_REFRESH_INTERVAL_MS = 2 * 60_000;
+// Keep the now-playing card in step with a track change. The API response is
+// shared-edge cached for one second, so multiple visitors do not multiply
+// Spotify requests while the browser still receives a revalidated response.
+const SPOTIFY_REFRESH_INTERVAL_MS = 1_000;
+
+function albumArtworkSrc(url: string) {
+  return `/api/spotify/artwork?url=${encodeURIComponent(url)}`;
+}
 const WAVEFORM_HEIGHTS = [12, 22, 31, 17, 38, 25, 14, 34, 19, 29, 11, 27, 36, 16, 24, 33, 13];
 
 const fetcher = async (url: string): Promise<SpotifyData> => {
-  const response = await fetch(url, { cache: "no-store" });
+  // `max-age=0` on the API response makes the browser revalidate every poll.
+  // Do not use fetch's `no-store` mode here: it bypasses Vercel's one-second
+  // shared cache and turns simultaneous visitors into duplicate API calls.
+  const response = await fetch(url);
   if (!response.ok) throw new Error(`Spotify endpoint ${response.status}`);
   const payload = (await response.json()) as SpotifyData;
   if (payload.detail && process.env.NODE_ENV !== "production") {
@@ -58,8 +68,14 @@ function Waveform({ active }: { active: boolean }) {
 
 function PlaybackProgress({ data }: { data: SpotifyData }) {
   const durationMs = Math.max(0, data.durationMs ?? 0);
-  const initialProgressMs = Math.min(durationMs || Infinity, Math.max(0, data.progressMs ?? 0));
-  const [progressMs, setProgressMs] = useState(initialProgressMs);
+  const serverProgressMs = Math.min(durationMs || Infinity, Math.max(0, data.progressMs ?? 0));
+  const [progressMs, setProgressMs] = useState(serverProgressMs);
+
+  // Use Spotify's latest sampled position when it is ahead of the local
+  // playhead. This avoids synchronously setting state inside an effect.
+  const displayedProgressMs = data.isPlaying
+    ? Math.max(progressMs, serverProgressMs)
+    : serverProgressMs;
 
   useEffect(() => {
     if (!data.isPlaying || durationMs <= 0) {
@@ -75,7 +91,7 @@ function PlaybackProgress({ data }: { data: SpotifyData }) {
 
   const hasTiming = durationMs > 0;
   const percentage = hasTiming
-    ? Math.min(100, Math.max(0, (progressMs / durationMs) * 100))
+    ? Math.min(100, Math.max(0, (displayedProgressMs / durationMs) * 100))
     : data.isPlaying
       ? 38
       : 100;
@@ -90,7 +106,7 @@ function PlaybackProgress({ data }: { data: SpotifyData }) {
         />
       </div>
       <div className="flex items-center justify-between text-[0.68rem] font-medium tabular-nums text-white/65">
-        <span>{hasTiming ? formatTime(progressMs) : data.isPlaying ? "Live" : "Played"}</span>
+        <span>{hasTiming ? formatTime(displayedProgressMs) : data.isPlaying ? "Live" : "Played"}</span>
         <span>{hasTiming ? formatTime(durationMs) : "Spotify"}</span>
       </div>
     </div>
@@ -113,7 +129,7 @@ function CompactSpotifyCard({ data, hasTrack, isPlaying, label }: SpotifyCardPro
       {data.albumImageUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={data.albumImageUrl}
+          src={albumArtworkSrc(data.albumImageUrl)}
           alt=""
           className="absolute inset-0 h-full w-full scale-110 object-cover opacity-80 transition-transform duration-700 group-hover:scale-[1.16]"
           aria-hidden
@@ -155,10 +171,7 @@ function CompactSpotifyCard({ data, hasTrack, isPlaying, label }: SpotifyCardPro
             <FiHeart className="mb-1 shrink-0 text-white/90" size={24} aria-hidden />
           </div>
 
-          <PlaybackProgress
-            key={`${data.songUrl}-${data.progressMs}-${data.durationMs}-${data.isPlaying}`}
-            data={data}
-          />
+          <PlaybackProgress key={data.songUrl} data={data} />
         </div>
       </div>
     </ControlCenterPanel>
@@ -168,7 +181,11 @@ function CompactSpotifyCard({ data, hasTrack, isPlaying, label }: SpotifyCardPro
 export function SpotifyWidget() {
   const { data, error } = useSWR(SPOTIFY_ENDPOINT, fetcher, {
     refreshInterval: SPOTIFY_REFRESH_INTERVAL_MS,
+    dedupingInterval: SPOTIFY_REFRESH_INTERVAL_MS,
     revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+    refreshWhenHidden: false,
+    refreshWhenOffline: false,
   });
 
   const isLoading = !data && !error;

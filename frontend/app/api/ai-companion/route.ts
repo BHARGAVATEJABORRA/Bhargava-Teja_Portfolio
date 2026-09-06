@@ -4,6 +4,7 @@ import { portfolioContent } from "@/content/portfolio-content";
 import { getSiteConfig } from "@/lib/content-store";
 import { recordAiConversation } from "@/lib/insights-store";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { readJsonObject, requestErrorResponse } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -209,6 +210,8 @@ function fallbackAnswer(rawMessage: string): string {
 // ---------------------------------------------------------------------------
 
 export async function POST(request: Request) {
+  const config = await getSiteConfig().catch(() => null);
+  if (!config?.aiEnabled) return NextResponse.json({ error: "The assistant is currently disabled." }, { status: 503 });
   const ip = clientIp(request);
 
   // Durable, serverless-safe rate limits (cost protection).
@@ -229,9 +232,9 @@ export async function POST(request: Request) {
 
   let payload: AiCompanionRequest;
   try {
-    payload = (await request.json()) as AiCompanionRequest;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON payload." }, { status: 400 });
+    payload = await readJsonObject(request) as AiCompanionRequest;
+  } catch (error) {
+    return requestErrorResponse(error);
   }
 
   const message = cleanText(payload.message);
@@ -259,8 +262,7 @@ export async function POST(request: Request) {
   const respond = (msg: string) => (isGreeting(msg) ? greetingAnswer() : fallbackAnswer(msg));
 
   // /admin/settings (AI Companion section) takes precedence; env vars fallback.
-  const config = await getSiteConfig().catch(() => null);
-  const apiKey = (config?.aiEnabled !== false && config?.openaiApiKey) || process.env.OPENAI_API_KEY;
+  const apiKey = config.openaiApiKey || process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
     const preview = respond(message);
@@ -269,9 +271,15 @@ export async function POST(request: Request) {
   }
 
   const history = Array.isArray(payload.history)
-    ? payload.history.slice(-8).map((item) => ({ role: item.role, content: cleanText(item.content).slice(0, MAX_MESSAGE_CHARS) }))
+    ? payload.history.slice(-8).filter((item) => item && (item.role === "user" || item.role === "assistant") && typeof item.content === "string")
+        .map((item) => ({ role: item.role, content: cleanText(item.content).slice(0, MAX_MESSAGE_CHARS) }))
     : [];
   const context = buildPortfolioContext();
+  if (history.some((item) => looksLikeInjection(item.content))) {
+    return NextResponse.json({ answer: OFF_TOPIC_REFUSAL, mode: "guardrail" });
+  }
+  const daily = await rateLimit("ai:daily", { limit: 500, windowMs: 86_400_000 });
+  if (!daily.allowed) return NextResponse.json({ error: "The assistant has reached its daily limit." }, { status: 429 });
   const transcript = history.map((item) => `${item.role === "user" ? "Visitor" : "Companion"}: ${item.content}`).join("\n");
 
   const guardedSystemPrompt = [
@@ -291,6 +299,8 @@ export async function POST(request: Request) {
   try {
     const response = await fetch(OPENAI_RESPONSES_URL, {
       method: "POST",
+      signal: AbortSignal.timeout(15_000),
+      redirect: "error",
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
@@ -304,11 +314,11 @@ export async function POST(request: Request) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
+      await response.body?.cancel();
       const preview = respond(message);
       await recordAiConversation({ question: message, answer: preview, mode: "local-preview" });
       return NextResponse.json(
-        { answer: preview, mode: "local-preview", warning: `OpenAI request failed: ${response.status} ${errorText.slice(0, 180)}` },
+        { answer: preview, mode: "local-preview" },
         { status: 200 },
       );
     }
@@ -318,11 +328,11 @@ export async function POST(request: Request) {
 
     await recordAiConversation({ question: message, answer, mode: "openai" });
     return NextResponse.json({ answer, mode: "openai" });
-  } catch (error) {
+  } catch {
     const preview = respond(message);
     await recordAiConversation({ question: message, answer: preview, mode: "local-preview" });
     return NextResponse.json(
-      { answer: preview, mode: "local-preview", warning: error instanceof Error ? error.message : "OpenAI request failed." },
+      { answer: preview, mode: "local-preview" },
       { status: 200 },
     );
   }

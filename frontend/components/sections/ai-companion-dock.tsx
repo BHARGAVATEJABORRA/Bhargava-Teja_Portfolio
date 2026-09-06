@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { LuBot, LuSendHorizontal, LuSparkles, LuX } from "react-icons/lu";
+import { LuSendHorizontal, LuSparkles, LuX } from "react-icons/lu";
 
 import { portfolioContent } from "@/content/portfolio-content";
 import { trackEvent } from "@/lib/analytics";
@@ -18,6 +18,67 @@ const starterPrompts = [
   "Show me his cloud experience",
   "Why should I hire him?",
 ];
+
+function NeuralBrainMark() {
+  const nodes = [
+    [10, 34],
+    [15, 22],
+    [27, 14],
+    [41, 10],
+    [55, 12],
+    [68, 17],
+    [79, 25],
+    [85, 36],
+    [80, 46],
+    [69, 51],
+    [59, 52],
+    [54, 61],
+    [54, 69],
+    [46, 59],
+    [36, 55],
+    [24, 52],
+    [14, 45],
+    [24, 31],
+    [32, 21],
+    [43, 20],
+    [52, 29],
+    [62, 24],
+    [72, 34],
+    [62, 41],
+    [50, 45],
+    [38, 38],
+    [29, 45],
+  ] as const;
+
+  return (
+    <svg viewBox="0 0 96 76" width="32" height="27" fill="none" aria-hidden className="ai-core-mark">
+      <defs>
+        <linearGradient id="ai-brain-facet" x1="12" y1="12" x2="80" y2="62" gradientUnits="userSpaceOnUse">
+          <stop stopColor="currentColor" stopOpacity="0.28" />
+          <stop offset="1" stopColor="currentColor" stopOpacity="0.04" />
+        </linearGradient>
+      </defs>
+      <path
+        d="M10 34 15 22 27 14 41 10 55 12 68 17 79 25 85 36 80 46 69 51 59 52 54 61 54 69 46 59 36 55 24 52 14 45Z"
+        fill="url(#ai-brain-facet)"
+        stroke="currentColor"
+        strokeWidth="2.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M15 22 24 31 27 14 32 21 41 10 43 20 55 12 52 29 68 17 62 24 79 25 72 34 85 36M10 34l14-3-10 14 15-1-5 8m0-21 8-10 6 17-14 14m8-31 11-1-5 18 14-9-9-9m12-8-3 17 10-5 10 10 7-9m-27 4-14 9 12 7-14 10m14-10 12-4-2 11-12 4-4 14m24-25 10 10-10 7 7 10m-33 4 10 10 14 4m-14-4 8 16m14-4 5 9"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {nodes.map(([cx, cy]) => (
+        <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="2.25" fill="currentColor" />
+      ))}
+    </svg>
+  );
+}
 
 function createMessage(role: CompanionMessage["role"], content: string): CompanionMessage {
   return {
@@ -186,7 +247,11 @@ export function AiCompanionDock() {
         data-open={isOpen}
       >
         <span className="ai-dock-launcher-icon">
-          {isOpen ? <LuX size={19} aria-hidden /> : <LuBot size={21} aria-hidden />}
+          {isOpen ? (
+            <LuX size={19} aria-hidden />
+          ) : (
+            <NeuralBrainMark />
+          )}
         </span>
         <span className="ai-dock-launcher-ring" aria-hidden />
       </button>

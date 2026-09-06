@@ -65,7 +65,7 @@ export function AccessRequestForm() {
   };
 
   return (
-    <form onSubmit={submitForm} className="space-y-4">
+    <form method="post" action="/api/contact" onSubmit={submitForm} className="space-y-4">
       <div aria-hidden className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden">
         <label>
           Website

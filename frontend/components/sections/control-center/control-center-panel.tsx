@@ -7,6 +7,7 @@ import GlassSurface from "@/components/ui/glass-surface";
 interface ControlCenterPanelProps {
   children: ReactNode;
   className?: string;
+  surfaceClassName?: string;
   radius?: number;
   style?: CSSProperties;
 }
@@ -27,12 +28,13 @@ interface ControlCenterPanelProps {
 export function ControlCenterPanel({
   children,
   className = "",
+  surfaceClassName = "",
   radius = 28,
   style,
 }: ControlCenterPanelProps) {
   return (
     <GlassSurface
-      className="control-center-panel"
+      className={`control-center-panel ${surfaceClassName}`.trim()}
       borderRadius={radius}
       distortionScale={-90}
       redOffset={0}

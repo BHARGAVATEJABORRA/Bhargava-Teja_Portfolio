@@ -29,13 +29,7 @@ function getVisitorId(): string {
 }
 
 /** Stable key for items that only have a title (projects). */
-export function likeKey(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 120);
-}
+export { likeKey } from "@/lib/like-key";
 
 export function useLikes(type: LikeEntityType) {
   const [counts, setCounts] = useState<Record<string, number>>({});

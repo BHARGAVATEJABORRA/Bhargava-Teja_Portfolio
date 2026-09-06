@@ -35,6 +35,11 @@ test.describe("§3.1 footer layers are a pure function of scroll", () => {
     expect(footerTop).toBeGreaterThan(0);
 
     const start = Math.max(0, footerTop - 400);
+    // The cloud plate is intentionally decoded on demand. Bring the footer
+    // into its activation zone and wait for its first paint before comparing
+    // two otherwise identical scroll states.
+    await scrollToAndSettle(page, start);
+    await expect(page.locator('[data-scroll-scene="clouds"][data-ready="true"]')).toHaveCount(1);
     const steps = 7;
     const offsets = Array.from({ length: steps }, (_, i) => Math.round(start + ((maxScroll - start) * i) / (steps - 1)));
 

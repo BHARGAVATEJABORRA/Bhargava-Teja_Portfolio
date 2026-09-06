@@ -215,13 +215,20 @@ export function TidesBackground({ onReady }: { onReady?: () => void }) {
 
     let raf = 0;
     let last = performance.now();
-    const FRAME_MS = 1000 / 60;
+    const SIMULATION_FRAME_MS = 1000 / 60;
+    const RENDER_INTERVAL_MS = 1000 / 30;
     let firstFramePainted = false;
+    let lastPaint = last - RENDER_INTERVAL_MS;
 
     const tick = (now: number) => {
+      if (now - lastPaint < RENDER_INTERVAL_MS) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
       const elapsed = Math.min(now - last, 64);
       last = now;
-      advanceTidesWorld(world, elapsed / FRAME_MS, random);
+      lastPaint = now;
+      advanceTidesWorld(world, elapsed / SIMULATION_FRAME_MS, random);
       drawTides(
         context,
         cssWidth,
@@ -246,6 +253,7 @@ export function TidesBackground({ onReady }: { onReady?: () => void }) {
         cancelAnimationFrame(raf);
       } else {
         last = performance.now();
+        lastPaint = last - RENDER_INTERVAL_MS;
         raf = requestAnimationFrame(tick);
       }
     };

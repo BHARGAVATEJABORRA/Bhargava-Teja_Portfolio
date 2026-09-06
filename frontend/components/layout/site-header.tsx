@@ -161,14 +161,8 @@ export function SiteHeader() {
       <div className="pointer-events-auto relative z-10 flex items-center gap-3">
         <Link
           href="/#hero"
-          onClick={(event) => {
-            event.preventDefault();
-            trackEvent("header_nav_click", { target: "/#hero", source: "brand_refresh" });
-            // Keep the brand as a true refresh, but give that refresh an
-            // explicit destination. HashScroll removes the temporary hash and
-            // corrects the position after the home layout settles.
-            window.history.replaceState(window.history.state, "", "/#hero");
-            window.location.reload();
+          onClick={() => {
+            trackEvent("header_nav_click", { target: "/#hero", source: "brand_home" });
           }}
           className="inline-flex h-10 shrink-0 items-center px-1 text-sm font-semibold tracking-tight text-[var(--color-ink)]"
         >

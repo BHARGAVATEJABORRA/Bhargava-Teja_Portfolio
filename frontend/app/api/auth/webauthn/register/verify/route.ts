@@ -6,11 +6,11 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { ADMIN_SESSION_COOKIE, createSessionToken, sessionCookieOptions } from "@/lib/admin-session";
 import { getExpectedOrigin, getRpID } from "@/lib/webauthn-config";
 import { bytesToBase64url, saveCredential } from "@/lib/webauthn-store";
+import { challengeCookie, challengeCookieOptions, consumeChallenge } from "@/lib/webauthn-challenge";
+import { readJsonObject, requestErrorResponse } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-const CHALLENGE_COOKIE = "webauthn_challenge";
 
 export async function POST(req: NextRequest) {
   // Passkey enrollment is admin-only (see register/options). Belt-and-suspenders
@@ -18,12 +18,13 @@ export async function POST(req: NextRequest) {
   const denied = await requireAdmin();
   if (denied) return denied;
 
-  const expectedChallenge = req.cookies.get(CHALLENGE_COOKIE)?.value;
+  let body: RegistrationResponseJSON;
+  try { body = await readJsonObject(req, 65_536) as unknown as RegistrationResponseJSON; }
+  catch (error) { return requestErrorResponse(error); }
+  const expectedChallenge = await consumeChallenge(req.cookies.get(challengeCookie("register"))?.value, "register", req.cookies.get(ADMIN_SESSION_COOKIE)?.value);
   if (!expectedChallenge) {
     return NextResponse.json({ verified: false, error: "Challenge expired. Try again." }, { status: 400 });
   }
-
-  const body = (await req.json()) as RegistrationResponseJSON;
 
   try {
     const verification = await verifyRegistrationResponse({
@@ -48,11 +49,11 @@ export async function POST(req: NextRequest) {
     });
 
     const token = await createSessionToken();
-    const res = NextResponse.json({ verified: true });
+    const res = NextResponse.json({ verified: true }, { headers: { "Cache-Control": "no-store" } });
     res.cookies.set(ADMIN_SESSION_COOKIE, token, sessionCookieOptions());
-    res.cookies.set(CHALLENGE_COOKIE, "", { path: "/", maxAge: 0 });
+    res.cookies.set(challengeCookie("register"), "", { ...challengeCookieOptions(), maxAge: 0 });
     return res;
-  } catch (err) {
-    return NextResponse.json({ verified: false, error: (err as Error).message }, { status: 400 });
+  } catch {
+    return NextResponse.json({ verified: false, error: "Registration failed. Start again." }, { status: 400 });
   }
 }

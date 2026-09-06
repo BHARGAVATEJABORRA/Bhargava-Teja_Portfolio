@@ -73,7 +73,7 @@ export async function createSessionToken(ttlSeconds: number = DEFAULT_TTL_SECOND
 }
 
 export async function verifySessionToken(token: string | undefined | null): Promise<boolean> {
-  if (!token) return false;
+  if (!token || token.length > 2048) return false;
   const parts = token.split(".");
   if (parts.length !== 2) return false;
   const [payloadB64, sig] = parts;
@@ -100,7 +100,7 @@ export async function verifySessionToken(token: string | undefined | null): Prom
       exp?: number;
     };
     if (payload.sub !== "admin") return false;
-    if (typeof payload.exp !== "number" || payload.exp < Math.floor(Date.now() / 1000)) return false;
+    if (typeof payload.exp !== "number" || !Number.isSafeInteger(payload.exp) || payload.exp <= Math.floor(Date.now() / 1000)) return false;
     return true;
   } catch {
     return false;

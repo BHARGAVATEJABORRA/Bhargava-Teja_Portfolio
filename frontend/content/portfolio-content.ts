@@ -147,7 +147,7 @@ const basePortfolioContent = {
     phone: "123-456-7890",
     phoneVisibleOnPage: false,
     intro:
-      "Architect and engineer scalable AWS infrastructure with measurable reliability, performance, and cost outcomes.",
+      "I build reliable cloud systems, intuitive software, and AI-powered experiences that turn ideas into impact.",
     contactEmail: "bhargavateja.borra@gmail.com",
     socialLinks: [
       {
@@ -567,7 +567,7 @@ const basePortfolioContent = {
     {
       category: "Generative AI",
       skills: [
-        { name: "ChatGPT", iconKey: "SiOpenai", brandColor: "#412991", keywords: ["codex", "gpt", "openai", "llm"] },
+        { name: "ChatGPT", iconKey: "SiOpenai", brandColor: "#10A37F", keywords: ["codex", "gpt", "openai", "llm"] },
         { name: "Claude", iconKey: "SiClaude", brandColor: "#D97757", keywords: ["claude code", "cowork", "anthropic", "llm"] },
         { name: "Perplexity", iconKey: "SiPerplexity", brandColor: "#1FB8CD", keywords: ["comet", "research", "llm"] },
         { name: "Prompt Engineering", iconKey: "LuMessageSquareCode", brandColor: "#38BDF8", keywords: ["llm", "ai"] },
