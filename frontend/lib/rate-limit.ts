@@ -10,6 +10,7 @@
  */
 
 import { prisma } from "@/lib/db";
+import { isIP } from "node:net";
 
 let tableReady: Promise<void> | null = null;
 
@@ -23,6 +24,7 @@ function ensureTable(): Promise<void> {
       )
     `);
     await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RateHit_bucket_ts" ON "RateHit" ("bucket","ts")`);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "RateHit_ts" ON "RateHit" ("ts")`);
   })().catch((err) => {
     tableReady = null;
     throw err;
@@ -30,9 +32,13 @@ function ensureTable(): Promise<void> {
   return tableReady;
 }
 
-/** Best-effort cleanup of rows older than the widest window we care about. */
-async function prune(bucket: string, olderThan: number): Promise<void> {
-  await prisma.$executeRaw`DELETE FROM "RateHit" WHERE "bucket" = ${bucket} AND "ts" < ${olderThan}`;
+let lastPrune = 0;
+/** Global expiry also removes abandoned IP buckets. Keep the widest supported window. */
+async function prune(): Promise<void> {
+  const now = Date.now();
+  if (now - lastPrune < 60_000) return;
+  await prisma.$executeRaw`DELETE FROM "RateHit" WHERE "ts" < ${now - 86_400_000}`;
+  lastPrune = now;
 }
 
 export interface RateResult {
@@ -43,8 +49,7 @@ export interface RateResult {
 
 /**
  * Sliding-window rate limit. Records this hit and returns whether the caller is
- * within `limit` requests per `windowMs`. Fails open (allows) on DB error so a
- * transient Turso blip never takes down a public endpoint.
+ * within `limit` requests per `windowMs`. Fails closed on DB errors.
  */
 export async function rateLimit(
   bucket: string,
@@ -52,23 +57,30 @@ export async function rateLimit(
 ): Promise<RateResult> {
   const now = Date.now();
   const windowStart = now - windowMs;
+  if (!Number.isInteger(limit) || limit < 1 || windowMs < 1 || windowMs > 86_400_000) {
+    throw new Error("Invalid rate-limit policy");
+  }
   try {
     await ensureTable();
-    await prune(bucket, windowStart);
+    await prune();
+    // One SQLite write statement serializes competing check-and-insert calls.
+    const inserted = await prisma.$executeRaw`
+      INSERT INTO "RateHit" ("bucket","ts","ok")
+      SELECT ${bucket}, ${now}, 1
+      WHERE (SELECT COUNT(*) FROM "RateHit" WHERE "bucket" = ${bucket} AND "ts" >= ${windowStart}) < ${limit}`;
     const rows = await prisma.$queryRaw<{ c: number | bigint; oldest: number | bigint | null }[]>`
       SELECT COUNT(*) c, MIN("ts") oldest FROM "RateHit" WHERE "bucket" = ${bucket} AND "ts" >= ${windowStart}
     `;
     const count = Number(rows[0]?.c ?? 0);
-    if (count >= limit) {
+    if (inserted === 0) {
       const oldest = Number(rows[0]?.oldest ?? now);
       const retryAfterSeconds = Math.max(1, Math.ceil((oldest + windowMs - now) / 1000));
       return { allowed: false, remaining: 0, retryAfterSeconds };
     }
-    await prisma.$executeRaw`INSERT INTO "RateHit" ("bucket","ts","ok") VALUES (${bucket}, ${now}, 1)`;
-    return { allowed: true, remaining: Math.max(0, limit - count - 1), retryAfterSeconds: 0 };
-  } catch (err) {
-    console.warn("[rate-limit] rateLimit failed (allowing):", err);
-    return { allowed: true, remaining: limit, retryAfterSeconds: 0 };
+    return { allowed: true, remaining: Math.max(0, limit - count), retryAfterSeconds: 0 };
+  } catch {
+    console.warn("[rate-limit] storage unavailable; request denied");
+    return { allowed: false, remaining: 0, retryAfterSeconds: 60 };
   }
 }
 
@@ -113,6 +125,7 @@ async function failureState(bucket: string): Promise<{ failures: number; last: n
 export async function loginLockStatus(ip: string): Promise<LockStatus> {
   try {
     await ensureTable();
+    await prune();
     const now = Date.now();
     const buckets = ["login:global", `login:ip:${ip}`];
     let worst: LockStatus = { locked: false, retryAfterSeconds: 0, failures: 0 };
@@ -157,7 +170,9 @@ export async function clearLoginFailures(ip: string): Promise<void> {
 
 /** Extract a best-effort client IP from proxy headers. */
 export function clientIp(req: Request): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  if (fwd) return fwd.split(",")[0].trim();
-  return req.headers.get("x-real-ip")?.trim() || "unknown";
+  // Vercel overwrites this header. Other hosts must explicitly trust a proxy
+  // that removes the incoming client value; otherwise share a conservative bucket.
+  if (!process.env.VERCEL && process.env.TRUST_PROXY_HEADERS !== "1") return "unknown";
+  const candidate = req.headers.get("x-forwarded-for")?.split(",")[0].trim() ?? "";
+  return isIP(candidate) ? candidate : "unknown";
 }

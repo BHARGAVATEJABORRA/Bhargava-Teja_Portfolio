@@ -126,7 +126,7 @@ export async function saveCredential(credential: StoredCredential): Promise<void
 
 export async function updateCredentialCounter(id: string, counter: number): Promise<void> {
   await ensureTable();
-  await prisma.$executeRaw`UPDATE "WebauthnCredential" SET "counter" = ${counter} WHERE "id" = ${id}`;
+  await prisma.$executeRaw`UPDATE "WebauthnCredential" SET "counter" = MAX("counter", ${counter}) WHERE "id" = ${id}`;
 }
 
 /** Remove a single passkey by id (admin "forget this device"). */

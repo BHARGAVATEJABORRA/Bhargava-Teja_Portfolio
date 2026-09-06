@@ -54,9 +54,13 @@ const AiCompanionDock = dynamic(
 export function HomeShell({
   projects,
   articles,
+  aiEnabled = false,
+  spotifyEnabled = false,
 }: {
   projects: ProjectSummary[];
   articles: ArticleSummary[];
+  aiEnabled?: boolean;
+  spotifyEnabled?: boolean;
 }) {
   const features = portfolioContent.features;
   const [bootReady, setBootReady] = useState(false);
@@ -118,7 +122,7 @@ export function HomeShell({
       <main id="main-content">
         {/* Hero copy sits over the backdrop. Rendered immediately so it is
             already in place under the curtain: greeting → hero, nothing else. */}
-        <HeroSection />
+        <HeroSection aiEnabled={aiEnabled} />
 
         {/* Everything below the fold is heavier (Three.js footer scene, etc.)
             and never visible during the reveal — defer it until the greeting is
@@ -128,7 +132,7 @@ export function HomeShell({
             {/* Content floats over the day-cycling sky; sections are
                 background-less so the sky shows through behind them. */}
             <div className="relative isolate -mt-px">
-              <ControlCenterSection />
+              <ControlCenterSection spotifyEnabled={spotifyEnabled} />
               <AboutSection />
               {features.skills && <SkillsSection />}
               {features.experience && <ExperienceSection />}
@@ -150,7 +154,7 @@ export function HomeShell({
           <HeroSocialDock />
 
           {/* Floating AI companion — spins on hover, opens a chat window on click */}
-          <AiCompanionDock />
+          {aiEnabled && <AiCompanionDock />}
         </>
       ) : null}
     </>

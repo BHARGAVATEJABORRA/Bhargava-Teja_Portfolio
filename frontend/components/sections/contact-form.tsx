@@ -89,6 +89,8 @@ export function ContactForm({ className = "", compact = false }: ContactFormProp
       mixBlendMode="screen"
     >
       <form
+        method="post"
+        action="/api/contact"
         onSubmit={submitForm}
         className={`${compact ? "p-3.5 sm:p-4 space-y-2" : "p-6 sm:p-7 space-y-4"} contact-form-inner`}
       >

@@ -2,7 +2,7 @@ import { HashScroll } from "@/components/layout/hash-scroll";
 import { HomeShell } from "@/components/layout/home-shell";
 import { StructuredData } from "@/components/seo/structured-data";
 import { portfolioContent } from "@/content/portfolio-content";
-import { getPublishedArticles, getPublishedProjects } from "@/lib/content-store";
+import { getPublishedArticles, getPublishedProjects, getSiteConfig } from "@/lib/content-store";
 
 // Public project data is database-backed and may be changed outside an admin
 // API request (imports, scripts, or direct Turso maintenance). Keep this route
@@ -11,6 +11,7 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function Home() {
+  const featureConfig = await getSiteConfig().catch(() => null);
   let projects = portfolioContent.projects;
   let articles = portfolioContent.articles;
   try {
@@ -28,7 +29,7 @@ export default async function Home() {
     <>
       <StructuredData projects={projects} articles={articles} />
       <HashScroll />
-      <HomeShell projects={projects} articles={articles} />
+      <HomeShell projects={projects} articles={articles} aiEnabled={featureConfig?.aiEnabled === true} spotifyEnabled={featureConfig?.spotifyEnabled === true} />
     </>
   );
 }

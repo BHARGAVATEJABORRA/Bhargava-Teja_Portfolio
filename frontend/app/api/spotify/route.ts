@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getSpotifyEnvConfig } from "@/lib/spotify-env";
 import type { SpotifyData } from "@/lib/spotify-types";
+import { getSiteConfig } from "@/lib/content-store";
 
 const PLAYER_URL = "https://api.spotify.com/v1/me/player";
 const TOP_TRACKS_URL = "https://api.spotify.com/v1/me/top/tracks?limit=1&time_range=short_term";
@@ -71,19 +72,17 @@ const UNAVAILABLE: SpotifyData = {
   detail: "Spotify did not return an access token or track data right now",
 };
 
-// Point re-auth instructions at whatever origin this deployment runs on
-// (NEXT_PUBLIC_SITE_URL et al via getSpotifyEnvConfig) instead of localhost.
-function tokenRejected(siteUrl: string): SpotifyData {
+function tokenRejected(): SpotifyData {
   return {
     ...OFFLINE,
-    detail: `Spotify rejected the refresh token (likely expired or revoked). Re-mint it: open ${siteUrl}/api/auth/signin, authorize, then retry /api/spotify`,
+    detail: "Spotify rejected the refresh token. The owner must renew it using the local-only setup flow and update the deployment secret.",
   };
 }
 
-function forbidden(siteUrl: string): SpotifyData {
+function forbidden(): SpotifyData {
   return {
     ...OFFLINE,
-    detail: `Spotify returned 403 on the player/track endpoints (usually missing scopes). Re-run ${siteUrl}/api/auth/signin to re-grant scopes`,
+    detail: "Spotify denied access to playback data. The owner should check scopes using the local-only setup flow.",
   };
 }
 
@@ -230,6 +229,8 @@ async function getTopTrack(accessToken: string): Promise<TrackLookupResult> {
 }
 
 export async function GET() {
+  const config = await getSiteConfig().catch(() => null);
+  if (!config?.spotifyEnabled) return NextResponse.json({ ...OFFLINE, detail: "Spotify sharing is disabled." }, { headers: { "Cache-Control": "no-store" } });
   const spotifyConfig = getSpotifyEnvConfig();
 
   if (!spotifyConfig.isConfigured) {
@@ -242,7 +243,7 @@ export async function GET() {
   if (!accessToken) {
     // We already know credentials are configured, so a null token means the
     // refresh exchange itself failed — almost always an expired/revoked token.
-    return NextResponse.json(tokenRejected(spotifyConfig.siteUrl), {
+    return NextResponse.json(tokenRejected(), {
       headers: { "Cache-Control": "no-store" },
     });
   }
@@ -281,7 +282,7 @@ export async function GET() {
     }
 
     if (wasForbidden) {
-      return NextResponse.json(forbidden(spotifyConfig.siteUrl), {
+      return NextResponse.json(forbidden(), {
         headers: { "Cache-Control": "no-store" },
       });
     }
@@ -291,7 +292,7 @@ export async function GET() {
         ...UNAVAILABLE,
         detail: accessToken.scopes.has("user-top-read")
           ? "Token is valid but Spotify returned no current, recent, or top track — play something, then retry"
-          : "Visit /api/auth/signin again to grant the updated top-track scope",
+          : "The owner must grant the top-track scope using the local-only Spotify setup flow",
       },
       { headers: { "Cache-Control": "no-store" } },
     );

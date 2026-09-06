@@ -21,6 +21,7 @@ function parseEnvValue(value: string): string {
 }
 
 function readLocalEnv(): Record<string, string> {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) return {};
   const envPath = path.join(process.cwd(), ".env.local");
 
   if (!existsSync(envPath)) {

@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "prebuild": "node scripts/prepare-content.mjs",
     "dev": "next dev --turbopack",
     "dev:turbo": "next dev --turbopack",
     "dev:webpack": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:security": "tsx --test tests/security/*.test.ts",
+    "test:security:libsql": "SECURITY_LIBSQL=1 tsx --test tests/security/*.test.ts",
+    "test:security:http": "node scripts/security-smoke.mjs",
     "test:scroll": "playwright test",
     "verify": "npm run lint && npm run build && npm run test:scroll",
     "db:migrate": "prisma migrate dev",
@@ -54,6 +58,11 @@
     "typescript": "^5"
   },
   "overrides": {
+    "nanoid": "3.3.18",
+    "js-yaml": "4.3.1",
+    "@prisma/config": {
+      "deepmerge-ts": "8.0.0"
+    },
     "next": {
       "postcss": "8.5.25",
       "sharp": "0.35.3"

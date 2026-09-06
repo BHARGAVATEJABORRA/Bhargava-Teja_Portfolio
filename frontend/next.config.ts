@@ -9,6 +9,7 @@ const isStaticExport = process.env.STATIC_EXPORT === "1";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH?.trim() ?? "";
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   experimental: {
     // Three.js exposes a large barrel file. Rewrite named imports to the
     // modules actually used so development does not compile its full export
@@ -41,6 +42,7 @@ const nextConfig: NextConfig = {
             headers: [
               { key: "X-Content-Type-Options", value: "nosniff" },
               { key: "X-Frame-Options", value: "DENY" },
+              { key: "Content-Security-Policy", value: "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" },
               { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
               { key: "Permissions-Policy", value: "camera=(), geolocation=(), payment=(), usb=()" },
             ],
@@ -51,6 +53,9 @@ const nextConfig: NextConfig = {
   // bootstrap a fresh database (Turso or the /tmp fallback) at runtime.
   outputFileTracingIncludes: {
     "/**/*": ["./prisma/migrations/**/*"],
+  },
+  outputFileTracingExcludes: {
+    "/**/*": ["./.env*", "./prisma/*.db*", "./.data/**/*"],
   },
   devIndicators: false,
   ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),

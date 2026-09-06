@@ -12,6 +12,9 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getLikeCounts, getVisitorLikes, setLike, type LikeEntityType } from "@/lib/likes-store";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { readJsonObject, requestErrorResponse } from "@/lib/request-security";
+import { getPublishedArticles, getPublishedProjects } from "@/lib/content-store";
+import { likeKey } from "@/lib/like-key";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -54,9 +57,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   let body: Record<string, unknown>;
   try {
-    body = (await req.json()) as Record<string, unknown>;
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON." }, { status: 400 });
+    body = await readJsonObject(req, 2048);
+  } catch (error) {
+    return requestErrorResponse(error);
   }
 
   const type = parseType(body.type);
@@ -67,6 +70,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   if (!type || !visitorId || !key) {
     return NextResponse.json({ error: "type, key and visitorId are required." }, { status: 400 });
   }
+  const keys = type === "project"
+    ? (await getPublishedProjects()).map((project) => likeKey(project.title))
+    : (await getPublishedArticles()).map((article) => article.slug);
+  if (!keys.includes(key)) return NextResponse.json({ error: "Unknown item." }, { status: 404 });
+  const global = await rateLimit("likes:global", { limit: 1000, windowMs: 3_600_000 });
+  if (!global.allowed) return NextResponse.json({ error: "Please try again later." }, { status: 429 });
 
   const count = await setLike(type, key, visitorId, liked);
   if (count === null) return NextResponse.json({ error: "Could not save like." }, { status: 500 });

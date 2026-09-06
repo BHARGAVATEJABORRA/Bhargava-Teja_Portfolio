@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { recordChange } from "@/lib/change-log";
 import { createContactSubmission } from "@/lib/insights-store";
 import { clientIp, rateLimit } from "@/lib/rate-limit";
+import { readBodyText, readJsonObject, requestErrorResponse } from "@/lib/request-security";
 
 interface ContactPayload {
   name?: unknown;
@@ -112,6 +113,8 @@ async function deliverContactSubmission(submission: ContactSubmission): Promise<
           : {}),
       },
       body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10_000),
+      redirect: "error",
     });
 
     if (!response.ok) {
@@ -121,31 +124,18 @@ async function deliverContactSubmission(submission: ContactSubmission): Promise<
     return;
   }
 
-  console.info("[contact_submission]", {
-    name: submission.name,
-    email: submission.email,
-    phone: submission.phone || undefined,
-    topic: submission.topic,
-    messagePreview: `${submission.message.slice(0, 80)}${submission.message.length > 80 ? "..." : ""}`,
-  });
+  console.info("[contact_submission] stored in admin inbox; no delivery webhook configured");
 }
 
 export async function POST(request: Request) {
   let payload: ContactPayload;
 
   try {
-    payload = (await request.json()) as ContactPayload;
-  } catch {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: {
-          code: "INVALID_JSON",
-          message: "Unable to process the request payload.",
-        },
-      },
-      { status: 400 },
-    );
+    payload = request.headers.get("content-type")?.startsWith("application/x-www-form-urlencoded")
+      ? Object.fromEntries(new URLSearchParams(await readBodyText(request, 32_768)))
+      : await readJsonObject(request, 32_768);
+  } catch (error) {
+    return requestErrorResponse(error);
   }
 
   const validation = validatePayload(payload);
@@ -191,6 +181,9 @@ export async function POST(request: Request) {
       { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } },
     );
   }
+
+  const global = await rateLimit("contact:global", { limit: 100, windowMs: 3_600_000 });
+  if (!global.allowed) return NextResponse.json({ error: "Contact form temporarily busy. Please try later." }, { status: 429 });
 
   // Persist to the admin inbox first (best-effort — never blocks delivery).
   const submissionId = await createContactSubmission({

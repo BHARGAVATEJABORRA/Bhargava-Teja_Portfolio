@@ -1,16 +1,16 @@
-# Local credentials and runtime state must never enter a deployment bundle.
+# Never ship local credentials, databases, browser captures, or build caches.
+.env*
 **/.env*
+**/*.db
+**/*.db-*
 **/.data/**
-**/prisma/*.db
-**/prisma/*.db-*
-**/public/uploads/**
-
-# Local build, browser, and diagnostic artifacts.
-**/.next/**
-**/.next-build/**
-**/.next-build-*/**
+.mcp.json
 **/.playwright-cli/**
+**/test-results/**
+**/playwright-report/**
+**/tmp/**
+**/.next*/**
+**/public/uploads/**
 **/node_modules/**
 **/output/**
-**/test-results/**
 **/*.log

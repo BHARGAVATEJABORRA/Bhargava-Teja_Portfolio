@@ -335,7 +335,7 @@ export function HeroSocialDock({ isSuppressed = false }: { isSuppressed?: boolea
   );
 }
 
-export function HeroSection() {
+export function HeroSection({ aiEnabled = false }: { aiEnabled?: boolean }) {
   return (
     <section
       id="hero"
@@ -369,7 +369,7 @@ export function HeroSection() {
             className="hero-short-copy relative z-10 mt-6 max-w-3xl text-pretty text-base font-medium leading-relaxed tracking-[0.01em] text-white/90 [text-shadow:0_2px_14px_rgba(0,0,0,0.32)] sm:text-lg"
           />
 
-          <AiCompanion />
+          {aiEnabled && <AiCompanion />}
 
           <GlareHover
             background="rgba(255,255,255,0.96)"

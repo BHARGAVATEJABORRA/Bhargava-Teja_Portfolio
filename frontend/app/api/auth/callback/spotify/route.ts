@@ -1,10 +1,11 @@
-import { readFile, writeFile } from "node:fs/promises";
+import { chmod, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getSpotifyEnvConfig } from "@/lib/spotify-env";
+import { requireAdmin } from "@/lib/admin-guard";
 
 type SpotifyTokenResponse = {
   access_token?: string;
@@ -99,7 +100,8 @@ async function upsertLocalEnvValue(key: string, value: string): Promise<void> {
     ? current.replace(linePattern, serialized)
     : `${current}${current && !current.endsWith("\n") ? "\n" : ""}${serialized}\n`;
 
-  await writeFile(envPath, next, "utf8");
+  await writeFile(envPath, next, { encoding: "utf8", mode: 0o600 });
+  await chmod(envPath, 0o600);
   process.env[key] = value;
 }
 
@@ -119,6 +121,8 @@ async function exchangeCodeForTokens(code: string): Promise<SpotifyTokenResponse
       redirect_uri: redirectUri,
     }),
     cache: "no-store",
+    signal: AbortSignal.timeout(10_000),
+    redirect: "error",
   });
 
   const payload = (await response.json()) as SpotifyTokenResponse;
@@ -134,6 +138,11 @@ async function exchangeCodeForTokens(code: string): Promise<SpotifyTokenResponse
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    return htmlResponse("Local setup only", "<h1>Spotify setup is available only on the local development server.</h1>", 403);
+  }
   const { clientId, clientSecret } = getSpotifyEnvConfig();
   const cookieStore = await cookies();
   const expectedState = cookieStore.get("spotify_oauth_state")?.value;
@@ -173,20 +182,11 @@ export async function GET(request: NextRequest) {
   const refreshToken = tokenResponse.refresh_token;
   const response = refreshToken
     ? await (async () => {
-        // Persisting to .env.local only works locally; on Vercel the
-        // filesystem is read-only, so fall through and show the token for
-        // manual entry into the dashboard env vars instead of crashing.
         let saved = false;
-        if (!process.env.VERCEL) {
-          try {
-            await upsertLocalEnvValue("SPOTIFY_REFRESH_TOKEN", refreshToken);
-            saved = true;
-          } catch {
-            saved = false;
-          }
-        } else {
-          process.env.SPOTIFY_REFRESH_TOKEN = refreshToken;
-        }
+        try {
+          await upsertLocalEnvValue("SPOTIFY_REFRESH_TOKEN", refreshToken);
+          saved = true;
+        } catch { saved = false; }
 
         return htmlResponse(
         "Spotify Refresh Token",
@@ -194,10 +194,8 @@ export async function GET(request: NextRequest) {
           ? `<h1>Spotify refresh token generated</h1>
         <p>The token was saved to <code>frontend/.env.local</code> and loaded into the running dev server.</p>
         <p>Keep this token private. The Spotify client secret was used only on the server during this exchange. You can now re-test <code>/api/spotify</code>.</p>`
-          : `<h1>Spotify refresh token generated</h1>
-        <p>This deployment can't write config files, so copy the token below into the <strong>SPOTIFY_REFRESH_TOKEN</strong> environment variable (Vercel → Settings → Environment Variables), then redeploy.</p>
-        <code>${escapeHtml(refreshToken)}</code>
-        <p>Keep this token private. It is loaded for the current server instance already, so <code>/api/spotify</code> works until the next cold start.</p>`,
+          : `<h1>Unable to save Spotify credentials</h1><p>Check local file permissions and start setup again.</p>`,
+        saved ? 200 : 500,
         );
       })()
     : htmlResponse(

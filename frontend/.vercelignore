@@ -1,0 +1,13 @@
+.env*
+*.db
+prisma/*.db*
+.data/**
+.playwright-cli/**
+test-results/**
+playwright-report/**
+tmp/**
+.next*/**
+public/uploads/**
+node_modules/**
+output/**
+*.log

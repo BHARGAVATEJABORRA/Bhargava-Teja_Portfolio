@@ -2,7 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";
 
 import { ADMIN_SESSION_COOKIE, createSessionToken, sessionCookieOptions } from "@/lib/admin-session";
-import { clearLoginFailures, clientIp, loginLockStatus, recordLoginFailure } from "@/lib/rate-limit";
+import { clearLoginFailures, clientIp, loginLockStatus, rateLimit, recordLoginFailure } from "@/lib/rate-limit";
+import { readJsonObject, requestErrorResponse } from "@/lib/request-security";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -27,7 +28,22 @@ function safeEqual(a: string, b: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  let body: Record<string, unknown>;
+  try { body = await readJsonObject(req, 2048); }
+  catch (error) { return requestErrorResponse(error); }
   const ip = clientIp(req);
+
+  // Reserve a slot before comparing. Failure-only lockouts can race when many
+  // guesses arrive together before any failed attempt has been recorded.
+  const localLimit = await rateLimit(`passcode:attempt:${ip}`, { limit: 5, windowMs: 60_000 });
+  const globalLimit = localLimit.allowed
+    ? await rateLimit("passcode:attempt:global", { limit: 20, windowMs: 60_000 })
+    : localLimit;
+  if (!globalLimit.allowed) {
+    return NextResponse.json({ ok: false, error: "Too many attempts. Try again later." }, {
+      status: 429, headers: { "Retry-After": String(globalLimit.retryAfterSeconds), "Cache-Control": "no-store" },
+    });
+  }
 
   // Brute-force lockout: refuse before even comparing once too many recent
   // failures have accrued (globally or from this IP).
@@ -45,8 +61,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "Admin login is not configured." }, { status: 503 });
   }
 
-  const body = (await req.json().catch(() => ({}))) as { passcode?: string };
-  const provided = String(body.passcode ?? "");
+  const provided = typeof body.passcode === "string" ? body.passcode : "";
 
   if (!provided || !safeEqual(provided, expected)) {
     await recordLoginFailure(ip);
@@ -57,7 +72,7 @@ export async function POST(req: NextRequest) {
 
   await clearLoginFailures(ip);
   const token = await createSessionToken();
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   res.cookies.set(ADMIN_SESSION_COOKIE, token, sessionCookieOptions());
   return res;
 }

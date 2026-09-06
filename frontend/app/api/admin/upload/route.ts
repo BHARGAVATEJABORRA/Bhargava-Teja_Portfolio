@@ -30,6 +30,7 @@ import {
   BLOB_UPLOAD_PREFIX,
   hasBlobStore,
   isAllowedUploadType,
+  uploadNameMatchesType,
   MAX_UPLOAD_BYTES,
   RESUME_BLOB_PATH,
   UPLOAD_KINDS,
@@ -89,7 +90,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Type validation. Browsers must always provide a recognized media type;
   // accepting an empty/unknown type would create a publicly served arbitrary
   // file endpoint in local development.
-  if (!isAllowedUploadType(kind, file.type)) {
+  if (!isAllowedUploadType(kind, file.type) || !uploadNameMatchesType(file.name, file.type)) {
     const error = kind === "resume" ? "Resume must be a PDF file." : kind === "image" ? "Images must be PNG, JPEG, WebP, AVIF, or GIF." : "Media must be an image, video, or PDF file.";
     return NextResponse.json({ error }, { status: 400 });
   }

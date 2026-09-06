@@ -28,7 +28,7 @@ SPOTIFY_CLIENT_SECRET=
 SPOTIFY_REDIRECT_URI=http://127.0.0.1:3000/api/auth/callback/spotify
 SPOTIFY_REFRESH_TOKEN=
 OPENWEATHER_API_KEY=
-NEXT_PUBLIC_OPENWEATHER_API_KEY=
+# Weather keys must stay server-only. Never prefix an API key with NEXT_PUBLIC_.
 ```
 
 Notes:
@@ -41,10 +41,27 @@ Notes:
 To obtain `SPOTIFY_REFRESH_TOKEN`, use Spotify's authorization-code flow:
 
 1. In the Spotify app dashboard, add `http://127.0.0.1:3000/api/auth/callback/spotify` as a redirect URI.
-2. Start the local app and visit `http://127.0.0.1:3000/api/auth/signin`.
+2. Start the local development app, sign in at `/login` with the admin passcode, then visit `http://127.0.0.1:3000/api/auth/signin` in the same browser.
 3. Approve Spotify access. The callback exchanges the code server-side and saves `SPOTIFY_REFRESH_TOKEN` in `frontend/.env.local`.
 4. Restart `npm run dev` so the app reads the updated local environment.
 5. Set the same variables in your production deployment environment before release.
+
+The Spotify setup routes are intentionally unavailable in production; they never render refresh tokens in a page. Existing production refresh tokens continue to work.
+
+## Security verification
+
+See [the security review and rollout checklist](../SECURITY.md) for findings, remaining limitations, and the staged firewall rules.
+
+```bash
+npm run test:security
+npm run test:security:libsql
+npm run build
+npm run test:security:http
+```
+
+The tests use disposable local databases, synthetic credentials, and disabled paid integrations. `npm run build` creates an empty ignored content-override file only when it is missing; existing content is preserved. The nonce-based script policy requires server-rendered HTML and intentionally disables HTML caching. This hardened configuration targets the Next.js server/Vercel deployment, not static hosting.
+
+`aiEnabled` and `spotifyEnabled` now control both the interface and their server endpoints. Enable the corresponding feature in the admin configuration when desired; a disabled integration will not call its provider.
 
 ## Launch Content Checklist
 
